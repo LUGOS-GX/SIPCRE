@@ -7,4 +7,5 @@ urlpatterns = [
    path('api/estadisticas/', views.api_estadisticas_laboratorio, name='api_estadisticas_laboratorio'),
    path('exportar-estadisticas/', views.exportar_estadisticas_lab_excel, name='exportar_estadisticas_lab_excel'),
    path('orden/<int:orden_id>/cancelar/', views.cancelar_orden_lab, name='cancelar_orden_lab'),
+   path('perfil/', views.editar_perfil_lab, name='editar_perfil_lab'),
 ]

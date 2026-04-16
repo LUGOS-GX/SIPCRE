@@ -430,3 +430,34 @@ def exportar_estadisticas_lab_excel(request):
     
     return response
 
+login_required
+@rol_requerido(['laboratorio'])
+def editar_perfil_lab(request):
+    usuario = request.user 
+
+    if request.method == 'POST':
+        try:
+            # Procesar el Nombre
+            nombre_completo = request.POST.get('nombre_completo', '').strip()
+            if nombre_completo:
+                partes = nombre_completo.split(' ', 1)
+                usuario.first_name = partes[0]
+                usuario.last_name = partes[1] if len(partes) > 1 else ''
+
+            # Procesar Cédula y Teléfono
+            usuario.cedula = request.POST.get('cedula', usuario.cedula)
+            usuario.telefono = request.POST.get('telefono', usuario.telefono)
+            
+            usuario.save()
+
+            messages.success(request, "Perfil actualizado correctamente.")
+            return redirect('editar_perfil_lab')
+
+        except Exception as e:
+            messages.error(request, f"Error al guardar los datos: {str(e)}")
+
+    context = {
+        'usuario': usuario,
+    }
+    return render(request, 'laboratorio/editar_perfil.html', context)
+
