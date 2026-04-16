@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Ajustes y Devoluciones</h1>
+            <p class="mt-1 text-sm text-gray-500">Registre mermas, reintegre medicamentos devueltos o realice cambios.</p>
+        </div>
+        <a href="{% url 'dashboard_farmacia' %}" class="text-gray-500 hover:text-blue-600 font-bold text-sm transition flex items-center">
+            ← Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white shadow-xl sm:rounded-lg overflow-hidden border-t-4 border-blue-500">
+        <div class="px-6 py-8">
+            <form method="POST" action="{% url 'ajuste_inventario' %}" class="space-y-8">
+                {% csrf_token %}
+                
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">¿Qué desea hacer?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="tipo_accion" value="devolucion" class="peer sr-only" checked onchange="toggleFormulario()">
+                            <div class="p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 peer-checked:border-green-500 peer-checked:bg-green-50 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-bold text-gray-900">Devolución</p>
+                                    <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Suma unidades al stock físico.</p>
+                            </div>
+                        </label>
+
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="tipo_accion" value="cambio" class="peer sr-only" onchange="toggleFormulario()">
+                            <div class="p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-bold text-gray-900">Cambio por Otro</p>
+                                    <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Reintegra uno y entrega otro distinto.</p>
+                            </div>
+                        </label>
+
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="tipo_accion" value="merma" class="peer sr-only" onchange="toggleFormulario()">
+                            <div class="p-4 bg-white border-2 border-gray-200 rounded-lg hover:bg-gray-50 peer-checked:border-red-500 peer-checked:bg-red-50 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-bold text-gray-900">Merma / Daño</p>
+                                    <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Da de baja unidades perdidas.</p>
+                            </div>
+                        </label>
+
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div>
+                        <label id="lbl_med_principal" class="block text-sm font-bold text-gray-700 mb-2">Medicamento Devuelto / Dañado</label>
+                        <input type="hidden" name="medicamento" id="id_med_a" required>
+                        
+                        <div class="relative">
+                            <input type="text" id="input_buscador_med_a" autocomplete="off" placeholder="Buscar medicamento..." 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-gray-700 bg-white shadow-sm" 
+                                onclick="toggleLista('lista_a')" onkeyup="filtrarLista('input_buscador_med_a', 'ul_a')">
+                            
+                            <div id="lista_a" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-2xl max-h-48 overflow-y-auto">
+                                <ul id="ul_a" class="py-1">
+                                    {% for med in medicamentos %}
+                                    <li class="px-4 py-2 hover:bg-blue-50 hover:text-blue-700 cursor-pointer border-b border-gray-50 text-sm transition" 
+                                        onclick="seleccionarMed('{{ med.id }}', '{{ med.nombre|escapejs }} {{ med.concentracion|escapejs }}', 'a')">
+                                        <span class="font-bold">{{ med.nombre }}</span> {{ med.concentracion }} (Stock: {{ med.stock_actual }})
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bloque_med_nuevo" class="hidden opacity-0 transition-opacity duration-500">
+                        <label class="block text-sm font-bold text-blue-700 mb-2">Medicamento a Entregar (Nuevo)</label>
+                        <input type="hidden" name="medicamento_nuevo" id="id_med_b">
+                        
+                        <div class="relative">
+                            <input type="text" id="input_buscador_med_b" autocomplete="off" placeholder="Buscar reemplazo..." 
+                                class="w-full px-4 py-3 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-bold text-blue-800 bg-blue-50 shadow-sm" 
+                                onclick="toggleLista('lista_b')" onkeyup="filtrarLista('input_buscador_med_b', 'ul_b')">
+                            
+                            <div id="lista_b" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-2xl max-h-48 overflow-y-auto">
+                                <ul id="ul_b" class="py-1">
+                                    {% for med in medicamentos %}
+                                    <li class="px-4 py-2 hover:bg-blue-50 hover:text-blue-700 cursor-pointer border-b border-gray-50 text-sm transition" 
+                                        onclick="seleccionarMed('{{ med.id }}', '{{ med.nombre|escapejs }} {{ med.concentracion|escapejs }}', 'b')">
+                                        <span class="font-bold">{{ med.nombre }}</span> {{ med.concentracion }} (Stock: {{ med.stock_actual }})
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-6 rounded-lg">
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Cantidad</label>
+                        <input type="number" name="cantidad" min="1" value="1" required class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-black text-xl text-center shadow-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Motivo / Justificación</label>
+                        <input type="text" name="motivo" placeholder="Ej: Paciente trajo caja cerrada equivocada, frasco roto..." required class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-200">
+                    <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-1 text-lg">
+                        Procesar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. Alternar formulario según la acción seleccionada
+    function toggleFormulario() {
+        const accion = document.querySelector('input[name="tipo_accion"]:checked').value;
+        const bloqueB = document.getElementById('bloque_med_nuevo');
+        const inputB = document.getElementById('id_med_b');
+        const labelA = document.getElementById('lbl_med_principal');
+
+        if (accion === 'cambio') {
+            bloqueB.classList.remove('hidden');
+            setTimeout(() => bloqueB.classList.remove('opacity-0'), 50);
+            inputB.required = true;
+            labelA.textContent = "Medicamento Devuelto (El que entra)";
+        } else {
+            bloqueB.classList.add('opacity-0');
+            setTimeout(() => bloqueB.classList.add('hidden'), 300);
+            inputB.required = false;
+            inputB.value = '';
+            document.getElementById('input_buscador_med_b').value = '';
+            
+            if(accion === 'devolucion') labelA.textContent = "Medicamento Reintegrado";
+            if(accion === 'merma') labelA.textContent = "Medicamento Dañado / Vencido";
+        }
+    }
+
+    // 2. Lógica de los dos Buscadores Inteligentes
+    function toggleLista(listaId) {
+        document.getElementById(listaId).classList.remove('hidden');
+        if(listaId === 'lista_a') document.getElementById('input_buscador_med_a').select();
+        if(listaId === 'lista_b') document.getElementById('input_buscador_med_b').select();
+    }
+
+    function filtrarLista(inputId, ulId) {
+        const filtro = document.getElementById(inputId).value.toLowerCase();
+        const items = document.querySelectorAll(`#${ulId} li`);
+        items.forEach(item => {
+            item.style.display = item.textContent.toLowerCase().includes(filtro) ? 'block' : 'none';
+        });
+    }
+
+    function seleccionarMed(id, texto, tipo) {
+        document.getElementById(`id_med_${tipo}`).value = id;
+        document.getElementById(`input_buscador_med_${tipo}`).value = texto;
+        document.getElementById(`lista_${tipo}`).classList.add('hidden');
+    }
+
+    // Cerrar listas al hacer clic afuera
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.relative')) {
+            document.getElementById('lista_a').classList.add('hidden');
+            document.getElementById('lista_b').classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

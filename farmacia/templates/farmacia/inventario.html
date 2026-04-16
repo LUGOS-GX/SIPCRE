@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Inventario de Medicamentos</h1>
+            <p class="mt-1 text-sm text-gray-500">Gestión de stock, lotes y catálogo de farmacia.</p>
+        </div>
+        
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'dashboard_farmacia' %}" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded shadow-sm flex items-center transition">
+                ← Volver
+            </a>
+            <a href="{% url 'registrar_lote' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                Registrar Lote
+            </a>
+            <a href="{% url 'agregar_medicamento' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow flex items-center transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Agregar Medicamento
+            </a>
+        </div>
+    </div>
+
+    <div class="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <form method="GET" action="{% url 'inventario_farmacia' %}" id="form-buscador-inventario">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" name="q" id="input-buscador" value="{{ query }}" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:text-sm transition-all" placeholder="Buscar por nombre, concentración o presentación...">
+                
+                {% if query %}
+                <a href="{% url 'inventario_farmacia' %}" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medicamento</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Presentación</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Actual</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio ($)</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for med in page_obj %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-bold text-gray-900">{{ med.nombre }}</div>
+                        <div class="text-sm text-gray-500">{{ med.concentracion }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ med.presentacion }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-bold {% if med.stock_actual <= med.stock_minimo %}text-red-600{% else %}text-gray-900{% endif %}">
+                        {{ med.stock_actual }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{{ med.precio }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if med.stock_actual <= med.stock_minimo %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Crítico</span>
+                        {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Óptimo</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                        <div class="flex items-center justify-center space-x-3">
+                            
+                            <button type="button" 
+                                onclick="abrirModalDetalles('{{ med.id }}', '{{ med.nombre|escapejs }}', '{{ med.concentracion|escapejs }}', '{{ med.presentacion|escapejs }}', '{% if med.descripcion %}{{ med.descripcion|escapejs }}{% endif %}', '{{ med.stock_actual }}', '{{ med.stock_minimo }}', '{{ med.precio }}', '{% if med.foto %}{{ med.foto.url }}{% else %}none{% endif %}')" 
+                                class="text-indigo-600 hover:text-indigo-900 transition bg-indigo-50 hover:bg-indigo-100 p-2 rounded-full" title="Ver Detalles">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943-9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </button>
+
+                            <a href="{% url 'editar_medicamento' med.id %}" class="text-blue-600 hover:text-blue-900 transition bg-blue-50 hover:bg-blue-100 p-2 rounded-full" title="Editar">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </a>
+                            
+                            <form action="{% url 'eliminar_medicamento' med.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea eliminar {{ med.nombre }}? Esta acción no se puede deshacer.');">
+                                {% csrf_token %}
+                                <button type="submit" class="text-red-600 hover:text-red-900 transition bg-red-50 hover:bg-red-100 p-2 rounded-full" title="Eliminar">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-10 text-center text-gray-500 italic">
+                        No se encontraron medicamentos.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if page_obj.has_other_pages %}
+        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Mostrando <span class="font-medium">{{ page_obj.start_index }}</span> a <span class="font-medium">{{ page_obj.end_index }}</span> de <span class="font-medium">{{ page_obj.paginator.count }}</span> medicamentos
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        {% if page_obj.has_previous %}
+                            <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if page_obj.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-bold text-blue-600">{{ i }}</span>
+                            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <a href="?q={{ query }}&page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">{{ i }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <a href="?q={{ query }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 010 1.414l-4-4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="modal_detalles" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center z-50 transition-opacity">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col transform transition-all">
+        
+        <div class="bg-gray-800 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-white font-bold text-lg flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Ficha del Medicamento
+            </h3>
+            <button type="button" onclick="cerrarModalDetalles()" class="text-gray-300 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="p-6 flex flex-col md:flex-row gap-6">
+            <div class="w-full md:w-1/3 flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-lg p-2 h-48 md:h-auto overflow-hidden">
+                <img id="modal_med_foto" src="" alt="Foto Medicamento" class="max-h-full max-w-full object-contain hidden rounded">
+                <div id="modal_med_nofoto" class="text-gray-400 text-center flex flex-col items-center justify-center">
+                    <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-xs font-bold uppercase tracking-wider">Sin Imagen</span>
+                </div>
+            </div>
+
+            <div class="w-full md:w-2/3 flex flex-col justify-center space-y-4">
+                <div>
+                    <h4 id="modal_med_nombre" class="text-2xl font-black text-gray-900 leading-tight"></h4>
+                    <p id="modal_med_concentracion" class="text-sm font-bold text-gray-500 mt-1"></p>
+                </div>
+
+                <div class="bg-blue-50 text-blue-800 p-3 rounded-lg border border-blue-100">
+                    <p class="text-xs uppercase font-bold text-blue-600 mb-1">Descripción / Laboratorio</p>
+                    <p id="modal_med_descripcion" class="text-sm italic"></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="border border-gray-200 p-3 rounded text-center shadow-sm">
+                        <p class="text-xs text-gray-500 uppercase font-bold">Stock Físico</p>
+                        <p id="modal_med_stock" class="text-xl font-black mt-1"></p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded text-center shadow-sm bg-green-50">
+                        <p class="text-xs text-green-700 uppercase font-bold">Precio Unitario</p>
+                        <p class="text-xl font-black text-green-700 mt-1">$<span id="modal_med_precio"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <a id="btn_modal_editar" href="#" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition">
+                Modificar
+            </a>
+            
+            <form id="form_modal_eliminar" action="#" method="POST" onsubmit="return confirm('¿Está seguro de que desea eliminar este medicamento? Esta acción es irreversible.');">
+                {% csrf_token %}
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow transition">
+                    Eliminar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    // --- SCRIPT DEL BUSCADOR REACTIVO ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const input = document.getElementById("input-buscador");
+        const form = document.getElementById("form-buscador-inventario");
+        let timeoutId;
+
+        if (input && form) {
+            if(input.value) {
+                input.focus();
+                let val = input.value;
+                input.value = '';
+                input.value = val;
+            }
+            input.addEventListener("input", function() {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => { form.submit(); }, 500); 
+            });
+        }
+    });
+
+    // --- SCRIPT DEL MODAL DE DETALLES ---
+    function abrirModalDetalles(id, nombre, concentracion, presentacion, descripcion, stock, min, precio, foto) {
+        document.getElementById('modal_med_nombre').textContent = nombre;
+        document.getElementById('modal_med_concentracion').textContent = presentacion + ' - ' + concentracion;
+        document.getElementById('modal_med_descripcion').textContent = descripcion ? descripcion : "Sin descripción adicional proporcionada.";
+        document.getElementById('modal_med_precio').textContent = precio;
+        
+        const stockEl = document.getElementById('modal_med_stock');
+        stockEl.textContent = stock + ' un.';
+        if (parseInt(stock) <= parseInt(min)) {
+            stockEl.className = "text-xl font-black mt-1 text-red-600";
+        } else {
+            stockEl.className = "text-xl font-black mt-1 text-gray-800";
+        }
+
+        const imgEl = document.getElementById('modal_med_foto');
+        const noImgEl = document.getElementById('modal_med_nofoto');
+        if (foto !== 'none' && foto.trim() !== '') {
+            imgEl.src = foto;
+            imgEl.classList.remove('hidden');
+            noImgEl.classList.add('hidden');
+        } else {
+            imgEl.classList.add('hidden');
+            noImgEl.classList.remove('hidden');
+        }
+
+        const urlEditar = "{% url 'editar_medicamento' 0 %}".replace('0', id);
+        const urlEliminar = "{% url 'eliminar_medicamento' 0 %}".replace('0', id);
+        
+        document.getElementById('btn_modal_editar').href = urlEditar;
+        document.getElementById('form_modal_eliminar').action = urlEliminar;
+
+        const modal = document.getElementById('modal_detalles');
+        modal.classList.remove('hidden');
+    }
+
+    function cerrarModalDetalles() {
+        document.getElementById('modal_detalles').classList.add('hidden');
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('modal_detalles');
+        if (event.target === modal) {
+            cerrarModalDetalles();
+        }
+    }
+</script>
+{% endblock %}

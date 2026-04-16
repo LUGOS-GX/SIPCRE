@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Despachar Orden #{{ orden.id }}</h1>
+            <p class="mt-1 text-sm text-gray-500">Paciente: 
+                <span class="font-bold">
+                {% if orden.nombre_paciente %}
+                    {{ orden.nombre_paciente }}
+                {% else %}
+                    {{ orden.paciente.nombres }}
+                {% endif %}
+                </span>
+            </p>
+        </div>
+        <a href="{% url 'dashboard_farmacia' %}" class="text-gray-500 hover:text-red-600 font-bold text-sm transition">
+            ← Cancelar / Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden border-t-4 border-blue-500">
+            <div class="p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Receta del Médico
+                </h2>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-500">Dr(a) Tratante:</p>
+                    <p class="font-bold text-gray-800">{{ orden.medico.nombre }} ({{ orden.medico.especialidad }})</p>
+                </div>
+                
+                <div class="bg-blue-50 p-4 rounded-md border border-blue-100 font-mono text-sm whitespace-pre-wrap text-gray-800 shadow-inner h-64 overflow-y-auto">
+{{ orden.receta_medica_texto }}
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden border-t-4 border-green-500 flex flex-col">
+            <div class="p-6 flex-grow">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Agregar a la Bolsa
+                </h2>
+                
+                <form method="POST" id="form_despacho" data-orden-interna="{{ orden.paciente|yesno:'true,false' }}" class="flex flex-col mb-6 bg-gray-50 p-4 rounded-md border border-gray-200">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="agregar_item">
+                    
+                    <div class="flex space-x-3 w-full">
+                        <div class="flex-grow">
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Medicamento Físico</label>
+                            
+                            <select name="medicamento_id" id="select_medicamento" class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 text-sm py-2" required onchange="verificarControlado()">
+                                <option value="" disabled selected>Seleccione del inventario...</option>
+                                {% for med in medicamentos_disponibles %}
+                                    <option value="{{ med.id }}" data-controlado="{{ med.es_controlado|yesno:'true,false' }}">
+                                        {% if med.es_controlado %}⚠️ {% endif %}{{ med.nombre }} {{ med.concentracion }} (Stock: {{ med.stock_actual }}) - ${{ med.precio }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="w-24">
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Cant.</label>
+                            <input type="number" name="cantidad" min="1" value="1" class="w-full border-gray-300 rounded-md shadow-sm focus:border-green-500 focus:ring-green-500 text-sm py-2 text-center" required>
+                        </div>
+                        
+                        <div class="flex items-end">
+                            <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 px-4 rounded-md shadow transition h-[38px] flex items-center justify-center">
+                                +
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="alerta_psicotropico" class="hidden mt-4 bg-red-50 border border-red-200 p-3 rounded-md">
+                        <p class="text-xs font-bold text-red-700 mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            MEDICAMENTO CONTROLADO (EXTERNO)
+                        </p>
+                        <label class="flex items-start space-x-2 cursor-pointer">
+                            <input type="checkbox" name="validacion_firma" id="check_validacion" class="mt-1 border-red-300 text-red-600 focus:ring-red-500 rounded">
+                            <span class="text-xs text-red-800">
+                                Confirmo que he validado el récipe original físico con sello húmedo y firma legible obligatoriamente.
+                            </span>
+                        </label>
+                    </div>
+                </form>
+
+                <h3 class="font-bold text-gray-700 text-sm uppercase mb-2">Artículos a Entregar:</h3>
+                <ul class="space-y-2 mb-4 h-32 overflow-y-auto pr-2">
+                    {% for item in detalles %}
+                    <li class="flex justify-between items-center text-sm border-b pb-2">
+                        <div>
+                            <span class="font-bold text-gray-800">{{ item.cantidad }}x</span> 
+                            <span class="text-gray-600">{{ item.medicamento.nombre }}</span>
+                        </div>
+                        <div class="text-gray-800 font-mono">${{ item.subtotal }}</div>
+                    </li>
+                    {% empty %}
+                    <li class="text-gray-400 text-sm italic text-center py-4">La bolsa está vacía.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="bg-gray-100 p-6 border-t border-gray-200">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-lg font-bold text-gray-700 uppercase">Total:</span>
+                    <span class="text-2xl font-black text-green-600 font-mono">${{ total_factura }}</span>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <button type="submit" name="accion" value="finalizar_despacho" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg text-lg transition transform hover:-translate-y-1 flex justify-center items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Finalizar y Entregar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function verificarControlado() {
+        const select = document.getElementById('select_medicamento');
+        const opcionSeleccionada = select.options[select.selectedIndex];
+        
+        if (!opcionSeleccionada) return;
+        
+        const esControlado = opcionSeleccionada.getAttribute('data-controlado') === 'true';
+        const alertaDiv = document.getElementById('alerta_psicotropico');
+        const checkbox = document.getElementById('check_validacion');
+        
+        const formDespacho = document.getElementById('form_despacho');
+        const esOrdenInterna = formDespacho.getAttribute('data-orden-interna') === 'true';
+        
+        if (esControlado) {
+            alertaDiv.classList.remove('hidden');
+            
+            if (!esOrdenInterna) {
+                checkbox.required = true;
+                checkbox.parentElement.classList.remove('hidden');
+                alertaDiv.className = 'mt-4 bg-red-50 border border-red-200 p-3 rounded-md';
+                alertaDiv.querySelector('p').innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> MEDICAMENTO CONTROLADO (EXTERNO)';
+            } else {
+                checkbox.required = false;
+                checkbox.parentElement.classList.add('hidden');
+                alertaDiv.className = 'mt-4 bg-green-50 border border-green-200 p-3 rounded-md';
+                alertaDiv.querySelector('p').className = 'text-xs font-bold text-green-700 flex items-center mb-0';
+                alertaDiv.querySelector('p').innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> FIRMA MÉDICA DIGITAL VALIDADA POR EL SISTEMA';
+            }
+            
+        } else {
+            alertaDiv.className = 'hidden mt-4 bg-red-50 border border-red-200 p-3 rounded-md';
+            checkbox.required = false;
+            checkbox.checked = false;
+        }
+    }
+</script>
+{% endblock %}

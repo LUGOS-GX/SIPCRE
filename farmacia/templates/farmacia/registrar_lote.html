@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Recepción de Lote</h1>
+            <p class="mt-1 text-sm text-gray-500">Ingreso de nuevas cajas/unidades al inventario físico.</p>
+        </div>
+        <a href="{% url 'dashboard_farmacia' %}" class="text-gray-500 hover:text-green-600 font-bold text-sm transition flex items-center">
+            ← Volver
+        </a>
+    </div>
+
+    <div class="bg-white shadow-xl sm:rounded-lg border-t-4 border-green-500 overflow-hidden">
+        <div class="px-6 py-8">
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in form %}
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            {{ field.label }}
+                        </label>
+
+                        {% if field.name == 'medicamento' %}
+                            
+                            <div class="hidden">
+                                {{ field }}
+                            </div>
+
+                            <div class="relative">
+                                <input type="text" id="input_buscador_med" autocomplete="off" placeholder="Escriba para buscar..." 
+                                    class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm font-bold text-gray-700 transition-all bg-gray-50" 
+                                    onclick="toggleMenuMed()" onkeyup="filtrarMeds()">
+                                
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+
+                                <div id="menu_meds" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-2xl max-h-56 overflow-y-auto">
+                                    <ul id="lista_meds" class="py-1">
+                                        </ul>
+                                </div>
+                            </div>
+
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+
+                        {% if field.help_text %}
+                            <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% if field.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-bold">{{ field.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="pt-6 border-t border-gray-200 mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-xs text-gray-500 italic flex-1 text-center sm:text-left">
+                        * Al guardar, el sistema sumará automáticamente esta cantidad al stock general del medicamento.
+                    </p>
+                    <button type="submit" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Registrar Entrada
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Estilos de Tailwind para los inputs de Django (evitamos tocar nuestro buscador custom)
+        let inputs = document.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            if (input.type !== 'checkbox' && input.id !== 'input_buscador_med') {
+                input.classList.add('appearance-none', 'block', 'w-full', 'px-3', 'py-2', 'border', 'border-gray-300', 'rounded-md', 'shadow-sm', 'focus:outline-none', 'focus:ring-green-500', 'focus:border-green-500', 'sm:text-sm');
+            }
+        });
+
+        // 2. Iniciar la magia del buscador
+        inicializarBuscadorMeds();
+    });
+
+    function inicializarBuscadorMeds() {
+        const selectOriginal = document.getElementById('id_medicamento');
+        if (!selectOriginal) return;
+
+        const listaUls = document.getElementById('lista_meds');
+        const inputBuscador = document.getElementById('input_buscador_med');
+        
+        // Verificamos si ya había algo seleccionado (Por ejemplo, si la página recarga por un error de validación)
+        const valorInicial = selectOriginal.value;
+
+        // Leemos cada <option> del select original y creamos un hermoso <li>
+        Array.from(selectOriginal.options).forEach(opcion => {
+            if (opcion.value !== "") { // Ignoramos la primera opción vacía de Django ("---------")
+                let li = document.createElement('li');
+                li.className = 'px-4 py-2 hover:bg-green-50 hover:text-green-700 cursor-pointer text-sm text-gray-700 transition border-b border-gray-50';
+                li.textContent = opcion.text;
+                
+                // Al hacer clic, actualiza el select oculto y el input visible
+                li.onclick = function() {
+                    seleccionarMed(opcion.value, opcion.text);
+                };
+                listaUls.appendChild(li);
+
+                // Si por defecto estaba seleccionado, lo mostramos en el input visual
+                if (valorInicial && valorInicial === opcion.value) {
+                    inputBuscador.value = opcion.text;
+                }
+            }
+        });
+
+        // Ocultar el menú si hacemos clic fuera de él
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('input_buscador_med').contains(e.target) && !document.getElementById('menu_meds').contains(e.target)) {
+                document.getElementById('menu_meds').classList.add('hidden');
+            }
+        });
+    }
+
+    function toggleMenuMed() {
+        const input = document.getElementById('input_buscador_med');
+        document.getElementById('menu_meds').classList.remove('hidden');
+        
+        // Si ya había algo escrito, seleccionamos todo el texto para que pueda sobreescribir rápido
+        input.select();
+        filtrarMeds();
+    }
+
+    function filtrarMeds() {
+        const filtro = document.getElementById('input_buscador_med').value.toLowerCase();
+        const items = document.querySelectorAll('#lista_meds li');
+        
+        let encontrados = 0;
+        items.forEach(item => {
+            if (item.textContent.toLowerCase().includes(filtro)) {
+                item.style.display = 'block';
+                encontrados++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Si todo falla, podrías agregar un mensaje de "No encontrado" aquí si lo deseas
+    }
+
+    function seleccionarMed(id, texto) {
+        // Magia: El backend recibe el ID correcto, pero el humano ve el texto bonito
+        document.getElementById('id_medicamento').value = id;
+        document.getElementById('input_buscador_med').value = texto;
+        document.getElementById('menu_meds').classList.add('hidden');
+    }
+</script>
+{% endblock %}

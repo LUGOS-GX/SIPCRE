@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+            <svg class="w-8 h-8 mr-3 text-cruzroja-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Expediente Médico Unificado
+        </h1>
+        
+        <div class="flex items-center space-x-4">
+            <button type="button" onclick="abrirModalConstancia()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow flex items-center transition">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Emitir Constancia
+            </button>
+
+            <a href="{% url 'historial_medico' %}" class="text-gray-500 hover:text-cruzroja-600 font-bold transition flex items-center">
+                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border-l-8 border-cruzroja-600 p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden">
+        <div class="z-10">
+            <h2 class="text-2xl font-black text-gray-900">{{ paciente.nombres }}</h2>
+            <div class="flex items-center space-x-4 mt-2">
+                <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-mono border border-gray-200">C.I: {{ paciente.cedula }}</span>
+                {% if expediente.tipo_sangre %}
+                    <span class="bg-red-50 text-red-700 px-3 py-1 rounded-full text-sm font-bold border border-red-200 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>
+                        {{ expediente.tipo_sangre }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="mt-4 text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+                <div><span class="font-bold">Ant. Personales:</span> {{ expediente.antecedentes_personales|default:"Ninguno registrado." }}</div>
+                <div><span class="font-bold">Ant. Familiares:</span> {{ expediente.antecedentes_familiares|default:"Ninguno registrado." }}</div>
+            </div>
+        </div>
+
+        {% if expediente.alergias %}
+        <div class="mt-4 md:mt-0 bg-red-600 text-white p-4 rounded-lg shadow-inner z-10 max-w-xs animate-pulse">
+            <h3 class="font-black uppercase tracking-wider text-xs mb-1 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Alerta de Alergias
+            </h3>
+            <p class="font-bold text-sm">{{ expediente.alergias }}</p>
+        </div>
+        {% endif %}
+        
+        <svg class="absolute -right-10 -bottom-10 w-48 h-48 text-gray-50 opacity-50 z-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path></svg>
+    </div>
+
+    <div class="border-b border-gray-200 mb-6">
+        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
+            <li class="mr-2">
+                <button onclick="changeTab('timeline')" id="btn-timeline" class="inline-flex p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active group">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Evolución (Línea de Tiempo)
+                </button>
+            </li>
+            <li class="mr-2">
+                <button onclick="changeTab('graficos')" id="btn-graficos" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                    Gráficos de Signos Vitales
+                </button>
+            </li>
+            <li class="mr-2">
+                <button onclick="changeTab('tratamientos')" id="btn-tratamientos" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Tratamientos recibidos
+                </button>
+            </li>
+            <li class="mr-2">
+                <button onclick="changeTab('anexos')" id="btn-anexos" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    Anexos / Resultados
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div id="tab-content">
+        
+        <div id="timeline" class="tab-pane">
+            <div class="bg-white rounded-lg shadow p-6">
+                {% if consultas %}
+                <div class="relative border-l-4 border-blue-200 ml-4 py-2 space-y-10">
+                    {% for c in consultas %}
+                    <div class="relative pl-8">
+                        <div class="absolute -left-3.5 top-1 h-6 w-6 rounded-full bg-blue-600 border-4 border-white shadow"></div>
+                        
+                        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition">
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-200">
+                                <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    {{ c.fecha.day }} de {{ c.fecha|date:"F" }}, {{ c.fecha.year }}
+                                </h3>
+                                <span class="text-sm font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{{ c.hora|time:"h:i A" }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Motivo / Enf. Actual</p>
+                                    <p class="text-sm text-gray-800 bg-white p-3 rounded border border-gray-100">{{ c.motivo_consulta }} <br> <span class="text-gray-600 italic">{{ c.enfermedad_actual|default:"" }}</span></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Signos Vitales del día</p>
+                                    <div class="bg-blue-50 p-3 rounded border border-blue-100 flex flex-wrap gap-3 text-xs font-mono text-blue-900">
+                                        {% if c.tension_arterial %}<span>TA: <b>{{c.tension_arterial}}</b></span>{% endif %}
+                                        {% if c.frecuencia_cardiaca %}<span>FC: <b>{{c.frecuencia_cardiaca}}</b></span>{% endif %}
+                                        {% if c.temperatura %}<span>Temp: <b>{{c.temperatura}}°C</b></span>{% endif %}
+                                        {% if c.peso %}<span>Peso: <b>{{c.peso}}Kg</b></span>{% endif %}
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Examen Físico / Hallazgos</p>
+                                    <p class="text-sm text-gray-700 whitespace-pre-line bg-gray-100 p-3 rounded">{{ c.examen_fisico|default:"Sin hallazgos registrados." }}</p>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <p class="text-xs font-bold text-purple-600 uppercase tracking-wide mb-1 flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Diagnóstico de esta visita
+                                    </p>
+                                    <p class="text-base font-bold text-gray-900 bg-purple-50 p-3 rounded border border-purple-100">{{ c.diagnostico }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <p class="text-center text-gray-500 py-8">No hay consultas registradas para este paciente.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="graficos" class="tab-pane hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Curva de Tensión Arterial</h3>
+                    <div class="relative h-72 w-full">
+                        <canvas id="chartTA"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Evolución de Peso (Kg)</h3>
+                    <div class="relative h-72 w-full">
+                        <canvas id="chartPeso"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tratamientos" class="tab-pane hidden">
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Fecha / Dx</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan de Trabajo / Tratamiento</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for c in consultas %}
+                            {% if c.plan_tratamiento %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-bold text-gray-900">{{ c.fecha|date:"d/m/Y" }}</div>
+                                    <div class="text-xs text-purple-600 font-bold truncate max-w-[200px]" title="{{ c.diagnostico }}">{{ c.diagnostico }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="text-sm text-gray-800 whitespace-pre-line">{{ c.plan_tratamiento }}</div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr><td colspan="2" class="px-6 py-8 text-center text-gray-500">No hay tratamientos registrados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="anexos" class="tab-pane hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {% for c in consultas %}
+                        {% if c.archivo_anexo %}
+                        <div class="border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:shadow-md transition bg-gray-50">
+                            {% if c.tipo_anexo == 'Img' %}
+                                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-3">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                            {% else %}
+                                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                </div>
+                            {% endif %}
+                            <h4 class="font-bold text-gray-800 text-sm mb-1">{{ c.get_tipo_anexo_display|default:"Documento" }}</h4>
+                            <p class="text-xs text-gray-500 mb-3">{{ c.fecha|date:"d/m/Y" }}</p>
+                            <a href="{{ c.archivo_anexo.url }}" target="_blank" class="text-xs font-bold text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-full transition w-full">Ver / Descargar</a>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if not consultas.0.archivo_anexo %}
+                        <p class="col-span-full text-center text-gray-500 py-8">No hay anexos o exámenes subidos en este expediente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="modal_constancia" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center z-50 transition-opacity">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col">
+        <div class="bg-blue-600 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-white font-bold text-lg">Redactar Constancia Médica</h3>
+            <button type="button" onclick="cerrarModalConstancia()" class="text-blue-100 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <form action="{% url 'generar_constancia' paciente.id %}" method="POST" target="_blank">
+            {% csrf_token %}
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Paciente: <strong class="text-gray-900">{{ paciente.nombres }} {{ paciente.apellidos }}</strong></p>
+                
+                <label class="block text-sm font-bold text-gray-700 mb-2">Cuerpo del Documento / Diagnóstico / Reposo:</label>
+                <textarea name="motivo_texto" rows="5" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800" placeholder="Ej. Por medio de la presente hago constar que el paciente acudió a consulta presentando un cuadro de... Ameritando reposo físico por 72 horas..."></textarea>
+                <p class="text-xs text-gray-500 mt-2">La firma, el sello, el membrete y los datos del paciente se añadirán automáticamente al PDF.</p>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="cerrarModalConstancia()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded transition">Cancelar</button>
+                <button type="submit" onclick="setTimeout(cerrarModalConstancia, 1000)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Generar Documento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    // --- LÓGICA DE LAS PESTAÑAS ---
+    function changeTab(tabId) {
+        // Ocultar todos los paneles
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+        
+        // Resetear estilos de todos los botones
+        document.querySelectorAll('ul button').forEach(el => {
+            el.classList.remove('text-blue-600', 'border-blue-600', 'active');
+            el.classList.add('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+            el.querySelector('svg').classList.remove('text-blue-600');
+            el.querySelector('svg').classList.add('text-gray-400');
+        });
+
+        // Mostrar el panel activo
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        // Aplicar estilos al botón activo
+        const activeBtn = document.getElementById('btn-' + tabId);
+        activeBtn.classList.add('text-blue-600', 'border-blue-600', 'active');
+        activeBtn.classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+        activeBtn.querySelector('svg').classList.remove('text-gray-400');
+        activeBtn.querySelector('svg').classList.add('text-blue-600');
+    }
+
+    // --- LÓGICA DEL MODAL DE CONSTANCIA ---
+    function abrirModalConstancia() {
+        document.getElementById('modal_constancia').classList.remove('hidden');
+    }
+    function cerrarModalConstancia() {
+        document.getElementById('modal_constancia').classList.add('hidden');
+    }
+    // --- AUTO-ABRIR MODAL DESDE LA HISTORIA CLÍNICA ---
+    window.addEventListener('DOMContentLoaded', (event) => {
+        if (window.location.search.includes('constancia=true')) {
+            abrirModalConstancia();
+            // Limpiamos la URL por estética para que no se quede el ?constancia=true pegado arriba
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
+
+    // --- LÓGICA DE LOS GRÁFICOS (CHART.JS) ---
+    document.addEventListener("DOMContentLoaded", function() {
+        // Recibir los datos JSON enviados desde Django
+        const fechas = JSON.parse('{{ fechas_json|escapejs }}');
+        const sisData = JSON.parse('{{ sis_json|escapejs }}');
+        const diaData = JSON.parse('{{ dia_json|escapejs }}');
+        const pesoData = JSON.parse('{{ peso_json|escapejs }}');
+
+        // Configuración Común
+        Chart.defaults.font.family = "'Inter', 'sans-serif'";
+        Chart.defaults.color = '#6B7280';
+
+        // 1. Gráfico de Tensión Arterial (Dos líneas: Sistólica y Diastólica)
+        const ctxTA = document.getElementById('chartTA').getContext('2d');
+        new Chart(ctxTA, {
+            type: 'line',
+            data: {
+                labels: fechas,
+                datasets: [
+                    {
+                        label: 'Sistólica (Alta)',
+                        data: sisData,
+                        borderColor: '#EF4444', // Rojo
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointBackgroundColor: '#EF4444',
+                        spanGaps: true // Conecta la línea si un día no se tomó
+                    },
+                    {
+                        label: 'Diastólica (Baja)',
+                        data: diaData,
+                        borderColor: '#3B82F6', // Azul
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointBackgroundColor: '#3B82F6',
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    y: { beginAtZero: false, suggestedMin: 60, suggestedMax: 160 }
+                }
+            }
+        });
+
+        // 2. Gráfico de Peso
+        const ctxPeso = document.getElementById('chartPeso').getContext('2d');
+        new Chart(ctxPeso, {
+            type: 'line',
+            data: {
+                labels: fechas,
+                datasets: [{
+                    label: 'Peso (Kg)',
+                    data: pesoData,
+                    borderColor: '#10B981', // Verde
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#10B981',
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false } // Ocultamos la leyenda por ser una sola línea
+                },
+                scales: {
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

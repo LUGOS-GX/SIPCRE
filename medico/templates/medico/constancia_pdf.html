@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Constancia Médica - {{ paciente.nombres }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: white !important; }
+            .hoja-carta { box-shadow: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 py-10 font-sans text-gray-900">
+
+    <div class="max-w-4xl mx-auto mb-4 flex justify-end gap-4 no-print">
+        <button onclick="window.close()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded shadow">Cerrar</button>
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Imprimir / Guardar PDF
+        </button>
+    </div>
+
+    <div class="hoja-carta bg-white mx-auto p-12 shadow-2xl relative" style="width: 21.59cm; min-height: 27.94cm; position: relative;">
+        
+        <div class="flex justify-between items-center border-b-2 border-gray-800 pb-6 mb-8">
+            <div class="w-1/4">
+                <div class="h-16 w-16 bg-red-600 rounded-full flex items-center justify-center text-white font-black text-2xl">+</div>
+            </div>
+            <div class="w-3/4 text-right">
+                <h1 class="text-2xl font-black uppercase tracking-widest text-gray-900">Constancia Médica</h1>
+                <p class="text-sm text-gray-600">Centro Médico Ambulatorio Cruz Roja</p>
+                <p class="text-xs text-gray-500 font-mono mt-1">Ref: {{ constancia.codigo_verificacion }}</p>
+            </div>
+        </div>
+
+        <div class="text-right mb-10 text-sm">
+            <p><strong>Fecha de Emisión:</strong> {{ constancia.fecha_emision|date:"d de F de Y" }}</p>
+        </div>
+
+        <div class="mb-12 text-justify leading-relaxed text-lg space-y-6">
+            <p>Por medio de la presente, el médico suscrito hace constar que el/la paciente:</p>
+            
+            <p class="font-bold text-center text-xl uppercase">
+                {{ paciente.nombres }} {{ paciente.apellidos }}
+            </p>
+            
+            <p class="text-center text-base mb-8">
+                Titular de la Cédula de Identidad Nro. <strong class="font-mono">{{ paciente.cedula }}</strong>
+            </p>
+
+            <div class="bg-gray-50 p-6 rounded border border-gray-100 font-medium">
+                {{ constancia.motivo_texto|linebreaks }}
+            </div>
+
+            <p class="pt-6">Constancia que se expide a petición de la parte interesada, para los fines legales que considere convenientes.</p>
+        </div>
+
+        <div class="absolute bottom-12 left-0 right-0 px-12">
+            <div class="flex justify-center items-end text-center">
+                <div class="border-t border-gray-800 pt-2 px-12 w-2/3 relative">
+                    {% if firma_b64 %}
+                        <img src="{{ firma_b64 }}" alt="Firma" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 h-20 opacity-80" style="mix-blend-mode: multiply;">
+                    {% endif %}
+                    {% if sello_b64 %}
+                        <img src="{{ sello_b64 }}" alt="Sello" class="absolute bottom-6 right-0 h-24 opacity-60" style="mix-blend-mode: multiply;">
+                    {% endif %}
+
+                    <p class="font-bold text-lg">Dr(a). {{ medico.usuario.first_name }} {{ medico.usuario.last_name }}</p>
+                    <p class="text-sm text-gray-600 uppercase">{{ medico.especialidad }}</p>
+                    <p class="text-xs text-gray-500 font-mono mt-1">M.P.P.S: {{ medico.mpps }} | C.M.L: {{ medico.colegio_medicos }}</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500); // Medio segundo para que carguen bien las imágenes de la firma
+        };
+    </script>
+</body>
+</html>

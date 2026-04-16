@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        @page { size: letter; margin: 2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 14px; color: #333; }
+        
+        /* HEADER */
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 15px; }
+        .titulo { font-size: 22px; font-weight: bold; color: #2c3e50; text-transform: uppercase; }
+        .subtitulo { font-size: 12px; color: #666; margin-top: 5px; }
+        
+        /* DATOS PACIENTE */
+        .datos-paciente { background-color: #f8f9fa; padding: 15px; margin-bottom: 30px; border-radius: 5px; border: 1px solid #eee; }
+        
+        /* SECCIONES */
+        .rp-title { font-size: 28px; font-family: serif; font-weight: bold; font-style: italic; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; margin-bottom: 15px; }
+        .ind-title { font-size: 14px; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; }
+        .contenido { line-height: 1.8; font-size: 13px; }
+        
+        /* FIRMAS */
+        .firmas { width: 100%; margin-top: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="titulo">Dr(a). {{ recipe.medico.nombre }}</div>
+        <div class="subtitulo">{{ recipe.medico.especialidad }}</div>
+        <div class="subtitulo">
+            MPPS: {{ recipe.medico.usuario.mpps }}
+            {% if recipe.medico.usuario.cm %} | CM: {{ recipe.medico.usuario.cm }}{% endif %}
+        </div>
+    </div>
+
+    <div class="datos-paciente">
+        <strong>Paciente:</strong> 
+        {% if recipe.nombre_paciente %}
+            {{ recipe.nombre_paciente }}
+        {% else %}
+            Paciente No Especificado
+        {% endif %}
+        <br>
+        <strong>C.I:</strong> 
+        {% if recipe.cedula_paciente %}
+            {{ recipe.cedula_paciente }}
+        {% else %}
+            N/A
+        {% endif %}
+        <br>
+        <strong>Fecha:</strong> {{ recipe.fecha|date:"d/m/Y" }}
+    </div>
+
+    <table width="100%">
+        <tr>
+            <td width="50%" valign="top" style="padding-right: 20px;">
+                <div class="rp-title">Rp.</div>
+                <div class="contenido">
+                    {{ recipe.medicamentos|linebreaksbr }}
+                </div>
+            </td>
+            
+            <td width="50%" valign="top" style="padding-left: 20px; border-left: 1px dashed #ccc;">
+                <div class="ind-title">Indicaciones</div>
+                <div class="contenido">
+                    {{ recipe.indicaciones|linebreaksbr }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="firmas">
+        <tr>
+            <td width="50%" align="center" valign="bottom">
+                {% if recipe.medico.firma %}
+                    <img src="{{ recipe.medico.firma.path }}" width="150" style="margin-bottom: -5px;"><br>
+                {% else %}
+                    <br><br><br><br>
+                {% endif %}
+                <div style="border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px;">
+                    <strong>Firma del Médico</strong>
+                </div>
+            </td>
+            <td width="50%" align="center" valign="bottom">
+                {% if recipe.medico.sello %}
+                    <img src="{{ recipe.medico.sello.path }}" width="110">
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

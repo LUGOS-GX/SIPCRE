@@ -1,0 +1,167 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPCRE - Cruz Roja</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='white'/><rect x='40' y='20' width='20' height='60' fill='%23B71C1C'/><rect x='20' y='40' width='60' height='20' fill='%23B71C1C'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cruzroja: {
+                            500: '#D32F2F',
+                            600: '#B71C1C', 
+                            700: '#C62828',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal flex flex-col min-h-screen">
+
+    {% if is_popup != '1' %}
+    <nav class="bg-white shadow-md fixed w-full z-10 top-0">
+        <div class="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-3 px-6">
+            
+            <div class="flex items-center">
+                <a class="text-cruzroja-600 no-underline hover:no-underline font-bold text-2xl lg:text-3xl flex items-center" href="/">
+                    <svg class="h-8 w-8 mr-2 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M10 1a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm-1 3v3H6v2h3v3h2v-3h3V8h-3V6H9z"/>
+                    </svg>
+                    SIPCRE
+                </a>
+            </div>
+
+            <div class="flex items-center w-auto" id="menu">
+                <ul class="flex justify-between items-center text-base text-gray-700 pt-0">
+                    
+                    {% if user.is_authenticated %}
+                        <li class="mr-6 flex items-center relative">
+                            
+                            {% if user.medico or user.rol == 'farmacia' %}
+                            <button onclick="toggleMenuPerfil()" class="flex items-center focus:outline-none transition transform hover:scale-105">
+                            {% else %}
+                            <div class="flex items-center">
+                            {% endif %}
+                            
+                                <div class="text-right mr-3 hidden sm:block">
+                                    <p class="font-bold text-gray-900 text-sm">{{ user.first_name }} {{ user.last_name }}</p>
+                                    <p class="text-xs text-gray-500 uppercase tracking-wide">{{ user.get_rol_display }}</p>
+                                </div>
+                                
+                                <div class="h-10 w-10 rounded-full bg-red-100 text-cruzroja-600 flex items-center justify-center font-bold border border-red-200 overflow-hidden">
+                                    {% if user.medico and user.medico.foto_perfil %}
+                                        <img src="{{ user.medico.foto_perfil.url }}" alt="Perfil" class="h-full w-full object-cover">
+                                    {% else %}
+                                        {{ user.first_name|slice:":1" }}
+                                    {% endif %}
+                                </div>
+                                
+                                {% if user.medico or user.rol == 'farmacia' %}
+                                    <svg class="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                {% endif %}
+
+                            {% if user.medico or user.rol == 'farmacia' %}
+                            </button>
+                            
+                            <div id="menuPerfil" class="hidden absolute right-0 top-full mt-2 w-56 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1">
+                                    {% if user.medico %}
+                                        <a href="{% url 'editar_perfil_medico' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 border-b border-gray-100 transition">Modificar información</a>
+                                        <a href="{% url 'cargar_firma_sello' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Cargar firma y sello</a>
+                                    {% elif user.rol == 'farmacia' %}
+                                        <a href="{% url 'editar_perfil_farmacia' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            </div>
+                            {% endif %}
+                        </li>
+                        <li>
+                            <a class="inline-block bg-gray-200 hover:bg-gray-300 text-gray-600 font-bold py-2 px-4 rounded shadow transition text-sm" href="{% url 'logout' %}">
+                                Salir
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            {% if request.resolver_match.url_name != 'landing_page' and request.resolver_match.url_name != 'login' %}
+                                <a class="inline-block text-cruzroja-600 font-bold py-2 px-4 no-underline hover:text-cruzroja-800 hover:underline" href="{% url 'login' %}">
+                                    Acceder
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                    
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container mx-auto {% if is_popup != '1' %}mt-24{% else %}mt-6{% endif %} px-4 md:px-0 flex-grow pb-10">
+        
+        {% if messages %}
+            <div class="max-w-4xl mx-auto mb-6">
+                {% for message in messages %}
+                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 shadow-sm rounded-r mb-2" role="alert">
+                    <p>{{ message }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    
+    </div>
+
+    {% if is_popup != '1' %}
+    <footer class="w-full bg-gray-900 text-gray-300 py-10 mt-16 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+        
+            <div class="mb-4 md:mb-0 text-center md:text-left">
+                <h3 class="text-xl font-bold text-white tracking-wider">SIPCRE</h3>
+                <p class="text-sm mt-1">Sistema de Información Para la Cruz Roja Especializado.</p>
+            </div>
+        
+            <div class="text-sm text-center md:text-right">
+                <p>&copy; 2026 Todos los derechos reservados.</p>
+                <p class="text-gray-500 mt-1">Desarrollado por Luis G. Orellana</p>
+            </div>
+        
+        </div>
+    </footer>
+    {% endif %}
+
+    <script>
+        function toggleMenuPerfil() {
+            const menu = document.getElementById('menuPerfil');
+            if(menu) {
+                menu.classList.toggle('hidden');
+            }
+        }
+
+        // Cierra el menú al hacer clic en cualquier parte de la pantalla
+        window.onclick = function(event) {
+            if (!event.target.closest('.relative')) {
+                const menu = document.getElementById('menuPerfil');
+                if (menu && !menu.classList.contains('hidden')) {
+                    menu.classList.add('hidden');
+                }
+            }
+        }
+    </script>
+
+    <script src="{% static 'js/validar_cedula.js' %}"></script>
+    <script src="{% static 'js/botones_carga.js' %}"></script>
+
+</body>
+</html>

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Historial de Farmacia</h1>
+            <p class="mt-1 text-sm text-gray-500">Kardex inmutable de movimientos y trazabilidad de inventario.</p>
+        </div>
+        
+        <div class="flex flex-wrap gap-3">
+            <a href="{% url 'dashboard_farmacia' %}" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded shadow-sm flex items-center transition">
+                ← Volver al tablero principal
+            </a>
+        </div>
+    </div>
+
+    <div class="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <form method="GET" action="{% url 'kardex_farmacia' %}" id="form-buscador-kardex" class="flex flex-col sm:flex-row gap-4">
+            
+            <div class="relative flex-grow">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" name="q" id="input-buscador" value="{{ query }}" class="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:text-sm transition-all" placeholder="Buscar por medicamento, referencia o tipo...">
+            </div>
+
+            <div class="relative w-full sm:w-48">
+                <input type="date" name="fecha" value="{{ fecha_filtro }}" onchange="this.form.submit()" class="block w-full px-4 py-3 border border-gray-300 rounded-md leading-5 bg-gray-50 text-gray-700 focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 sm:text-sm transition-all" title="Filtrar por fecha exacta">
+            </div>
+            
+            {% if query or fecha_filtro %}
+            <div class="flex items-center">
+                <a href="{% url 'kardex_farmacia' %}" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-3 rounded-md text-sm font-bold transition flex items-center whitespace-nowrap">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    Limpiar
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-800 text-white">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Fecha / Hora</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Medicamento</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Movimiento</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Cantidad</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Saldo Final</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">Referencia</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider">Detalles</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for mov in page_obj %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                        {{ mov.fecha|date:"d/m/Y" }} <br> <span class="text-xs">{{ mov.fecha|time:"h:i A" }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="font-bold text-gray-900">{{ mov.medicamento.nombre }}</span>
+                        <span class="text-gray-500 block text-xs">{{ mov.medicamento.concentracion }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if mov.tipo_movimiento == 'ENTRADA' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-green-100 text-green-800">ENTRADA</span>
+                        {% elif mov.tipo_movimiento == 'SALIDA' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800">SALIDA</span>
+                        {% elif mov.tipo_movimiento == 'DEVOLUCION' %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-yellow-100 text-yellow-800">DEVOLUCIÓN</span>
+                        {% else %}
+                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-gray-100 text-gray-800">AJUSTE</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center font-bold {% if mov.cantidad > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        {% if mov.cantidad > 0 %}+{% endif %}{{ mov.cantidad }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-black text-gray-900">
+                        {{ mov.stock_resultante }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ mov.referencia }} <br>
+                        <span class="text-xs text-gray-400">Usuario: {{ mov.usuario.username|default:"Sistema" }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if mov.orden_relacionada %}
+                        <button onclick="verDetalleOrden(`{{ mov.orden_relacionada.id }}`, `{{ mov.orden_relacionada.paciente.nombres|default:mov.orden_relacionada.nombre_paciente|escapejs }}`, `{{ mov.orden_relacionada.medico.nombre|default:'N/A (Venta Directa)'|escapejs }}`, `{{ mov.fecha|date:'d/m/Y h:i A' }}`)" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-2 rounded-full transition" title="Ver Orden">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-300">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-10 text-center text-gray-500 italic">
+                        No se encontraron movimientos en el Kardex.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if page_obj.has_other_pages %}
+        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div><p class="text-sm text-gray-700">Mostrando <span class="font-medium">{{ page_obj.start_index }}</span> a <span class="font-medium">{{ page_obj.end_index }}</span> de <span class="font-medium">{{ page_obj.paginator.count }}</span> movimientos</p></div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        {% if page_obj.has_previous %}
+                            <a href="?q={{ query }}&fecha={{ fecha_filtro }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">Anterior</a>
+                        {% endif %}
+                        
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if page_obj.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-bold text-blue-600">{{ i }}</span>
+                            {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                <a href="?q={{ query }}&fecha={{ fecha_filtro }}&page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">{{ i }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?q={{ query }}&fecha={{ fecha_filtro }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">Siguiente</a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="modal_orden" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center z-50 transition-opacity">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col transform transition-all">
+        <div class="bg-blue-600 px-6 py-4 flex justify-between items-center">
+            <h3 class="text-white font-bold text-lg flex items-center">Detalle de Salida (Orden #<span id="modal_id_orden"></span>)</h3>
+            <button type="button" onclick="document.getElementById('modal_orden').classList.add('hidden')" class="text-blue-100 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <p class="text-xs uppercase font-bold text-gray-500">Paciente Atendido</p>
+                <p id="modal_paciente" class="text-lg font-bold text-gray-900"></p>
+            </div>
+            <div>
+                <p class="text-xs uppercase font-bold text-gray-500">Médico Tratante / Vendedor</p>
+                <p id="modal_medico" class="text-base text-gray-800"></p>
+            </div>
+            <div>
+                <p class="text-xs uppercase font-bold text-gray-500">Fecha Exacta del Movimiento</p>
+                <p id="modal_fecha" class="text-base font-mono text-gray-600"></p>
+            </div>
+        </div>
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+            <button type="button" onclick="document.getElementById('modal_orden').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Buscador Reactivo
+    document.addEventListener("DOMContentLoaded", function() {
+        const input = document.getElementById("input-buscador");
+        const form = document.getElementById("form-buscador-kardex");
+        let timeoutId;
+        if (input && form) {
+            if(input.value) {
+                input.focus();
+                let val = input.value; input.value = ''; input.value = val;
+            }
+            input.addEventListener("input", function() {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => { form.submit(); }, 600); 
+            });
+        }
+    });
+
+    // Abrir Modal
+    function verDetalleOrden(id, paciente, medico, fecha) {
+        document.getElementById('modal_id_orden').textContent = id;
+        document.getElementById('modal_paciente').textContent = paciente;
+        document.getElementById('modal_medico').textContent = medico !== 'N/A (Venta Directa)' ? 'Dr(a). ' + medico : medico;
+        document.getElementById('modal_fecha').textContent = fecha;
+        document.getElementById('modal_orden').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

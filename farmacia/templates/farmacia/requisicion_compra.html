@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requisición de Compras - SIPCRE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuraciones específicas para que el PDF salga perfecto */
+        @media print {
+            @page { margin: 1.5cm; size: A4 portrait; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+        }
+        body { background-color: #f3f4f6; }
+        .hoja-a4 {
+            background: white;
+            width: 21cm;
+            min-height: 29.7cm;
+            margin: 2cm auto;
+            padding: 2cm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="text-gray-800 font-sans">
+
+    <div class="no-print fixed top-4 right-4 flex gap-3">
+        <a href="{% url 'dashboard_farmacia' %}" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded shadow font-bold transition">
+            Volver al Sistema
+        </a>
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow font-bold flex items-center transition">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Guardar como PDF / Imprimir
+        </button>
+    </div>
+
+    <div class="hoja-a4">
+        
+        <div class="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-8">
+            <div>
+                <h1 class="text-3xl font-black text-gray-900 tracking-tight">SIPCRE</h1>
+                <p class="text-sm font-bold text-gray-600 uppercase tracking-widest mt-1">Módulo de Farmacia</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-xl font-bold text-gray-800">REQUISICIÓN DE COMPRAS</h2>
+                <p class="text-sm text-gray-500 mt-1">N° de Documento: <span class="font-mono text-gray-900">REQ-{{ fecha_emision|date:"Ymd-Hi" }}</span></p>
+                <p class="text-sm text-gray-500">Fecha de Emisión: <span class="text-gray-900">{{ fecha_emision|date:"d/m/Y" }}</span></p>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <p class="text-justify text-sm mb-4">
+                Por medio de la presente, el departamento de Farmacia solicita la reposición prioritaria de los siguientes insumos médicos, los cuales han alcanzado o descendido por debajo del límite de stock crítico establecido en el sistema, comprometiendo la capacidad operativa del área.
+            </p>
+        </div>
+
+        <table class="w-full text-sm mb-8 border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-100 text-gray-800 uppercase text-xs">
+                    <th class="border border-gray-300 px-4 py-3 text-center w-12">#</th>
+                    <th class="border border-gray-300 px-4 py-3 text-left">Descripción del Insumo / Medicamento</th>
+                    <th class="border border-gray-300 px-4 py-3 text-center w-24">Stock Actual</th>
+                    <th class="border border-gray-300 px-4 py-3 text-center w-24">Stock Mínimo</th>
+                    <th class="border border-gray-300 px-4 py-3 text-center w-32">Cant. Solicitada</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in medicamentos %}
+                <tr>
+                    <td class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-500">{{ forloop.counter }}</td>
+                    <td class="border border-gray-300 px-4 py-3">
+                        <span class="font-bold text-gray-900">{{ med.nombre }}</span> {{ med.concentracion }} <br>
+                        <span class="text-xs text-gray-500">{{ med.presentacion }}</span>
+                    </td>
+                    <td class="border border-gray-300 px-4 py-3 text-center font-bold text-red-600">{{ med.stock_actual }}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-center text-gray-600">{{ med.stock_minimo }}</td>
+                    <td class="border border-gray-300 px-4 py-3 text-center bg-gray-50"></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="border border-gray-300 px-4 py-8 text-center text-gray-500 italic">
+                        Actualmente no hay medicamentos en estado de stock crítico.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="mt-24 grid grid-cols-2 gap-12 text-center">
+            <div>
+                <div class="border-t border-gray-800 pt-2 w-3/4 mx-auto">
+                    <p class="font-bold text-gray-800">Solicitado por (Farmacia)</p>
+                    <p class="text-sm text-gray-500 mt-1">{{ farmaceuta.get_full_name|default:farmaceuta.username }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Firma y Sello</p>
+                </div>
+            </div>
+            <div>
+                <div class="border-t border-gray-800 pt-2 w-3/4 mx-auto">
+                    <p class="font-bold text-gray-800">Aprobado por (Dirección/Compras)</p>
+                    <p class="text-sm text-gray-500 mt-1">&nbsp;</p>
+                    <p class="text-xs text-gray-400 mt-1">Firma y Sello</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Un pequeño retraso para asegurar que Tailwind cargue los estilos
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

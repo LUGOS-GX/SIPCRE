@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        
+        <div class="flex-shrink-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate flex items-center">
+                <svg class="w-8 h-8 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Panel Laboratorio
+            </h2>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            
+            <div class="relative rounded-md shadow-sm flex-grow sm:w-72 lg:w-80">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="buscador_lab" value="{{ query }}" placeholder="Buscar paciente o N°..." class="focus:ring-purple-500 focus:border-purple-500 block w-full pl-10 pr-10 sm:text-sm border border-gray-300 rounded-md py-2.5 bg-gray-50 text-gray-900 font-medium transition-colors" onkeyup="buscarInteligente(this.value)">
+                {% if query %}
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <a href="#" onclick="limpiarBusqueda(event)" class="text-gray-400 hover:text-red-500 transition-colors" title="Limpiar búsqueda">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex-shrink-0">
+                {% if pendientes_count > 0 %}
+                <span class="inline-flex justify-center w-full sm:w-auto items-center px-4 py-2.5 rounded-md shadow-sm text-sm font-bold text-white bg-red-600 animate-pulse whitespace-nowrap border border-red-700">
+                    {{ pendientes_count }} Nuevas
+                </span>
+                {% else %}
+                <span class="inline-flex justify-center w-full sm:w-auto items-center px-4 py-2.5 rounded-md shadow-sm text-sm font-bold text-gray-700 bg-gray-200 whitespace-nowrap border border-gray-300">
+                    Sin novedades
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="border-b border-gray-200 mb-6">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <button onclick="cambiarPestana('activas')" id="btn-activas" class="border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition">
+                Buzón de Trabajo
+            </button>
+            <button onclick="cambiarPestana('historial')" id="btn-historial" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition">
+                Historial 
+            </button>
+        </nav>
+    </div>
+
+    <div id="vista-activas" class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200 block">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Orden / Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Paciente</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Médico</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for orden in page_activas %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-900">#{{ orden.id|stringformat:"05d" }}</div>
+                            <div class="text-xs text-gray-500">{{ orden.fecha_solicitud|date:"d M Y - h:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-900">{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% elif orden.paciente %}{{ orden.paciente.nombres }}{% else %}N/A{% endif %}</div>
+                            <div class="text-xs text-gray-500">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% elif orden.paciente %}{{ orden.paciente.cedula }}{% else %}N/A{% endif %}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">Dr(a). {{ orden.medico.usuario.last_name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if orden.estado == 'Pendiente' %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 border border-red-200">Pendiente</span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">Procesando</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="flex justify-end items-center space-x-2">
+                                <a href="{% url 'detalle_orden' orden.id %}" class="text-purple-600 hover:text-purple-900 font-bold bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded transition">
+                                    {% if orden.estado == 'Pendiente' %}Abrir Orden{% else %}Subir Resultado{% endif %}
+                                </a>
+                                
+                                <form action="{% url 'cancelar_orden_lab' orden.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea DESCARTAR esta orden?\n\nEl paciente no recibirá resultados y la orden se moverá al historial como CANCELADA.');">
+                                    {% csrf_token %}
+                                    <button type="submit" title="Descartar Orden" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                            <p class="text-lg font-medium">No hay solicitudes por el momento.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_activas.has_other_pages %}
+        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Mostrando <span class="font-medium">{{ page_activas.start_index }}</span> a <span class="font-medium">{{ page_activas.end_index }}</span> de <span class="font-medium">{{ page_activas.paginator.count }}</span> órdenes
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_activas.has_previous %}
+                            <a href="?page_activas={{ page_activas.previous_page_number }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=activas" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Anterior</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+                        
+                        {% for i in page_activas.paginator.page_range %}
+                            {% if page_activas.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-purple-500 bg-purple-50 text-sm font-bold text-purple-600">{{ i }}</span>
+                            {% else %}
+                                <a href="?page_activas={{ i }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=activas" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ i }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_activas.has_next %}
+                            <a href="?page_activas={{ page_activas.next_page_number }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=activas" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Siguiente</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 010 1.414l-4-4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="vista-historial" class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200 hidden">
+        
+        <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Resultados Entregados</h3>
+            <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-md border border-gray-300 shadow-sm">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <label for="fecha_filtro" class="text-sm font-bold text-gray-600 whitespace-nowrap">Filtrar:</label>
+                <input type="date" id="fecha_filtro" value="{{ fecha_filtro }}" onchange="filtrarPorFecha(this.value)" class="border-none text-sm text-gray-800 focus:ring-0 py-0 cursor-pointer bg-transparent">
+                {% if fecha_filtro %}
+                    <a href="#" onclick="limpiarFecha(event)" class="text-gray-400 hover:text-red-500 ml-1 transition" title="Limpiar fecha">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-white">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Orden</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Paciente</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Fecha Finalizado</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for orden in page_historial %}
+                    <tr class="hover:bg-gray-50 transition opacity-90">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-700">#{{ orden.id|stringformat:"05d" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-700">{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% elif orden.paciente %}{{ orden.paciente.nombres }}{% else %}N/A{% endif %}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-600">{{ orden.fecha_resultado|date:"d M Y - h:i A" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {% if orden.estado == 'Cancelada' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-md text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Rechazada
+                                </span>
+                            {% else %}
+                                <div class="flex justify-end space-x-3">
+                                    <a href="{% url 'detalle_orden' orden.id %}" class="text-gray-600 hover:text-purple-700 font-bold bg-gray-100 hover:bg-purple-50 px-3 py-2 rounded transition border border-gray-200">
+                                        Ver Detalles
+                                    </a>
+                                    
+                                    {% if orden.resultados_archivo %}
+                                    <a href="{{ orden.resultados_archivo.url }}" target="_blank" class="text-blue-600 hover:text-white font-bold bg-blue-50 hover:bg-blue-600 px-3 py-2 rounded transition flex items-center border border-blue-200">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        PDF
+                                    </a>
+                                    {% else %}
+                                    <span class="text-gray-400 px-3 py-2">Sin PDF</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-10 text-center text-gray-500">
+                            <p class="text-lg font-medium">No hay resultados que coincidan con su búsqueda.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_historial.has_other_pages %}
+        <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Mostrando <span class="font-medium">{{ page_historial.start_index }}</span> a <span class="font-medium">{{ page_historial.end_index }}</span> de <span class="font-medium">{{ page_historial.paginator.count }}</span> órdenes
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_historial.has_previous %}
+                            <a href="?page_historial={{ page_historial.previous_page_number }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=historial" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Anterior</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+                        
+                        {% for i in page_historial.paginator.page_range %}
+                            {% if page_historial.number == i %}
+                                <span class="relative inline-flex items-center px-4 py-2 border border-purple-500 bg-purple-50 text-sm font-bold text-purple-600">{{ i }}</span>
+                            {% else %}
+                                <a href="?page_historial={{ i }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=historial" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">{{ i }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_historial.has_next %}
+                            <a href="?page_historial={{ page_historial.next_page_number }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=historial" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <span class="sr-only">Siguiente</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-8 mb-6">
+        <button id="btn_toggle_stats_lab" class="w-full bg-white border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50 text-purple-600 font-bold py-4 px-6 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center group" onclick="toggleEstadisticasLab()">
+            <svg class="w-6 h-6 mr-3 text-purple-400 group-hover:text-purple-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span id="texto_btn_stats_lab">Ver Estadísticas de Laboratorio e Imagenología</span>
+            <svg id="icono_flecha_stats_lab" class="w-5 h-5 ml-auto transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+
+        <div id="panel_estadisticas_lab" class="hidden mt-4 bg-white p-6 rounded-lg shadow-lg border border-gray-200 opacity-0 transition-opacity duration-500">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-4 gap-4">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                    <span class="bg-purple-500 w-2 h-6 mr-2 rounded-full"></span>
+                    Análisis de Demanda
+                </h3>
+                
+                <div class="flex items-center space-x-3">
+                    <select id="filtro_periodo_lab" class="border border-gray-300 rounded-md px-4 py-2 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-50 hover:bg-white transition cursor-pointer" onchange="cargarEstadisticasLab()">
+                        <option value="semana">Últimos 7 días</option>
+                        <option value="mes" selected>Últimos 30 días</option>
+                        <option value="ano">Últimos 12 meses</option>
+                    </select>
+                    
+                    <button type="button" onclick="exportarEstadisticasLabExcel()" title="Exportar Estadísticas a Excel" class="text-sm bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold py-2 px-4 rounded-md border border-purple-200 transition flex items-center shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Exportar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                    <h4 class="text-xs font-bold text-gray-500 mb-4 text-center uppercase tracking-wider">Top 10 Exámenes Más Solicitados</h4>
+                    <div class="relative h-72 w-full flex justify-center">
+                        <canvas id="chartTopExamenes"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 shadow-inner">
+                    <h4 class="text-xs font-bold text-purple-600 mb-4 text-center uppercase tracking-wider">Volumen de Órdenes (Tendencia)</h4>
+                    <div class="relative h-72 w-full flex justify-center">
+                        <canvas id="chartFlujoLab"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // === LÓGICA DE PESTAÑAS Y ESTADO ===
+    let tabActual = '{{ tab_activa }}';
+
+    function cambiarPestana(pestana) {
+        tabActual = pestana;
+        let vistaActivas = document.getElementById('vista-activas');
+        let vistaHistorial = document.getElementById('vista-historial');
+        let btnActivas = document.getElementById('btn-activas');
+        let btnHistorial = document.getElementById('btn-historial');
+
+        const claseInactiva = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition";
+        const claseActiva = "border-purple-500 text-purple-600 whitespace-nowrap py-4 px-1 border-b-2 font-bold text-sm transition";
+
+        if (pestana === 'activas') {
+            vistaActivas.classList.remove('hidden');
+            vistaHistorial.classList.add('hidden');
+            btnActivas.className = claseActiva;
+            btnHistorial.className = claseInactiva;
+        } else {
+            vistaActivas.classList.add('hidden');
+            vistaHistorial.classList.remove('hidden');
+            btnActivas.className = claseInactiva;
+            btnHistorial.className = claseActiva;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        cambiarPestana(tabActual);
+    });
+
+    // === LÓGICA DE FILTROS COMBINADOS (TEXTO + FECHA) ===
+    function actualizarFiltros(nuevaQuery, nuevaFecha) {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Manejar el Buscador de Texto
+        if (nuevaQuery !== null) {
+            if (nuevaQuery.trim() !== '') {
+                urlParams.set('q', nuevaQuery);
+            } else {
+                urlParams.delete('q');
+            }
+        }
+
+        // Manejar el Filtro de Fecha
+        if (nuevaFecha !== null) {
+            if (nuevaFecha.trim() !== '') {
+                urlParams.set('fecha', nuevaFecha);
+            } else {
+                urlParams.delete('fecha');
+            }
+        }
+        
+        // Mantener pestaña y resetear páginas
+        urlParams.set('tab', tabActual);
+        urlParams.delete('page_activas');
+        urlParams.delete('page_historial');
+        
+        window.location.search = urlParams.toString();
+    }
+
+    // Buscador Inteligente (Debounce de 0.5s)
+    let timeoutBusqueda = null;
+    function buscarInteligente(valor) {
+        clearTimeout(timeoutBusqueda);
+        timeoutBusqueda = setTimeout(() => {
+            actualizarFiltros(valor, null);
+        }, 500); 
+    }
+
+    // Limpiar Buscador
+    function limpiarBusqueda(e) {
+        e.preventDefault();
+        document.getElementById('buscador_lab').value = '';
+        actualizarFiltros('', null);
+    }
+
+    // Filtro por Fecha (Al seleccionar en el calendario)
+    function filtrarPorFecha(fecha) {
+        actualizarFiltros(null, fecha);
+    }
+
+    // Limpiar Fecha
+    function limpiarFecha(e) {
+        e.preventDefault();
+        document.getElementById('fecha_filtro').value = '';
+        actualizarFiltros(null, '');
+    }
+
+    // === LÓGICA DE ESTADÍSTICAS DE LABORATORIO ===
+    let chartTopExamenesInst = null;
+    let chartFlujoLabInst = null;
+    let statsLabCargadas = false;
+
+    function toggleEstadisticasLab() {
+        const panel = document.getElementById('panel_estadisticas_lab');
+        const flecha = document.getElementById('icono_flecha_stats_lab');
+        
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            setTimeout(() => panel.classList.remove('opacity-0'), 10); 
+            flecha.classList.add('rotate-180');
+            
+            if (!statsLabCargadas) {
+                cargarEstadisticasLab();
+                statsLabCargadas = true;
+            }
+        } else {
+            panel.classList.add('opacity-0');
+            flecha.classList.remove('rotate-180');
+            setTimeout(() => panel.classList.add('hidden'), 500);
+        }
+    }
+
+    function cargarEstadisticasLab() {
+        const periodo = document.getElementById('filtro_periodo_lab').value;
+        const url = `{% url 'api_estadisticas_laboratorio' %}?periodo=${periodo}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Dibujar Gráfico de Dona (Top Exámenes)
+                dibujarDonaLab(document.getElementById('chartTopExamenes'), chartTopExamenesInst, data.top_examenes, ['#9333EA', '#A855F7', '#C084FC', '#D8B4FE', '#E9D5FF', '#F3E8FF', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'], (inst) => chartTopExamenesInst = inst);
+                
+                // Dibujar Gráfico de Línea (Flujo de Órdenes)
+                dibujarLineaLab(document.getElementById('chartFlujoLab'), chartFlujoLabInst, data.tendencia, (inst) => chartFlujoLabInst = inst);
+            })
+            .catch(error => console.error('Error al cargar estadísticas:', error));
+    }
+
+    function dibujarDonaLab(canvas, instanciaAnterior, datos, colores, callbackInstancia) {
+        if (instanciaAnterior) instanciaAnterior.destroy();
+        const ctx = canvas.getContext('2d');
+        const nuevaInstancia = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: datos.labels.length > 0 ? datos.labels : ['Sin datos'],
+                datasets: [{
+                    data: datos.data.length > 0 ? datos.data : [1],
+                    backgroundColor: datos.data.length > 0 ? colores : ['#E5E7EB'],
+                    borderWidth: 2, hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: {size: 11} } } },
+                cutout: '50%'
+            }
+        });
+        callbackInstancia(nuevaInstancia);
+    }
+
+    function dibujarLineaLab(canvas, instanciaAnterior, datos, callbackInstancia) {
+        if (instanciaAnterior) instanciaAnterior.destroy();
+        const ctx = canvas.getContext('2d');
+        const nuevaInstancia = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: datos.labels.length > 0 ? datos.labels : ['Sin datos'],
+                datasets: [{
+                    label: 'Órdenes Creadas',
+                    data: datos.data.length > 0 ? datos.data : [0],
+                    borderColor: '#9333EA', // Morado
+                    backgroundColor: 'rgba(147, 51, 234, 0.1)', 
+                    borderWidth: 3, pointBackgroundColor: '#9333EA',
+                    tension: 0.4, fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
+            }
+        });
+        callbackInstancia(nuevaInstancia);
+    }
+
+    // Descarga de Excel de Estadísticas
+    function exportarEstadisticasLabExcel() {
+        const periodo = document.getElementById('filtro_periodo_lab').value;
+        const url = `{% url 'exportar_estadisticas_lab_excel' %}?periodo=${periodo}`;
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

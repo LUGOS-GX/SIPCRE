@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    /* Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+</style>
+
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">
+            {% if modo_control %}Consulta / Control{% else %}Nueva Historia Médica{% endif %}
+        </h1>
+        <a href="{% url 'dashboard_medico' %}" class="text-gray-500 hover:text-red-600 font-bold text-sm transition flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            Cancelar / Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-green-100 text-green-700 border-l-4 border-green-500{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <div class="lg:col-span-1 space-y-6">
+                
+                <div class="rounded-lg shadow-md overflow-hidden border border-blue-200">
+                    <div class="bg-blue-600 text-white px-4 py-2 font-bold text-sm uppercase tracking-wide text-center">
+                        Datos del Paciente
+                    </div>
+                    <div class="bg-blue-50 p-4">
+                        
+                        {% if modo_control %}
+                            <input type="hidden" name="tipo_registro" value="control">
+                            <input type="hidden" name="paciente_control_id" value="{{ paciente_control.id }}">
+                            
+                            <div class="space-y-2">
+                                <p class="text-gray-800 text-sm font-bold truncate">{{ paciente_control.nombres }}</p>
+                                <p class="text-gray-600 text-xs font-mono bg-white inline-block px-2 py-1 rounded border border-gray-200">C.I: {{ paciente_control.cedula }}</p>
+                                
+                                {% if expediente_control.tipo_sangre %}
+                                    <p class="text-gray-600 text-xs mt-1">Sangre: <span class="text-red-600 font-bold">{{ expediente_control.tipo_sangre }}</span></p>
+                                {% endif %}
+                            </div>
+
+                            {% if expediente_control.alergias %}
+                                <div class="mt-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded shadow-sm animate-pulse">
+                                    <div class="flex items-center mb-1">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                        <p class="text-[10px] font-bold uppercase tracking-wider">Alerta Alergias</p>
+                                    </div>
+                                    <p class="text-xs font-bold leading-tight">{{ expediente_control.alergias }}</p>
+                                </div>
+                            {% endif %}
+                            
+                        {% else %}
+                            <div class="mb-4 flex flex-col space-y-2 bg-white p-2 rounded border border-blue-200">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="tipo_registro" value="existente" checked onclick="togglePaciente('existente')" class="form-radio h-4 w-4 text-blue-600">
+                                    <span class="ml-2 text-xs font-bold text-gray-700">Paciente Agendado</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="tipo_registro" value="nuevo" onclick="togglePaciente('nuevo')" class="form-radio h-4 w-4 text-red-600">
+                                    <span class="ml-2 text-xs font-bold text-red-600"> Nuevo Px. </span>
+                                </label>
+                            </div>
+
+                            <div id="bloque_existente" class="animate-fade-in">
+                                <label class="block text-xs font-bold text-blue-900 mb-1">Paciente a Atender</label>
+        
+                                <select name="paciente" class="w-full border border-blue-300 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-600 font-bold text-gray-700">
+            
+                                    <option value="" disabled {% if not cita_preseleccionada_id %}selected{% endif %}>
+                                        -- Seleccione un paciente de la lista --
+                                    </option>
+            
+                                    {% for cita in citas_pendientes %}
+                                        <option value="{{ cita.paciente.id }}" 
+                                            {% if cita.id == cita_preseleccionada_id %}selected{% endif %}>
+                                            {{ cita.hora|time:"H:i" }} - {{ cita.paciente.nombres }} ({{ cita.paciente.cedula }})
+                                        </option>
+                                    {% empty %}
+                                        <option disabled>No hay citas agendadas para hoy</option>
+                                    {% endfor %}
+
+                                </select>
+                            </div>
+
+                            <div id="bloque_nuevo" class="hidden space-y-3 animate-fade-in">
+                                <div>
+                                    <label class="block text-xs font-bold text-blue-900 mb-1">Cédula (Max 40M)</label>
+                                    <div class="flex shadow-sm">
+                                        <select name="nuevo_nacionalidad" class="border border-blue-300 rounded-l px-1 py-1 text-xs bg-white w-1/3 focus:outline-none">
+                                            <option value="V">V</option>
+                                            <option value="E">E</option>
+                                        </select>
+                                        <input type="number" id="nuevo_cedula" name="nuevo_cedula" placeholder="12345678" class="w-2/3 border border-blue-300 border-l-0 rounded-r px-2 py-1 text-xs focus:outline-none focus:border-blue-600" >
+                                    </div>
+                                    
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-blue-900 mb-1">Nombre Completo</label>
+                                    <input type="text" name="nuevo_nombre" placeholder="Juan Pérez" class="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-600">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-blue-900 mb-1">Tipo de Sangre</label>
+                                    <select name="nuevo_sangre" class="w-full border border-blue-300 rounded px-1 py-1 text-xs bg-white">
+                                        <option value="O+">O+</option>
+                                        <option value="A+">A+</option>
+                                        <option value="B+">B+</option>
+                                        <option value="AB+">AB+</option>
+                                        <option value="O-">O-</option>
+                                        <option value="A-">A-</option>
+                                        <option value="B-">B-</option>
+                                        <option value="AB-">AB-</option>
+                                    </select>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="rounded-lg shadow-md overflow-hidden border border-green-200">
+                    <div class="bg-green-600 text-white px-4 py-2 font-bold text-sm uppercase tracking-wide text-center">
+                        Signos Vitales
+                    </div>
+                    <div class="bg-green-50 p-4 space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">TA (mmHg)</label>
+                                <input type="text" name="ta" placeholder="120/80" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">FC (lpm)</label>
+                                <input type="number" name="fc" placeholder="80" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">FR (rpm)</label>
+                                <input type="number" name="fr" placeholder="18" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">Temp (°C)</label>
+                                <input type="number" step="0.1" name="temp" placeholder="36.5" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">Peso (Kg)</label>
+                                <input type="number" step="0.01" name="peso" placeholder="70.5" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">Estatura (m)</label>
+                                <input type="number" step="0.01" name="talla" placeholder="1.75" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                             <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">SatO2 (%)</label>
+                                <input type="number" name="sato2" placeholder="98" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                             <div>
+                                <label class="block text-[10px] uppercase font-bold text-green-900">Glicemia</label>
+                                <input type="number" name="glic" placeholder="90" class="w-full border border-green-300 rounded px-2 py-1 text-sm text-center focus:border-green-600 focus:outline-none bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-lg shadow-md overflow-hidden border border-gray-300">
+                    <div class="bg-gray-600 text-white px-4 py-2 font-bold text-sm uppercase tracking-wide text-center">
+                        Anexos / Archivos
+                    </div>
+                    <div class="bg-gray-100 p-4 space-y-2">
+                        <select name="tipo_anexo" class="w-full border border-gray-400 rounded px-2 py-1 text-xs bg-white">
+                            <option value="Lab">Laboratorio</option>
+                            <option value="Img">Imagenología</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                        <input type="file" name="archivo_anexo" class="w-full text-[10px] text-gray-700">
+                    </div>
+                </div>
+
+                <div class="mt-6 rounded-lg shadow-md overflow-hidden border border-indigo-200 animate-fade-in">
+                    <div class="bg-indigo-600 text-white px-4 py-2 font-bold text-sm uppercase tracking-wide text-center">
+                        Récipes
+                    </div>
+                    <div class="bg-indigo-50 p-4">
+                        <p class="text-[10px] text-indigo-800 mb-3 text-center font-medium leading-tight">Cree un récipe y/o envíelo a farmacia.</p>
+                            <button type="button" onclick="abrirRecipePopup()" class="w-full bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 px-4 rounded border border-indigo-300 shadow-sm transition flex justify-center items-center text-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Crear récipe nuevo
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-3 space-y-6">
+                
+                <div class="bg-white shadow-lg rounded-lg p-6 border-l-8 border-purple-600">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <span class="bg-purple-100 text-purple-700 py-1 px-3 rounded-full text-xs mr-2 uppercase tracking-wider">Sección I</span>
+                        Historia Clínica
+                    </h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Motivo de Consulta</label>
+                        <textarea name="motivo" rows="2" placeholder="Ej: Dolor abdominal fuerte..." class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500 transition resize-none overflow-hidden" oninput="autoResize(this)" required></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Enfermedad Actual</label>
+                        <textarea name="enfermedad_actual" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500 transition resize-none overflow-hidden" oninput="autoResize(this)"></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-red-600 text-sm font-bold mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Alergias Conocidas (Deje en blanco si no aplica)
+                        </label>
+                        <textarea name="alergias" rows="1" placeholder="Ej: Penicilina, Ibuprofeno..." class="w-full border border-red-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 transition resize-none overflow-hidden" oninput="autoResize(this)">{% if modo_control %}{{ expediente_control.alergias|default_if_none:'' }}{% endif %}</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Antecedentes Personales</label>
+                            <textarea name="ant_personales" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-purple-500 resize-none overflow-hidden" oninput="autoResize(this)">{% if modo_control %}{{ expediente_control.antecedentes_personales|default_if_none:'' }}{% endif %}</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Antecedentes Familiares</label>
+                            <textarea name="ant_familiares" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-purple-500 resize-none overflow-hidden" oninput="autoResize(this)">{% if modo_control %}{{ expediente_control.antecedentes_familiares|default_if_none:'' }}{% endif %}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-lg rounded-lg p-6 border-l-8 border-yellow-600">
+                    <h3 class="text-lg font-bold text-gray-800 border-b pb-2 mb-4 flex items-center">
+                        <span class="bg-yellow-100 text-yellow-700 py-1 px-3 rounded-full text-xs mr-2 uppercase tracking-wider">Sección II</span>
+                        Examen Físico
+                    </h3>
+            
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Hallazgos Clínicos</label>
+                        <textarea name="examen_fisico" rows="12" 
+                            class="w-full border border-gray-300 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner font-mono text-sm leading-relaxed resize-none overflow-hidden"
+                            placeholder="GENERAL: (Condiciones generales del paciente...)&#10;&#10;CABEZA Y PIEL: (Normocéfalo, lesiones cutáneas...)&#10;&#10;CARDIOPULMONAR: (Ruidos respiratorios, ruidos cardíacos...)&#10;&#10;ABDOMEN: (Blando, depresible, dolor...)&#10;&#10;EXTREMIDADES: (Simétricas, edema, pulsos...)&#10;&#10;NEUROLÓGICO: (Vigil, orientado, fuerza muscular...)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                        <p class="text-xs text-gray-500 mt-2 text-right">Use esta estructura como guía para la redacción.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-lg rounded-lg p-6 border-l-8 border-red-600">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center">
+                        <span class="bg-red-100 text-red-700 py-1 px-3 rounded-full text-xs mr-2 uppercase tracking-wider">Sección III</span>
+                        Resolución
+                    </h2>
+                    
+                    <div class="mb-4 relative">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Diagnóstico Principal (Dx) <span class="text-red-500">*</span></label>
+                        
+                        <input type="text" name="diagnostico" id="diagnostico_input" autocomplete="off" oninput="filtrarCIE10()" onfocus="mostrarCIE10()" placeholder="Buscar diagnóstico" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-medium text-lg bg-gray-50 transition" required>
+                        
+                        <div id="menu_cie10" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-2xl max-h-60 overflow-y-auto">
+                            <ul id="lista_cie10" class="py-1">
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Amebiasis')">Amebiasis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Amigdalitis aguda')"> Amigdalitis aguda</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Anemia')"> Anemia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Arritmia Cardíaca')">Arritmia cardíaca</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Asma')"> Asma</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Bronquitis aguda')"> Bronquitis aguda</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('COVID-19')"> COVID-19</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cefalea / Dolor de cabeza')"> Cefalea / Dolor de cabeza</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Chikungunya')"> Chikungunya</li>                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cirrosis hepática')">Cirrosis hepática</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Colitis')"> Colitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Colon Irritable')"> Colon Irritable</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Conjuntivitis')"> Conjuntivitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Constipación / Estreñimiento')"> Constipación / Estreñimiento</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cólico abdominal)')"> Cólico abdominal</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Dengue')"> Dengue</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Deshidratación')"> Deshidratación</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Diabetes mellitus tipo 2')"> Diabetes mellitus tipo 2</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Diarrea')"> Diarrea</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Dispepsia (Indigestión)')"> Dispepsia (Indigestión)</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Enfermedad Broncopulmonar Obstructiva Crónica (EBOC)')"> Enfermedad Broncopulmonar Obstructiva Crónica (EBOC)</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Enfermedad de Chagas')"> Enfermedad de Chagas</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Epigastralgia')"> Epigastralgia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Epilepsia')"> Epilepsia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Esplenomegalia')">Esplenomegalia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Esquistosomiasis')"> Esquistosomiasis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Examen médico general (Chequeo de rutina)')"> Examen médico general (Chequeo de rutina)</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Faringitis aguda')"> Faringitis aguda</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Fiebre')"> Fiebre</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Gastritis')"> Gastritis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Glomerulonefritis')">Glomerulonefritis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Hemorroides')">Hemorroides</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Hepatitis')"> Hepatitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Hipertensión arterial')"> Hipertensión arterial</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Hipoglicemia')"> Hipoglicemia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Infarto al miocardio')"> Infarto al miocardio</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Infección del tracto urinario')"> Infección del tracto urinario</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Infección respiratoria')"> Infección respiratoria</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Infección viral')"> Síndrome viral</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Insuficiencia Cardíaca)')">Insuficiencia Cardíaca</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Insuficiencia renal')">Insuficiencia renal</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Laringitis')"> Laringitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Leishmaniasis')"> Leishmaniasis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Lepra')"> Lepra</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Litasis vesicular')"> Litasis vesicular</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Lumbago no especificado / Dolor de espalda baja')"> Lumbago no especificado / Dolor de espalda baja</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Malaria / Paludismo')"> Malaria / Paludismo</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Malnutrición')"> Malnutrición</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Melena')">Melena</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Migraña / Jaqueca)')"> Migraña / Jaqueca</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Neoplasia(Cáncer)')">Neoplasia (Cáncer)</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Obesidad')"> Obesidad</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Oncocercosis')"> Oncocercosis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Otitis externa')"> Otitis externa</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Pancreatitis')">Pancreatitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Parásitos intestinales')"> Parásitos intestinales</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Pericarditis')"> Pericarditis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Resfriado común / Rinofaringitis aguda')"> Resfriado común / Rinofaringitis aguda</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Sangrado Rectal')">Sangrado Rectal</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Sinusitis')"> Sinusitis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Síndrome Depresivo')">Síndrome Depresivo</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Síndrome Maníaco-depresivo')">Síndrome Maníaco-depresivo</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Síndrome Nefrítico')">Síndrome Nefrítico</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Síndrome Nefrótico')">Síndrome Nefrótico</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Taquicardia')"> Taquicardia</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Trastorno Límite de Personalidad')">Trastorno Límite de Personalidad </li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Tuberculosis')"> Tuberculosis</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Tumor de hígado')"> Tumor de hígado</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('VIH / SIDA')"> VIH / SIDA</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Virus del papiloma humano (VPH)')"> Virus del papiloma humano (VPH)</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Zika')"> Zika</li>
+                                <li class="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold cursor-pointer text-sm transition" onclick="seleccionarCIE10('Otro - Especificar manualmente')">+ Otro - Especificar manualmente</li>
+                            </ul>
+                        </div>
+
+                        <p class="text-xs text-gray-500 mt-1">Haga clic o empiece a escribir para ver sugerencias.</p>
+                    </div>
+
+                    <div id="div_diagnostico_otro" class="mb-4 hidden p-4 bg-red-50 border border-red-200 rounded-lg animate-fade-in">
+                        <label class="block text-red-800 text-sm font-bold mb-2 flex items-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            Por favor, especifique el diagnóstico:
+                        </label>
+                        <input type="text" name="diagnostico_otro" id="input_diagnostico_otro" placeholder="Ej: Dengue Clásico, Apendicitis aguda..." class="w-full border border-red-300 rounded px-3 py-2 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 font-medium">
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Plan de Trabajo / Tratamiento</label>
+                        <textarea name="plan" rows="5" placeholder="- Medicamentos...&#10;- Reposo...&#10;- Exámenes..." class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-red-500 resize-none overflow-hidden" oninput="autoResize(this)"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-100 flex-wrap gap-y-3">
+                        <button type="submit" name="accion" value="guardar_salir" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 md:px-6 rounded transition">
+                            Guardar y Salir
+                        </button>
+                        
+                        <button type="submit" name="accion" value="guardar_constancia" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 md:px-6 rounded shadow hover:shadow-lg transition flex items-center transform hover:-translate-y-1">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Guardar y Emitir Constancia
+                        </button>
+
+                        <button type="submit" name="accion" value="guardar_pdf" class="btn-generar-pdf bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 md:px-6 rounded shadow hover:shadow-lg transition flex items-center transform hover:-translate-y-1">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Guardar y Generar PDF
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // 1. Alternar entre Cita y Emergencia (Ignorado si estamos en modo control)
+    function togglePaciente(modo) {
+        const bloqueExistente = document.getElementById('bloque_existente');
+        const bloqueNuevo = document.getElementById('bloque_nuevo');
+        
+        if (!bloqueExistente || !bloqueNuevo) return; // Salir si estamos en modo control
+        
+        if (modo === 'existente') {
+            bloqueExistente.classList.remove('hidden');
+            bloqueNuevo.classList.add('hidden');
+            // Gestión de required
+            document.querySelector('[name="paciente"]').required = true;
+            document.querySelectorAll('#bloque_nuevo input').forEach(i => i.required = false);
+        } else {
+            bloqueExistente.classList.add('hidden');
+            bloqueNuevo.classList.remove('hidden');
+            // Gestión de required
+            document.querySelector('[name="paciente"]').required = false;
+            document.querySelector('[name="nuevo_cedula"]').required = true;
+            document.querySelector('[name="nuevo_nombre"]').required = true;
+        }
+    }
+
+    // 2. Auto-redimensionar Textareas
+    function autoResize(textarea) {
+        // Reseteamos la altura para calcular el nuevo scrollHeight
+        textarea.style.height = 'auto';
+        // Asignamos la nueva altura basada en el contenido
+        textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    // Inicializar los textareas cuando carga la página para que se ajusten al contenido inicial (placeholders o texto pre-llenado)
+    document.addEventListener("DOMContentLoaded", function() {
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(ta => autoResize(ta));
+    });
+
+    // 3. Lógica del CIE-10 (Mostrar/Ocultar "Otro")
+    function mostrarCIE10() {
+        const input = document.getElementById('diagnostico_input');
+        
+        // UX FIX: Si el médico hace clic y estaba en "Otro", limpiamos el campo 
+        // automáticamente para que pueda ver la lista completa de nuevo.
+        if (input.value === "Otro - Especificar manualmente") {
+            input.value = "";
+            checkOtroDiagnostico(); // Esto ocultará la caja de abajo
+        }
+        
+        // Seleccionamos todo el texto por si hace clic en un diagnóstico normal y quiere borrarlo rápido
+        input.select(); 
+        
+        document.getElementById('menu_cie10').classList.remove('hidden');
+        filtrarCIE10(); // Muestra la lista actualizada
+    }
+
+    // Cerrar el menú si hacemos clic afuera de él
+    document.addEventListener('click', function(event) {
+        const input = document.getElementById('diagnostico_input');
+        const menu = document.getElementById('menu_cie10');
+        if (input && menu && !input.contains(event.target) && !menu.contains(event.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    function filtrarCIE10() {
+        const input = document.getElementById('diagnostico_input');
+        const filtro = input.value.toLowerCase();
+        const items = document.querySelectorAll('#lista_cie10 li');
+        
+        let encontroAlgo = false;
+
+        items.forEach(item => {
+            const texto = item.innerText.toLowerCase();
+            // Mostrar si coincide con lo escrito (O si es la opción "Otro" para dejarla siempre visible al final)
+            if (texto.includes(filtro) || texto.includes("otro - especificar")) {
+                item.style.display = "block";
+                encontroAlgo = true;
+            } else {
+                item.style.display = "none";
+            }
+        });
+
+        // Actualizamos la caja de texto extra por si el usuario borró todo
+        checkOtroDiagnostico();
+    }
+
+    function seleccionarCIE10(valorTexto) {
+        // Pegamos el valor en el input
+        document.getElementById('diagnostico_input').value = valorTexto;
+        // Escondemos el menú
+        document.getElementById('menu_cie10').classList.add('hidden');
+        // Verificamos si eligió "Otro" para abrir la caja extra
+        checkOtroDiagnostico();
+    }
+
+    function checkOtroDiagnostico() {
+        const inputPrincipal = document.getElementById('diagnostico_input');
+        const divOtro = document.getElementById('div_diagnostico_otro');
+        const inputOtro = document.getElementById('input_diagnostico_otro');
+
+        // Ya no verificamos "[000]", verificamos la frase limpia
+        if (inputPrincipal.value === "Otro - Especificar manualmente") {
+            divOtro.classList.remove('hidden');
+            inputOtro.required = true;
+            inputOtro.focus(); // Llevamos el cursor directo para que escriba
+        } else {
+            divOtro.classList.add('hidden');
+            inputOtro.required = false;
+            inputOtro.value = ""; // Limpiamos si se arrepintió
+        }
+    }
+</script>
+{% endblock %}

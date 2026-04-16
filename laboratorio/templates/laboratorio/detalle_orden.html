@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-800">Detalle de la Orden</h1>
+        <a href="{% url 'dashboard_lab' %}" class="text-gray-500 hover:text-purple-600 font-bold text-sm transition flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Volver al Panel
+        </a>
+    </div>
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8 border-t-4 border-purple-600">
+        <div class="px-4 py-5 sm:px-6 flex justify-between items-center bg-gray-50">
+            <div>
+                <h3 class="text-lg leading-6 font-bold text-gray-900 flex items-center">
+                    <svg class="w-6 h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Orden de Laboratorio #{{ orden.id|stringformat:"05d" }}
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">Solicitada el {{ orden.fecha_solicitud|date:"d M Y, h:i A" }}</p>
+            </div>
+            <div>
+                {% if orden.estado == 'Pendiente' or orden.estado == 'Procesando' %}
+                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">En Proceso</span>
+                {% else %}
+                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">Realizado</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
+            <dl class="sm:divide-y sm:divide-gray-200">
+                <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Paciente</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold">
+                        {% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% else %}{{ orden.paciente.nombres }}{% endif %}
+                        <span class="text-gray-500 font-normal ml-2">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% else %}{{ orden.paciente.cedula }}{% endif %}</span>
+                        
+                        {% if orden.correo_paciente %}
+                            <br><span class="inline-block mt-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">Se notificará a: {{ orden.correo_paciente }}</span>
+                        {% elif orden.paciente and orden.paciente.usuario.email %}
+                            <br><span class="inline-block mt-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">Se notificará a: {{ orden.paciente.usuario.email }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Médico Solicitante</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">Dr(a). {{ orden.medico.usuario.get_full_name }}</dd>
+                </div>
+                <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 bg-purple-50">
+                    <dt class="text-sm font-medium text-purple-800">Exámenes Solicitados</dt>
+                    <dd class="mt-1 text-sm text-purple-900 sm:mt-0 sm:col-span-2 font-bold">{{ orden.examenes_solicitados }}</dd>
+                </div>
+                {% if orden.observacion %}
+                <div class="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <dt class="text-sm font-medium text-gray-500">Observaciones del Médico</dt>
+                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 italic">"{{ orden.observacion }}"</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+    {% if orden.estado != 'Realizado' %}
+        
+        {% if tiene_catalogo %}
+        <div class="bg-white shadow sm:rounded-lg mb-8 border border-gray-200">
+            <div class="px-4 py-5 border-b border-gray-200 bg-gray-50">
+                <h3 class="text-lg leading-6 font-bold text-gray-900">Carga de Resultados</h3>
+                <p class="mt-1 text-sm text-gray-500">Ingrese los valores obtenidos. El sistema detectará valores anormales automáticamente.</p>
+            </div>
+            
+            <form action="{% url 'detalle_orden' orden.id %}" method="POST" class="p-6">
+                {% csrf_token %}
+                
+                {% for examen in examenes_catalogo %}
+                <div class="mb-8 last:mb-0">
+                    <h4 class="text-md font-bold text-purple-700 mb-4 uppercase tracking-wider border-b border-purple-100 pb-2">{{ examen.nombre }}</h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        {% for param in examen.parametros.all %}
+                        <div class="flex flex-col">
+                            <div class="flex justify-between items-end mb-1">
+                                <label for="param_{{ param.id }}" class="block text-sm font-bold text-gray-700">{{ param.nombre }}</label>
+                                <span class="text-xs text-gray-500">
+                                    {% if param.rango_minimo or param.rango_maximo %}
+                                        Ref: {{ param.rango_minimo|default_if_none:"" }} - {{ param.rango_maximo|default_if_none:"" }} {{ param.unidad_medida|default_if_none:"" }}
+                                    {% elif param.valor_referencia_texto %}
+                                        Ref: {{ param.valor_referencia_texto }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="relative rounded-md shadow-sm">
+                                <input type="text" name="param_{{ param.id }}" id="param_{{ param.id }}" 
+                                    class="focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md transition-colors"
+                                    data-min="{% if param.rango_minimo %}{{ param.rango_minimo }}{% endif %}"
+                                    data-max="{% if param.rango_maximo %}{{ param.rango_maximo }}{% endif %}"
+                                    oninput="verificarRango(this)"
+                                    placeholder="Ingrese valor..." required>
+                                
+                                {% if param.unidad_medida %}
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">{{ param.unidad_medida }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="mt-8 flex justify-end">
+                    <a href="{% url 'dashboard_lab' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 mr-3 transition">Cancelar</a>
+                    <button type="submit" name="guardar_resultados" class="bg-purple-600 border border-transparent rounded-md shadow-sm py-2 px-6 inline-flex justify-center text-sm font-bold text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition">
+                        Guardar Resultados Analíticos
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="bg-white shadow sm:rounded-lg border border-gray-200">
+            <div class="px-4 py-5 border-b border-gray-200 bg-gray-50 cursor-pointer" onclick="document.getElementById('panel_pdf_respaldo').classList.toggle('hidden')">
+                <h3 class="text-md leading-6 font-bold text-gray-700 flex justify-between items-center">
+                    Carga por Documento (Plan de Respaldo)
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </h3>
+            </div>
+            
+            <form action="{% url 'detalle_orden' orden.id %}" method="POST" enctype="multipart/form-data" id="panel_pdf_respaldo" class="p-6 {% if tiene_catalogo %}hidden{% endif %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Adjuntar archivo de resultados (PDF o Imagen)</label>
+                    <input type="file" name="archivo_resultados" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer border border-gray-300 rounded-md p-2">
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" name="subir_pdf" class="bg-gray-800 text-white font-bold py-2 px-4 rounded hover:bg-gray-900 transition shadow-sm">
+                        Subir Documento
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    {% else %}
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-8 rounded-r-md">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-green-700 font-bold">
+                        Esta orden ya fue procesada el {{ orden.fecha_resultado|date:"d M Y, h:i A" }}.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-center space-x-4">
+            <a href="{% url 'dashboard_lab' %}" class="bg-white py-2 px-6 border border-gray-300 rounded-md shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 transition">
+                Volver al Panel
+            </a>
+            
+            {% if orden.resultados_archivo %}
+            <a href="{{ orden.resultados_archivo.url }}" target="_blank" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 transition shadow-sm flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Ver PDF Adjunto
+            </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+    function verificarRango(input) {
+        // Lee los valores directamente de los atributos data-min y data-max del HTML
+        const minStr = input.dataset.min;
+        const maxStr = input.dataset.max;
+        
+        if (!minStr && !maxStr) return; // Si no hay referencias numéricas, no hace nada
+        
+        // Reemplazamos coma por punto para los decimales europeos
+        const val = parseFloat(input.value.replace(',', '.')); 
+        
+        if (isNaN(val)) {
+            // Si el analista borró el valor o escribió texto, quitamos la alerta
+            input.classList.remove('text-red-600', 'bg-red-50', 'border-red-500', 'font-bold');
+            return;
+        }
+
+        let minVal = parseFloat(minStr);
+        let maxVal = parseFloat(maxStr);
+
+        // Lógica de alerta roja
+        if ((minStr && val < minVal) || (maxStr && val > maxVal)) {
+            input.classList.add('text-red-600', 'bg-red-50', 'border-red-500', 'font-bold');
+        } else {
+            input.classList.remove('text-red-600', 'bg-red-50', 'border-red-500', 'font-bold');
+        }
+    }
+</script>
+{% endblock %}

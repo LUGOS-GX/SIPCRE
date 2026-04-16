@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto pb-10">
+    
+    <div class="mb-6">
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-500 text-sm flex items-center">
+            ← Volver
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
+        
+        <div class="bg-gray-800 px-8 py-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-white">Registro de Orden Externa</h1>
+                <p class="text-gray-400 text-sm">Laboratorio e Imagenología (Pacientes sin cita médica)</p>
+            </div>
+            <div class="bg-gray-700 p-2 rounded text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+        </div>
+
+        <form method="POST" class="p-8 space-y-8">
+            {% csrf_token %}
+
+            <div class="bg-gray-50 p-6 rounded border border-gray-200">
+                <h3 class="font-bold text-gray-700 mb-4 uppercase text-xs tracking-wider border-b pb-2">Datos del Paciente</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2 text-sm">Nombre Completo</label>
+                        <input type="text" name="nombre" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2 text-sm">Cédula</label>
+                        <div class="flex">
+                            <select name="nacionalidad" class="bg-gray-100 border border-gray-300 border-r-0 rounded-l px-2 py-2">
+                                <option>V</option>
+                                <option>E</option>
+                            </select>
+                            <input type="text" name="cedula" class="w-full border border-gray-300 rounded-r px-3 py-2 focus:border-cruzroja-500" placeholder="12.345.678" oninput="formatearCedula(this)" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                    <svg class="w-5 h-5 mr-2 text-cruzroja-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    Laboratorio
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    {% for ex in examenes_lab %}
+                    <label class="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer transition border border-transparent hover:border-gray-200">
+                        <input type="checkbox" name="examenes" value="{{ ex }}" class="w-4 h-4 text-cruzroja-500 border-gray-300 rounded focus:ring-cruzroja-500">
+                        <span class="text-xs text-gray-700 font-medium">{{ ex }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                 <div class="bg-gray-50 p-3 rounded-lg flex items-center space-x-3 border border-gray-200">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" name="examenes" value="Otros" class="w-4 h-4 text-cruzroja-500 border-gray-300 rounded focus:ring-cruzroja-500">
+                        <span class="text-sm font-bold text-gray-700">Otros:</span>
+                    </label>
+                    <input type="text" name="otros_detalle" class="flex-1 bg-white border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:border-cruzroja-500" placeholder="Especifique...">
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Imagenología
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {% for ex in examenes_img %}
+                    <label class="flex items-center space-x-2 p-2 rounded hover:bg-blue-50 cursor-pointer transition border border-transparent hover:border-blue-100">
+                        <input type="checkbox" name="examenes" value="{{ ex }}" class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="text-sm text-gray-700 font-medium">{{ ex }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="pt-4 flex justify-end">
+                <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded shadow-lg transition transform hover:-translate-y-0.5 flex items-center">
+                    <span class="mr-2"></span> Registrar Orden y Enviar a Laboratorio
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script>
+function formatearCedula(input) {
+    // 1. Limpiar caracteres no numéricos
+    let valor = input.value.replace(/\D/g, '');
+    
+    if (valor.length > 8) {
+        valor = valor.slice(0, 8);
+    }
+    
+    // 3. Validación de rango (Máximo 40 millones)
+    if (parseInt(valor) > 40000000) {
+        // Opción: Borrar el último número si se pasa
+        valor = valor.slice(0, -1); 
+        alert("La cédula no puede ser mayor a 40.000.000");
+    }
+
+    // 4. Formato visual con puntos
+    valor = valor.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    input.value = valor;
+}
+</script>
+{% endblock %}

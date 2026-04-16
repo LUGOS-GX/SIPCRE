@@ -1,0 +1,148 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style>
+        @page { size: letter; margin: 2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; }
+        
+        /* HEADER */
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #cc0000; padding-bottom: 10px; }
+        .titulo { font-size: 18px; font-weight: bold; color: #cc0000; }
+        .subtitulo { font-size: 10px; color: #666; }
+        
+        /* SECCIONES */
+        .section { margin-bottom: 15px; }
+        .section-title { background-color: #f0f0f0; padding: 5px; font-weight: bold; border-left: 5px solid #cc0000; margin-bottom: 5px; }
+        
+        .label { font-weight: bold; color: #555; }
+        
+        /* TABLA SIGNOS VITALES */
+        .vitales { width: 100%; border: 1px solid #ddd; padding: 5px; margin-bottom: 10px; border-collapse: collapse; }
+        .vitales td, .vitales th { padding: 5px; text-align: center; border: 1px solid #ddd; }
+        .vitales th { background-color: #eee; font-size: 10px; }
+        
+        /* CLASE MÁGICA PARA EVITAR SALTOS DE PÁGINA */
+        .bloque-indivisible {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="titulo">INFORME DE HISTORIA MÉDICA / EVOLUCIÓN</div>
+        <div class="subtitulo">Fecha de Consulta: {{ h.fecha|date:"d/m/Y" }} - Hora: {{ h.hora|time:"h:i A" }}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. DATOS DEL PACIENTE</div>
+        <table width="100%">
+            <tr>
+                <td><span class="label">Nombre:</span> {{ h.expediente.paciente.nombres }}</td>
+                <td><span class="label">Cédula:</span> {{ h.expediente.paciente.nacionalidad }}-{{ h.expediente.paciente.cedula }}</td>
+            </tr>
+            <tr>
+                <td><span class="label">Sangre:</span> {{ h.expediente.tipo_sangre|default:"-" }}</td>
+                <td><span class="label">Consulta ID:</span> #{{ h.id }}</td>
+            </tr>
+        </table>
+        {% if h.expediente.alergias %}
+        <div style="margin-top: 5px; color: #cc0000;">
+            <span class="label" style="color: #cc0000;">ALERGIAS CONOCIDAS:</span> {{ h.expediente.alergias }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. SIGNOS VITALES</div>
+        <table class="vitales">
+            <tr>
+                <th>T. Arterial</th>
+                <th>F. Cardíaca</th>
+                <th>F. Respiratoria</th>
+                <th>Sat. O2</th>
+                <th>Temp</th>
+                <th>Peso</th>
+                <th>Talla</th>
+            </tr>
+            <tr>
+                <td>{{ h.tension_arterial|default:"-" }}</td>
+                <td>{{ h.frecuencia_cardiaca|default:"-" }}</td>
+                <td>{{ h.frecuencia_respiratoria|default:"-" }}</td>
+                <td>{{ h.saturacion_oxigeno|default:"-" }}</td>
+                <td>{{ h.temperatura|default:"-" }}</td>
+                <td>{{ h.peso|default:"-" }} kg</td>
+                <td>{{ h.talla|default:"-" }} m</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. ANAMNESIS</div>
+        <p><span class="label">Motivo de Consulta:</span><br>{{ h.motivo_consulta }}</p>
+        <p><span class="label">Enfermedad Actual:</span><br>{{ h.enfermedad_actual|linebreaksbr }}</p>
+        <p><span class="label">Antecedentes:</span><br>
+           <span class="label">Per:</span> {{ h.expediente.antecedentes_personales|default:"Negativos" }}<br>
+           <span class="label">Fam:</span> {{ h.expediente.antecedentes_familiares|default:"Negativos" }}
+        </p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">4. EXAMEN FÍSICO</div>
+        <p>{{ h.examen_fisico|default:"Sin hallazgos registrados."|linebreaksbr }}</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">5. RESOLUCIÓN</div>
+        
+        <p><span class="label">Diagnóstico:</span><br>{{ h.diagnostico }}</p>
+
+        <br>
+
+        <div class="bloque-indivisible">
+            
+            <p><span class="label">Plan / Tratamiento:</span><br>{{ h.plan_tratamiento|linebreaksbr }}</p>
+
+            {% if h.archivo_anexo %}
+            <br>
+            <div style="border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
+                <span class="label">ANEXO ADJUNTO ({{ h.get_tipo_anexo_display }})</span><br>
+                <span style="font-size: 10px; color: #666;">[Imagen/Archivo disponible en sistema digital]</span>
+            </div>
+            {% endif %}
+
+            <br><br><br>
+
+            <table width="100%" style="margin-top: 20px;">
+                <tr>
+                    <td width="50%" align="center" valign="bottom">
+                        
+                        {% if h.medico.firma %}
+                            <img src="{{ h.medico.firma.path }}" width="150" style="margin-bottom: -5px;">
+                        {% else %}
+                            <div style="height: 60px;"></div>
+                        {% endif %}
+
+                        <div style="border-top: 1px solid #333; width: 60%; margin: 0 auto; padding-top: 5px;">
+                            <strong>Dr/a. {{ h.medico.nombre }}</strong><br>
+                            <span style="font-size: 10px;">{{ h.medico.especialidad }}</span><br>
+                            
+                            <span style="font-size: 9px; color: #555;">
+                                MPPS: {{ h.medico.usuario.mpps|default:h.medico.usuario.mpps }} 
+                                {% if h.medico.usuario.cm %} | CM: {{ h.medico.usuario.cm }} {% endif %}
+                            </span>
+                        </div>
+                    </td>
+
+                    <td width="50%" align="center" valign="bottom">
+                        {% if h.medico.sello %}
+                            <img src="{{ h.medico.sello.path }}" width="90">
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+
+        </div> 
+    </div>
+
+</body>
+</html>

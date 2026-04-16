@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-800">Nuevo Récipe Médico</h1>
+        
+        {% if is_popup == '1' %}
+            <button type="button" onclick="window.close()" class="text-gray-500 hover:text-red-600 font-bold text-sm transition flex items-center cursor-pointer">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Cancelar y Cerrar 
+            </button>
+        {% else %}
+            <a href="{% url 'dashboard_medico' %}" class="text-gray-500 hover:text-red-600 font-bold text-sm transition flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                Cancelar / Volver
+            </a>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-green-100 text-green-700 border-l-4 border-green-500{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="POST" class="bg-white shadow-2xl rounded-lg overflow-hidden border border-gray-200">
+        {% csrf_token %}
+        <input type="hidden" name="popup" value="{{ is_popup}}">
+
+        <div class="bg-red-700 border-b border-gray-300 px-8 py-6 flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-bold text-zinc-50 uppercase tracking-wider">Dr. {{ request.user.medico.nombre|default:"Dr(a). Nombre del Médico" }}</h2>
+                
+                <p class="text-xs text-red-200 font-semibold mb-1">
+                    MPPS: {{ request.user.mpps }} 
+                    {% if request.user.cm or request.user.medico.cm %}
+                        | CM: {{ request.user.cm|default:request.user.medico.cm }}
+                    {% endif %}
+                </p>
+                
+                <p class="text-sm text-stone-50 font-medium">{{ request.user.medico.especialidad|default:"Especialidad Médica" }}</p>
+            </div>
+            <div class="text-right flex items-center">
+                <label for="fecha_emision" class="text-white font-bold mr-2 text-sm">Fecha:</label>
+                <input type="date" name="fecha_emision" id="fecha_emision" value="{% now 'Y-m-d' %}" class="text-sm text-gray-800 font-bold bg-white px-3 py-1 rounded shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <div class="bg-gray-50 border-b border-gray-200 px-8 py-5">
+            <div class="flex items-center space-x-6 mb-4">
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="tipo_paciente" value="registrado" class="form-radio text-blue-600 focus:ring-blue-500" checked onchange="togglePacienteType()">
+                    <span class="ml-2 text-sm font-medium text-gray-700">Paciente Frecuente</span>
+                </label>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="radio" name="tipo_paciente" value="manual" class="form-radio text-blue-600 focus:ring-blue-500" onchange="togglePacienteType()">
+                    <span class="ml-2 text-sm font-medium text-gray-700">Paciente No Registrado (Solo Récipe)</span>
+                </label>
+            </div>
+
+            <div id="div_registrado" class="relative">
+                <input type="hidden" name="paciente_id" id="control_paciente_id">
+                
+                <button type="button" id="btn_select_control" class="w-full bg-white border border-gray-300 rounded-md shadow-sm pl-4 pr-10 py-3 text-left cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ease-in-out duration-150" onclick="toggleDropdownControl()">
+                    <span class="block truncate text-gray-500 sm:text-sm" id="texto_select_control">Seleccione un paciente de su lista...</span>
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </span>
+                </button>
+
+                <div id="menu_select_control" class="hidden absolute z-50 mt-1 w-full bg-white shadow-2xl max-h-72 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-hidden focus:outline-none sm:text-sm flex flex-col">
+                    
+                    <div class="px-3 py-2 border-b border-gray-100 bg-gray-50 sticky top-0 z-10">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            <input type="text" id="buscador_control_input" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm" placeholder="Buscar cédula o nombre..." onkeyup="filtrarControles()">
+                        </div>
+                    </div>
+                    
+                    <ul id="lista_opciones_control" class="overflow-y-auto flex-1 py-1">
+                        {% for p in pacientes %}
+                            <li class="opcion-control text-gray-700 cursor-pointer select-none relative py-2 pl-4 pr-9 hover:bg-blue-600 hover:text-white transition-colors group" data-id="{{ p.id }}" data-texto="{{ p.nombres }} {{ p.cedula }}" onclick="seleccionarControlCustom('{{ p.id }}', '{{ p.nombres }} - C.I: {{ p.cedula }}')">
+                                <span class="font-bold block truncate group-hover:text-white">{{ p.nombres }}</span>
+                                <span class="text-xs text-gray-500 group-hover:text-blue-100 block truncate mt-0.5">C.I: {{ p.cedula }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="text-gray-500 cursor-default select-none relative py-4 pl-4 pr-9 text-sm italic text-center">No hay pacientes registrados con historias clínicas.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div id="div_manual" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <input type="text" name="nombre_manual" id="nombre_manual" placeholder="Nombre completo del paciente" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
+                </div>
+                <div>
+                    <input type="text" name="cedula_manual" id="cedula_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="9" minlength="6" title="Ingrese una cédula válida (entre 6 y 9 números sin puntos)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2">
+            
+            <div class="p-8">
+                <label class="block text-3xl font-serif font-bold text-gray-800 mb-4 italic border-b-2 border-gray-800 pb-2 w-16">Rp.</label>
+                <textarea name="medicamentos" rows="10" placeholder="Ej:&#10;1. Losartán Potásico 50mg - 1 Caja.&#10;2. Ibuprofeno 400mg - 1 Caja." class="w-full border border-gray-200 rounded p-4 text-gray-800 focus:outline-none focus:border-blue-500 transition shadow-inner text-lg leading-relaxed bg-gray-50 hover:bg-white" required></textarea>
+            </div>
+
+            <div class="p-8 md:border-l-2 md:border-dashed md:border-gray-300 relative bg-gray-50/30">
+                <label class="block text-xl font-bold text-gray-700 mb-4 border-b-2 border-gray-300 pb-2 uppercase tracking-widest">Indicaciones</label>
+                <textarea name="indicaciones" rows="10" placeholder="Ej:&#10;1. Tomar 1 tableta de Losartán cada 12 horas.&#10;2. Tomar 1 tableta de Ibuprofeno en caso de dolor." class="w-full border border-gray-200 rounded p-4 text-gray-800 focus:outline-none focus:border-blue-500 transition shadow-inner text-md leading-relaxed bg-white" required></textarea>
+            </div>
+
+        </div>
+
+        <div class="px-8 pb-10 flex justify-end mt-4">
+            <div class="flex items-end space-x-8">
+                
+                <div class="w-48 text-center relative">
+                    <div class="border-b border-gray-800 h-16 mb-2 flex items-end justify-center relative">
+                        {% if request.user.medico.firma %}
+                            <img src="{{ request.user.medico.firma.url }}" alt="Firma" class="absolute bottom-0 max-h-24 max-w-full object-contain">
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-600 font-bold uppercase tracking-wide">Firma del Médico</p>
+                </div>
+                
+                <div class="text-center flex flex-col items-center">
+                    {% if request.user.medico.sello %}
+                        <div class="h-24 w-24 mb-2 flex items-center justify-center">
+                            <img src="{{ request.user.medico.sello.url }}" alt="Sello" class="max-h-full max-w-full object-contain opacity-90 mix-blend-multiply">
+                        </div>
+                    {% else %}
+                        <div class="h-24 w-24 border-2 border-dashed border-blue-200 bg-blue-50 rounded-full mb-2 flex items-center justify-center">
+                            <span class="text-blue-300 text-xs font-bold tracking-widest">SELLO</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="bg-gray-100 px-8 py-5 border-t border-gray-200 flex items-center justify-end space-x-4">
+            
+            <button type="submit" name="accion" value="enviar_farmacia" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow hover:shadow-lg transition flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Enviar a Farmacia
+            </button>
+
+            <button type="submit" name="accion" value="exportar_pdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow hover:shadow-lg transition flex items-center">
+                <svg class="btn-generar-pdf w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Exportar PDF
+            </button>
+
+        </div>
+    </form>
+</div>
+
+<script src="{% static 'js/buscador_px.js' %}"></script>
+
+<script>
+function togglePacienteType() {
+    const tipo = document.querySelector('input[name="tipo_paciente"]:checked').value;
+    const divRegistrado = document.getElementById('div_registrado');
+    const divManual = document.getElementById('div_manual');
+    const inputNombre = document.getElementById('nombre_manual');
+    const inputCedula = document.getElementById('cedula_manual');
+    
+    // Variables adaptadas al buscador unificado
+    const inputOculto = document.getElementById('control_paciente_id');
+    const textoBtn = document.getElementById('texto_select_control');
+    
+    if (tipo === 'registrado') {
+        divRegistrado.classList.remove('hidden');
+        divManual.classList.add('hidden');
+        inputNombre.value = ''; 
+        inputCedula.value = '';
+        inputNombre.removeAttribute('required');
+        inputCedula.removeAttribute('required');
+    } else {
+        divRegistrado.classList.add('hidden');
+        divManual.classList.remove('hidden');
+        
+        // Reseteamos el select custom al ir a manual
+        inputOculto.value = '';
+        textoBtn.innerText = 'Seleccione un paciente de su lista...';
+        textoBtn.classList.add('text-gray-500');
+        textoBtn.classList.remove('text-gray-900', 'font-semibold');
+        
+        inputNombre.setAttribute('required', 'required');
+        inputCedula.setAttribute('required', 'required');
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    togglePacienteType();
+
+    // Lógica de autollenado si venimos de la Historia Clínica
+    const isPopup = "{{ is_popup }}";
+    const prePacienteId = "{{ pre_paciente_id }}";
+    const preNombre = "{{ pre_nombre }}";
+    const preCedula = "{{ pre_cedula }}";
+
+    if (isPopup === "1") {
+        if (prePacienteId) {
+            // 1. Es un paciente registrado
+            document.querySelector('input[name="tipo_paciente"][value="registrado"]').click();
+            document.getElementById('control_paciente_id').value = prePacienteId;
+
+            // Cambiar visualmente el botón inteligente para mostrar que ya se cargó
+            const textoBtn = document.getElementById('texto_select_control');
+            textoBtn.innerText = "Paciente pre-seleccionado de la historia actual";
+            textoBtn.classList.remove('text-gray-500');
+            textoBtn.classList.add('text-blue-700', 'font-bold', 'bg-blue-50');
+
+        } else if (preNombre && preCedula) {
+            // 2. Es un paciente nuevo manual
+            document.querySelector('input[name="tipo_paciente"][value="manual"]').click();
+            document.getElementById('nombre_manual').value = preNombre;
+            document.getElementById('cedula_manual').value = preCedula;
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Variables de entorno y secretos
+.env
+
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+
+# Base de datos local (por si alguna vez usaste SQLite)
+db.sqlite3
+
+# Archivos multimedia subidos por los usuarios (fotos, firmas, pdfs)
+media/

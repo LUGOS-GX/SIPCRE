@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-8 flex justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Cargar Firma y Sello</h1>
+            <p class="text-gray-500 text-sm mt-1">Sube imágenes claras (preferiblemente con fondo blanco) para tus récipes y reportes.</p>
+        </div>
+        <a href="{% url 'dashboard_medico' %}" class="text-blue-600 hover:text-blue-800 font-bold text-sm transition">
+            ← Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-green-100 text-green-700 border-l-4 border-green-500{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <h3 class="font-bold text-gray-800 text-lg flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        Firma Digital
+                    </h3>
+                </div>
+                
+                <div class="p-6 flex flex-col items-center">
+                    <div class="w-full h-40 border-2 border-dashed border-gray-300 rounded bg-gray-50 flex items-center justify-center mb-6 overflow-hidden relative">
+                        {% if medico.firma %}
+                            <img src="{{ medico.firma.url }}" alt="Firma del Médico" class="max-h-full max-w-full object-contain">
+                            <label class="absolute top-2 right-2 bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold cursor-pointer hover:bg-red-200">
+                                <input type="checkbox" name="eliminar_firma" class="hidden"> 🗑️ Borrar
+                            </label>
+                        {% else %}
+                            <span class="text-gray-400 text-sm">Sin firma cargada</span>
+                        {% endif %}
+                    </div>
+
+                    <label class="w-full cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 py-3 px-4 rounded text-sm font-bold shadow-sm transition text-center block">
+                        <span>Subir archivo de Firma</span>
+                        <input type="file" name="firma" class="hidden" accept="image/*">
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-white shadow-lg rounded-lg border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <h3 class="font-bold text-gray-800 text-lg flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        Sello Médico
+                    </h3>
+                </div>
+                
+                <div class="p-6 flex flex-col items-center">
+                    <div class="w-40 h-40 border-2 border-dashed border-gray-300 rounded-full bg-gray-50 flex items-center justify-center mb-6 overflow-hidden relative">
+                        {% if medico.sello %}
+                            <img src="{{ medico.sello.url }}" alt="Sello del Médico" class="max-h-full max-w-full object-contain">
+                            <label class="absolute bottom-2 bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold cursor-pointer hover:bg-red-200">
+                                <input type="checkbox" name="eliminar_sello" class="hidden"> Borrar
+                            </label>
+                        {% else %}
+                            <span class="text-gray-400 text-xs">Sin sello</span>
+                        {% endif %}
+                    </div>
+
+                    <label class="w-full cursor-pointer bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 py-3 px-4 rounded text-sm font-bold shadow-sm transition text-center block">
+                        <span>Subir archivo de Sello</span>
+                        <input type="file" name="sello" class="hidden" accept="image/*">
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="flex justify-end pt-4">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded shadow-lg transition transform hover:-translate-y-1">
+                Guardar Imágenes
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function(e) {
+            if(e.target.files.length > 0) {
+                let label = e.target.previousElementSibling;
+                label.innerHTML = `✅ ${e.target.files[0].name}`;
+                label.classList.add('text-green-600');
+            }
+        });
+    });
+</script>
+{% endblock %}

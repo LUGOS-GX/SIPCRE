@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Sala de Espera</h1>
+            <p class="text-gray-500 mt-1 text-sm">Validación de nómina y aprobación de cuentas</p>
+        </div>
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition flex items-center">
+            &larr; Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha / Datos</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contacto</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Departamento</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Decisión</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for u in usuarios_pendientes %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-bold text-gray-900">{{ u.first_name }} {{ u.last_name }}</div>
+                        <div class="text-xs text-gray-500">C.I: {{ u.cedula }} | {{ u.date_joined|date:"d/m/Y" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {{ u.email }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 uppercase">
+                            {{ u.rol }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a href="{% url 'aprobar_usuario' u.id %}" class="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-2 rounded text-xs font-bold border border-green-200 mr-2 transition">
+                            Aprobar
+                        </a>
+                        <a href="{% url 'rechazar_usuario' u.id %}" onclick="return confirm('¿Seguro que desea rechazar y eliminar a este usuario permanentemente?');" class="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded text-xs font-bold border border-red-200 transition">
+                            Rechazar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                        <p class="text-lg font-medium">No hay personal en la sala de espera.</p>
+                        <p class="text-sm mt-1">Todos los usuarios actuales han sido verificados.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

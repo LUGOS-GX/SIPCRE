@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados de Laboratorio</title>
+    <style>
+        /* Definimos el tamaño de la página y los márgenes globales */
+        @page {
+            size: a4 portrait;
+            margin-top: 2.5cm;
+            margin-bottom: 2cm;
+            margin-left: 2cm;
+            margin-right: 2cm;
+        }
+        body { font-family: Helvetica, sans-serif; font-size: 11pt; color: #333; }
+        
+        /* Usamos position: fixed (Estándar CSS) para que xhtml2pdf lo repita en todas las hojas */
+        #header_content {
+            position: fixed;
+            top: -1.5cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            border-bottom: 2px solid #9333EA;
+            padding-bottom: 10px;
+        }
+        #header_content h1 { margin: 0; color: #9333EA; font-size: 18pt; }
+        #header_content p { margin: 2px 0; font-size: 10pt; color: #555; }
+        
+        #footer_content {
+            position: fixed;
+            bottom: -1.5cm;
+            left: 0;
+            right: 0;
+            text-align: right;
+            font-size: 8pt;
+            color: #aaa;
+        }
+        
+        .info-box { border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; background-color: #fcfcfc; border-radius: 5px; }
+        .info-table { width: 100%; font-size: 10pt; }
+        .info-table td { padding: 3px; }
+        .label { font-weight: bold; color: #555; width: 25%; }
+        
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .results-table th { background-color: #f3e8ff; color: #6b21a8; font-weight: bold; padding: 8px; text-align: left; border-bottom: 2px solid #d8b4fe; }
+        .results-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        
+        .anormal { color: red; font-weight: bold; }
+        
+        .footer-signatures { margin-top: 60px; text-align: center; }
+        .signature-line { border-top: 1px solid #333; width: 200px; margin: 0 auto; padding-top: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="header_content">
+        <h1>CRUZ ROJA - SIPCRE</h1>
+        <p>Departamento de Laboratorio Clínico e Imagenología</p>
+    </div>
+
+    <div id="footer_content">
+        Página <pdf:pagenumber> de <pdf:pagecount>
+    </div>
+
+    <div class="info-box">
+        <table class="info-table">
+            <tr>
+                <td class="label">Paciente:</td>
+                <td>{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% else %}{{ orden.paciente.nombres }}{% endif %}</td>
+                <td class="label">Cédula:</td>
+                <td>{% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% else %}{{ orden.paciente.cedula }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td class="label">N° de Orden:</td>
+                <td>#{{ orden.id|stringformat:"05d" }}</td>
+                <td class="label">Fecha Impresión:</td>
+                <td>{{ fecha_impresion|date:"d/m/Y h:i A" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Médico Tratante:</td>
+                <td colspan="3">Dr(a). {{ orden.medico.usuario.get_full_name }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <h3 style="color: #444; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Reporte de Resultados Analíticos</h3>
+
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>Parámetro</th>
+                <th>Resultado</th>
+                <th>Unidad</th>
+                <th>Valores de Referencia</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for res in resultados %}
+            <tr>
+                <td>{{ res.parametro.nombre }}</td>
+                <td class="{% if res.es_anormal %}anormal{% endif %}">
+                    {{ res.valor_obtenido }} {% if res.es_anormal %}*{% endif %}
+                </td>
+                <td>{{ res.parametro.unidad_medida|default:"-" }}</td>
+                <td style="font-size: 9pt; color: #666;">
+                    {% if res.parametro.rango_minimo or res.parametro.rango_maximo %}
+                        {{ res.parametro.rango_minimo|default:"" }} - {{ res.parametro.rango_maximo|default:"" }}
+                    {% elif res.parametro.valor_referencia_texto %}
+                        {{ res.parametro.valor_referencia_texto }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p style="font-size: 8pt; color: #888; margin-top: 10px;">
+        * Los valores marcados con asterisco y en color rojo se encuentran fuera de los rangos de referencia normales.
+    </p>
+
+    <div class="footer-signatures">
+        <br><br><br>
+        <div class="signature-line">
+            Firma del Bioanalista
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    
+    {% if messages %}
+        <div id="alerta-flotante" class="fixed top-5 right-5 z-50">
+            {% for message in messages %}
+            <div class="p-4 mb-2 text-white rounded-lg shadow-lg transition-opacity duration-500 {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-600{% endif %}">
+                <span class="font-bold flex items-center">
+                    {% if message.tags == 'success' %}✓{% else %}⚠️{% endif %}
+                    <span class="ml-2">{{ message }}</span>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="mb-6">
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-500 text-sm flex items-center">
+            ← Volver al Itinerario
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
+        <div class="bg-gray-800 px-8 py-6">
+            <h1 class="text-2xl font-bold text-white">Agendar Nueva Cita</h1>
+        </div>
+
+        <form method="POST" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label class="block text-gray-700 font-bold mb-2">Nombre Completo</label>
+                    <input type="text" name="nombre" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500 transition" placeholder="Ej. María Pérez" required>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Cédula</label>
+                    <div class="flex">
+                        <select name="nacionalidad" class="bg-gray-100 border border-gray-300 border-r-0 rounded-l px-2 py-2 font-bold text-gray-600">
+                            <option value="V">V</option>
+                            <option value="E">E</option>
+                        </select>
+                        <input type="text" name="cedula" class="w-full border border-gray-300 rounded-r px-3 py-2 font-mono" placeholder="12.345.678" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Sangre</label>
+                    <select name="sangre" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500">
+                        <option value="" disabled selected>Seleccione...</option>
+                        <option value="O+">O Positivo (O+)</option>
+                        <option value="O-">O Negativo (O-)</option>
+                        <option value="A+">A Positivo (A+)</option>
+                        <option value="A-">A Negativo (A-)</option>
+                        <option value="B+">B Positivo (B+)</option>
+                        <option value="B-">B Negativo (B-)</option>
+                        <option value="AB+">AB Positivo (AB+)</option>
+                        <option value="AB-">AB Negativo (AB-)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                <label class="block text-gray-700 font-bold mb-2">¿Posee Seguro Médico?</label>
+                <div class="flex space-x-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="tiene_seguro" value="Si" class="text-cruzroja-500 focus:ring-cruzroja-500" onclick="toggleSeguro(true)"> 
+                        <span class="ml-2">Sí</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="tiene_seguro" value="No" checked class="text-cruzroja-500 focus:ring-cruzroja-500" onclick="toggleSeguro(false)"> 
+                        <span class="ml-2">No</span>
+                    </label>
+                </div>
+                <input type="text" name="seguro_detalle" id="input_seguro" class="hidden w-full border border-blue-300 bg-white rounded px-3 py-2 mt-3 focus:outline-none focus:border-blue-500" placeholder="Ej. Seguros Caracas - Póliza #998811">
+            </div>
+
+            <div class="bg-green-50 p-6 rounded-lg border border-green-200 mt-6">
+                <h3 class="font-bold text-green-800 mb-4 border-b border-green-200 pb-2 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Facturación de la Consulta
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Costo de la Consulta ($)</label>
+                        <input type="number" step="0.01" name="costo_consulta" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500" placeholder="Ej. 30.00" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Opciones de Pago</label>
+                        <select name="opcion_pago" id="opcion_pago" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500 bg-white" onchange="toggleMetodoPago(this.value)">
+                            <option value="abierta" selected>Dejar cuenta abierta (Añadir a Caja Central)</option>
+                            <option value="pagar_ahora">Pagar consulta ahora</option>
+                        </select>
+                    </div>
+
+                    <div id="div_metodo_pago" class="hidden md:col-span-2 mt-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Método de Pago (Cobro Inmediato)</label>
+                        <select name="metodo_pago" id="select_metodo_pago" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500 bg-white">
+                            <option value="" disabled selected>Seleccione cómo está pagando...</option>
+                            <option value="Punto de Venta">Punto de Venta</option>
+                            <option value="Pago Móvil">Pago Móvil</option>
+                            <option value="Efectivo (Divisas)">Efectivo (Divisas)</option>
+                            <option value="Efectivo (Bs)">Efectivo (Bs)</option>
+                            <option value="Seguro Médico">Seguro Médico</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-300">
+                <h3 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Programación de la Cita
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Fecha</label>
+                        <input type="date" name="fecha_cita" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500" required>
+                    </div>
+
+                   <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Hora Estimada</label>
+                        <div class="relative">
+                            <select name="hora_cita" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500 appearance-none bg-white" required>
+                                <option value="" disabled selected>--Seleccionar Hora--</option>
+                                <option value="08:00">08:00 AM</option>
+                                <option value="08:30">08:30 AM</option>
+                                <option value="09:00">09:00 AM</option>
+                                <option value="09:30">09:30 AM</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="10:30">10:30 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="11:30">11:30 AM</option>
+                                <option value="12:00">12:00 PM (Mediodía)</option>
+                                <option value="13:00">01:00 PM</option>
+                                <option value="13:30">01:30 PM</option>
+                                <option value="14:00">02:00 PM</option>
+                                <option value="14:30">02:30 PM</option>
+                                <option value="15:00">03:00 PM</option>
+                                <option value="15:30">03:30 PM</option>
+                                <option value="16:00">04:00 PM</option>
+                                <option value="16:30">04:30 PM</option>
+                                <option value="17:00">05:00 PM</option>
+                                    </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Especialista</label>
+                        <select name="medico" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500" required>
+                            <option value="" disabled selected>Seleccionar Dr...</option>
+                            {% for medico in medicos %}
+                                <option value="{{ medico.id }}">
+                                    {{ medico.nombre }} - {{ medico.especialidad }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Motivo de Consulta</label>
+                <textarea name="motivo" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500" placeholder="Ej. Dolor de cabeza frecuente, mareos, control de tensión..." required></textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-cruzroja-500 text-white font-bold py-4 rounded-lg shadow-lg hover:bg-cruzroja-600 transition transform hover:-translate-y-1">
+                Confirmar y Agendar
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>    
+    function toggleSeguro(mostrar) {
+        const input = document.getElementById('input_seguro');
+        mostrar ? input.classList.remove('hidden') : input.classList.add('hidden');
+    }
+
+    // NUEVO: Ocultar mensajes automáticamente después de 4 segundos
+    setTimeout(function() {
+        const alerta = document.getElementById('alerta-flotante');
+        if (alerta) {
+            alerta.style.opacity = '0';
+            setTimeout(() => alerta.remove(), 500); // Esperar a que termine la transición
+        }
+    }, 4000);
+
+    function toggleMetodoPago(valor) {
+            const div = document.getElementById('div_metodo_pago');
+            const select = document.getElementById('select_metodo_pago');
+            if (valor === 'pagar_ahora') {
+                div.classList.remove('hidden');
+                select.required = true;
+            } else {
+                div.classList.add('hidden');
+                select.required = false;
+            }
+        }
+
+</script>
+{% endblock %}

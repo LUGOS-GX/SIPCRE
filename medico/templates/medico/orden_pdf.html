@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Orden Médica</title>
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 2cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #333;
+            font-size: 14px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        .dr-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 0;
+        }
+        .especialidad {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin: 5px 0;
+        }
+        .credenciales {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        .patient-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-weight: bold;
+            color: #2c3e50;
+            text-transform: uppercase;
+            font-size: 14px;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .exam-list {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        .signature-box {
+            text-align: center;
+            margin-top: 80px;
+            position: relative;
+        }
+        .firma {
+            max-width: 200px;
+            max-height: 100px;
+        }
+        .sello {
+            max-width: 120px;
+            max-height: 120px;
+            position: absolute;
+            right: 150px;
+            top: -20px;
+            opacity: 0.8;
+        }
+        .linea-firma {
+            border-top: 1px solid #000;
+            width: 250px;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <p class="dr-name">Dr(a). {{ orden.medico.usuario.first_name }} {{ orden.medico.usuario.last_name }}</p>
+        <p class="especialidad">{{ orden.medico.especialidad }}</p>
+        <p class="credenciales">MPPS: {{ orden.medico.usuario.mpps }} | C.M: {{ orden.medico.usuario.cm }}</p>
+    </div>
+
+    <div class="patient-info">
+        <strong>Paciente:</strong> {{ orden.nombre_paciente }}<br>
+        <strong>C.I:</strong> {{ orden.cedula_paciente }}<br>
+        <strong>Fecha:</strong> {{ orden.fecha_solicitud|date:"d/m/Y" }}
+    </div>
+
+    <h2 style="text-align: center; letter-spacing: 2px;">ÓRDENES MÉDICAS</h2>
+
+    <div class="section-title">Exámenes Solicitados</div>
+    <div class="exam-list">
+        {{ orden.examenes_solicitados }}
+    </div>
+
+    {% if orden.otros %}
+    <div class="section-title">Otros Exámenes</div>
+    <div class="exam-list">
+        {{ orden.otros }}
+    </div>
+    {% endif %}
+
+    {% if orden.observacion %}
+    <div class="section-title">Observaciones / Diagnóstico Presuntivo</div>
+    <div class="exam-list">
+        {{ orden.observacion }}
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 60px;">
+        <table style="width: 100%; border: none;">
+            <tr>
+                <td style="width: 50%; text-align: center; vertical-align: bottom;">
+                    {% if orden.medico.firma %}
+                        <img src="{{ orden.medico.firma.path }}" width="180"><br>
+                    {% else %}
+                        <br><br><br><br>
+                    {% endif %}
+                    
+                    <div style="border-top: 1px solid #000; width: 250px; margin: 5px auto 0 auto; padding-top: 5px; font-weight: bold;">
+                        Firma del Médico
+                    </div>
+                </td>
+
+                <td style="width: 50%; text-align: center; vertical-align: bottom;">
+                    {% if orden.medico.sello %}
+                        <img src="{{ orden.medico.sello.path }}" width="120">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+</html>

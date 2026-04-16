@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
+    
+    <div class="lg:col-span-1 space-y-6">
+        <div class="bg-white p-6 rounded-lg shadow-lg border-t-4 border-cruzroja-500">
+            <h2 class="text-gray-500 text-sm font-bold uppercase tracking-wide">Pacientes en Espera</h2>
+            <div class="flex items-baseline mt-2">
+                <p class="text-5xl font-extrabold text-gray-800">{{ pacientes_espera.count }}</p>
+                <span class="ml-2 text-gray-500 text-sm">para hoy</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-4 border-t pt-2">Fecha: {{ fecha }}</p>
+        </div>
+
+        <div class="mb-6">
+            <a href="{% url 'crear_recipe' %}" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition flex items-center justify-center transform hover:-translate-y-1">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Crear Récipe Médico
+            </a>
+
+            <a href="{% url 'solicitar_examenes' %}" class="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center mt-4">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                Solicitar Exámenes/Imagenología
+            </a>
+
+            <a href="{% url 'resultados_examenes' %}" class="bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 p-6 flex items-center transition-all duration-200 group mt-4">
+                <div class="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-500 transition-colors">
+                    <svg class="w-7 h-7 text-green-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg">Resultados de Exámenes</h3>
+                    <p class="text-sm text-gray-500">Ver resultados de laboratorio</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="bg-blue-50 p-6 rounded-lg border border-blue-100 shadow-sm">
+            <div class="flex items-start">
+                <span class="text-2xl mr-2">ℹ</span>
+                <div>
+                    <h3 class="font-bold text-blue-800 mb-1">Consultorio Activo</h3>
+                    <p class="text-sm text-blue-600 leading-relaxed">
+                        Recuerde completar todos los campos obligatorios de la historia (Motivo y Diagnóstico) antes de finalizar la consulta.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lg:col-span-2">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center self-start sm:self-auto">
+                <span class="bg-cruzroja-500 w-2 h-8 mr-3 rounded-full"></span>
+                Sala de Espera
+            </h2>
+            
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                <a href="{% url 'crear_historia_manual' %}" class="flex-1 sm:flex-none text-center bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded shadow transition flex items-center justify-center text-xs font-bold">
+                    <span class="mr-1">+</span> Nueva historia clínica
+                </a>
+                
+                <button type="button" onclick="abrirModalControl()" class="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow transition flex items-center justify-center text-xs font-bold">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                    Consulta / Control
+                </button>
+
+                <a href="{% url 'historial_medico' %}" class="flex-1 sm:flex-none text-center bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded shadow transition flex items-center justify-center text-xs font-bold">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Historial de atendidos
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-100">
+            {% if page_obj %}
+                <ul class="divide-y divide-gray-100">
+                    {% for cita in page_obj %}
+                    <li class="p-6 hover:bg-red-50 transition duration-150 ease-in-out group">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center text-cruzroja-600 font-bold text-lg border-2 border-white shadow-sm group-hover:bg-cruzroja-500 group-hover:text-white transition">
+                                    {{ cita.paciente.nombres|slice:":1" }}
+                                </div>
+                                
+                                <div class="ml-4">
+                                    <div class="flex items-center flex-wrap gap-2">
+                                        <p class="text-lg font-bold text-gray-900">{{ cita.paciente.nombres }}</p>
+                                        <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-mono">
+                                            {{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}
+                                        </span>
+                                    </div>
+                                    
+                                    <p class="text-sm text-gray-500 mt-1 italic">
+                                        "{{ cita.motivo|truncatechars:60 }}"
+                                    </p>
+                                    
+                                    <div class="mt-2 flex items-center text-xs text-gray-400 font-bold">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Hora Cita: {{ cita.hora|time:"h:i A" }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <a href="{% url 'crear_historia_manual' %}?cita_id={{ cita.id }}" class="bg-indigo-600 hover:bg-indigo-900 text-white font-bold py-2 px-4 rounded shadow transition">
+                                    Atender
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if page_obj.has_other_pages %}
+                <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-100 sm:px-6">
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Mostrando <span class="font-medium">{{ page_obj.start_index }}</span> a <span class="font-medium">{{ page_obj.end_index }}</span> de <span class="font-medium">{{ page_obj.paginator.count }}</span> pacientes en espera
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                                        <span class="sr-only">Anterior</span>
+                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                    </a>
+                                {% endif %}
+
+                                {% for i in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == i %}
+                                        <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-bold text-blue-600">
+                                            {{ i }}
+                                        </span>
+                                    {% else %}
+                                        <a href="?page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                                            {{ i }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                                        <span class="sr-only">Siguiente</span>
+                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                    </a>
+                                {% endif %}
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            {% else %}
+                <div class="p-16 text-center flex flex-col items-center justify-center bg-gray-50">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800">Sala de Espera Vacía</h3>
+                    <p class="text-gray-500 mt-2 max-w-sm">
+                        No hay pacientes asignados para este momento. Puede revisar su historial o iniciar un control manual.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-8">
+            <button id="btn_toggle_stats" class="w-full bg-white border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50 text-blue-600 font-bold py-4 px-6 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center group" onclick="toggleEstadisticas()">
+                <svg class="w-6 h-6 mr-3 text-blue-400 group-hover:text-blue-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span id="texto_btn_stats">Ver Estadísticas de Morbilidad</span>
+                <svg id="icono_flecha_stats" class="w-5 h-5 ml-auto transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+
+            <div id="panel_estadisticas" class="hidden mt-4 bg-white p-6 rounded-lg shadow-lg border border-gray-200 opacity-0 transition-opacity duration-500">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-4 gap-4">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center">
+                        <span class="bg-cruzroja-500 w-2 h-6 mr-2 rounded-full"></span>
+                        Análisis de Consultas
+                    </h3>
+                    <select id="filtro_periodo" class="border border-gray-300 rounded-md px-4 py-2 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition cursor-pointer" onchange="cargarEstadisticasMedico()">
+                        <option value="semana">Últimos 7 días</option>
+                        <option value="mes" selected>Últimos 30 días</option>
+                        <option value="ano">Últimos 12 meses</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider m-0">Mis Top Diagnósticos</h4>
+                            <a href="{% url 'exportar_morbilidad_excel' %}?tipo=personal" title="Descargar Morbilidad Personal" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-1 px-2 rounded border border-blue-200 transition flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Excel
+                            </a>
+                        </div>
+                        <div class="relative h-64 w-full flex justify-center">
+                            <canvas id="chartMisDiagnosticos"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-inner">
+                        <div class="flex justify-between items-center mb-4 border-b border-blue-200 pb-2">
+                            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider m-0">Morbilidad Global Ambulatorio</h4>
+                            <a href="{% url 'exportar_morbilidad_excel' %}?tipo=general" title="Descargar Morbilidad General" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-2 rounded border border-red-200 transition flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Excel
+                            </a>
+                        </div>
+                        <div class="relative h-64 w-full flex justify-center">
+                            <canvas id="chartGlobalDiagnosticos"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                        <h4 class="text-xs font-bold text-gray-500 mb-4 text-center uppercase tracking-wider">Mi Flujo de Pacientes</h4>
+                        <div class="relative h-64 w-full flex justify-center">
+                            <canvas id="chartTendencia"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal_control" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center z-50 transition-opacity">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md mx-4 transform transition-all flex flex-col">
+        
+        <div class="bg-blue-600 px-6 py-4 flex justify-between items-center rounded-t-lg">
+            <h3 class="text-white font-bold text-lg flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                Buscar Paciente Registrado
+            </h3>
+            <button type="button" onclick="cerrarModalControl()" class="text-blue-100 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <form action="{% url 'crear_control_rapido' %}" method="POST" class="p-6 pb-8">
+            {% csrf_token %}
+            
+            <p class="text-sm text-gray-600 mb-4">Seleccione al paciente de su lista histórica para registrar un nuevo control médico o evolución.</p>
+            
+            <div class="relative w-full">
+                <input type="hidden" name="paciente_id" id="control_paciente_id" required>
+                
+                <button type="button" id="btn_select_control" class="w-full bg-gray-50 border border-gray-300 rounded-lg shadow-sm pl-4 pr-10 py-3 text-left cursor-default focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition relative z-30" onclick="toggleDropdownControl()">
+                    <span class="block truncate text-gray-500 font-medium" id="texto_select_control">Haga clic para buscar...</span>
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                    </span>
+                </button>
+
+                <div id="menu_select_control" class="hidden absolute mt-1 w-full bg-white shadow-2xl max-h-80 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-hidden focus:outline-none sm:text-sm flex flex-col border border-gray-200 z-40">
+                    <div class="px-3 py-2 border-b border-gray-100 bg-gray-50 sticky top-0 z-50">
+                        <div class="relative">
+                            <input type="text" id="buscador_control_input" class="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm font-medium" placeholder="Escriba el nombre o cédula..." onkeyup="filtrarControles()">
+                        </div>
+                    </div>
+                    
+                    <ul id="lista_opciones_control" class="overflow-y-auto flex-1 py-1">
+                        {% for p in mis_pacientes %}
+                            <li class="opcion-control text-gray-700 cursor-pointer select-none relative py-2 pl-4 pr-9 hover:bg-blue-600 hover:text-white transition-colors group" data-id="{{ p.id }}" data-texto="{{ p.nombres }} {{ p.cedula }}" onclick="seleccionarControlCustom('{{ p.id }}', '{{ p.nombres }} - C.I: {{ p.cedula }}')">
+                                <span class="font-bold block truncate group-hover:text-white">{{ p.nombres }}</span>
+                                <span class="text-xs text-gray-500 group-hover:text-blue-100 block truncate mt-0.5">C.I: {{ p.cedula }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="text-gray-500 cursor-default select-none relative py-4 pl-4 pr-9 text-sm italic text-center">No tiene pacientes en su historial.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-16 flex justify-end space-x-3 pt-6 border-t border-gray-100 relative z-20">
+                <button type="button" onclick="cerrarModalControl()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-4 rounded transition">
+                    Cancelar
+                </button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition">
+                    Iniciar Control
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/buscador_px.js' %}"></script>
+
+<script> 
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pdfId = urlParams.get('pdf_id');
+        if (pdfId) {
+            const urlPdf = "{% url 'pdf_historia' 0 %}".replace('0', pdfId);
+            window.open(urlPdf, '_blank');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const recipePdfId = urlParams.get('recipe_pdf_id');
+        if (recipePdfId) {
+            window.open(`/medico/recipe/pdf/${recipePdfId}/`, '_blank');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const pdfOrdenId = urlParams.get('pdf_orden_id');
+        if (pdfOrdenId) {
+            window.open(`/medico/orden_pdf/${pdfOrdenId}/`, '_blank');
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    });
+
+    // === LÓGICA DE ESTADÍSTICAS ASÍNCRONAS ===
+    let chartMisDiagInstance = null;
+    let chartGlobalDiagInstance = null;
+    let chartTendenciaInstance = null;
+    let statsCargadas = false;
+
+    function toggleEstadisticas() {
+        const panel = document.getElementById('panel_estadisticas');
+        const flecha = document.getElementById('icono_flecha_stats');
+        
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            setTimeout(() => panel.classList.remove('opacity-0'), 10); 
+            flecha.classList.add('rotate-180');
+            
+            if (!statsCargadas) {
+                cargarEstadisticasMedico();
+                statsCargadas = true;
+            }
+        } else {
+            panel.classList.add('opacity-0');
+            flecha.classList.remove('rotate-180');
+            setTimeout(() => panel.classList.add('hidden'), 500);
+        }
+    }
+
+    function cargarEstadisticasMedico() {
+        const periodo = document.getElementById('filtro_periodo').value;
+        const url = `{% url 'api_estadisticas_medico' %}?periodo=${periodo}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                dibujarDona(document.getElementById('chartMisDiagnosticos'), chartMisDiagInstance, data.medico, ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'], (instancia) => chartMisDiagInstance = instancia);
+                
+                dibujarDona(document.getElementById('chartGlobalDiagnosticos'), chartGlobalDiagInstance, data.global, ['#6366F1', '#EC4899', '#14B8A6', '#F97316', '#84CC16'], (instancia) => chartGlobalDiagInstance = instancia);
+
+                dibujarGraficoTendencia(data.tendencia);
+            })
+            .catch(error => console.error('Error al cargar estadísticas:', error));
+    }
+
+    function dibujarDona(canvas, instanciaAnterior, datos, colores, callbackInstancia) {
+        if (instanciaAnterior) instanciaAnterior.destroy();
+        const ctx = canvas.getContext('2d');
+        const nuevaInstancia = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: datos.labels.length > 0 ? datos.labels : ['Sin registros'],
+                datasets: [{
+                    data: datos.data.length > 0 ? datos.data : [1],
+                    backgroundColor: datos.data.length > 0 ? colores : ['#E5E7EB'],
+                    borderWidth: 2, hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: {size: 10} } } },
+                cutout: '60%'
+            }
+        });
+        callbackInstancia(nuevaInstancia);
+    }
+
+    function dibujarGraficoTendencia(datos) {
+        const ctx = document.getElementById('chartTendencia').getContext('2d');
+        if (chartTendenciaInstance) chartTendenciaInstance.destroy();
+        chartTendenciaInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: datos.labels.length > 0 ? datos.labels : ['Sin datos'],
+                datasets: [{
+                    label: 'Atendidos',
+                    data: datos.data.length > 0 ? datos.data : [0],
+                    borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.1)', 
+                    borderWidth: 3, pointBackgroundColor: '#2563EB',
+                    tension: 0.4, fill: true
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
+            }
+        });
+    }
+</script>
+{% endblock %}

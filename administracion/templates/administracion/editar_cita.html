@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="mb-6">
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-500 flex items-center">
+            ← Cancelar y Volver
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Modificar Cita #{{ cita.id }}</h2>
+        
+        <div class="bg-blue-50 p-4 rounded mb-6 text-sm text-blue-800">
+            <strong>Paciente:</strong> {{ cita.paciente.nombres }} <br>
+            <strong>Cédula:</strong> {{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}
+        </div>
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Fecha</label>
+                <input type="date" name="fecha_cita" value="{{ cita.fecha|date:'Y-m-d' }}" class="w-full border rounded px-3 py-2">
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Hora</label>
+                <select name="hora_cita" class="w-full border rounded px-3 py-2 bg-white">
+                    <option value="08:00">08:00 AM</option>
+                                <option value="08:30">08:30 AM</option>
+                                <option value="09:00">09:00 AM</option>
+                                <option value="09:30">09:30 AM</option>
+                                <option value="10:00">10:00 AM</option>
+                                <option value="10:30">10:30 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="11:30">11:30 AM</option>
+                                <option value="12:00">12:00 PM (Mediodía)</option>
+                                <option value="13:00">01:00 PM</option>
+                                <option value="13:30">01:30 PM</option>
+                                <option value="14:00">02:00 PM</option>
+                                <option value="14:30">02:30 PM</option>
+                                <option value="15:00">03:00 PM</option>
+                                <option value="15:30">03:30 PM</option>
+                                <option value="16:00">04:00 PM</option>
+                                <option value="16:30">04:30 PM</option>
+                                <option value="17:00">05:00 PM</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Sangre</label>
+                    <select name="sangre" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500">
+                        <option value="" disabled selected>Seleccione...</option>
+                        <option value="O+">O Positivo (O+)</option>
+                        <option value="O-">O Negativo (O-)</option>
+                        <option value="A+">A Positivo (A+)</option>
+                        <option value="A-">A Negativo (A-)</option>
+                        <option value="B+">B Positivo (B+)</option>
+                        <option value="B-">B Negativo (B-)</option>
+                        <option value="AB+">AB Positivo (AB+)</option>
+                        <option value="AB-">AB Negativo (AB-)</option>
+                    </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Médico</label>
+                <select name="medico" class="w-full border rounded px-3 py-2 bg-white">
+                    {% for doc in medicos %}
+                        <option value="{{ doc.id }}" {% if cita.medico.id == doc.id %}selected{% endif %}>
+                            {{ doc.nombre }} ({{ doc.especialidad }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Estado</label>
+                <select name="estado" class="w-full border rounded px-3 py-2 bg-white">
+                    <option value="Pendiente" {% if cita.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="En Sala" {% if cita.estado == 'En Sala' %}selected{% endif %}>En Sala</option>
+                    <option value="Atendido" {% if cita.estado == 'Atendido' %}selected{% endif %}>Atendido</option>
+                    <option value="Cancelado" {% if cita.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 font-bold mb-2">Motivo</label>
+                <textarea name="motivo" rows="2" class="w-full border rounded px-3 py-2">{{ cita.motivo }}</textarea>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 mt-4">
+                Guardar Cambios
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

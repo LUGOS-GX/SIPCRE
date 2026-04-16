@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Iniciar Sesión
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Acceda con sus credenciales institucionales
+            </p>
+        </div>
+        <form class="mt-8 space-y-6" method="POST">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="bg-red-100 text-red-700 p-3 rounded text-sm text-center">
+                    Usuario o contraseña incorrectos.
+                </div>
+            {% endif %}
+
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div class="mb-4">
+                    {{ form.username.label_tag }}
+                    {{ form.username }}
+                </div>
+                <div>
+                    {{ form.password.label_tag }}
+                    {{ form.password }}
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-cruzroja-600 hover:bg-cruzroja-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cruzroja-500 transition duration-150">
+                    Entrar al Sistema
+                </button>
+            </div>
+            
+            <div class="text-center mt-6 flex flex-col space-y-3">
+                <a href="{% url 'seleccion_rol' %}" class="text-sm font-medium text-blue-600 hover:text-blue-800 transition">
+                    ¿No tienes cuenta? Regístrate aquí
+                </a>
+                
+                <a href="{% url 'landing_page' %}" class="text-sm font-medium text-gray-500 hover:text-gray-800 flex items-center justify-center transition">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Volver al Inicio
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background-color: #9333EA; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; color: #374151; line-height: 1.6; }
+        .footer { background-color: #f9fafb; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+        h1 { margin: 0; font-size: 24px; }
+        .highlight { color: #9333EA; font-weight: bold; }
+        .alert-box { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Cruz Roja Anzoátegui</h1>
+            <p style="margin: 5px 0 0 0;">Departamento de Laboratorio Clínico</p>
+        </div>
+        <div class="content">
+            <p>Estimado/a <span class="highlight">{{ nombre_paciente }}</span>,</p>
+            <p>Le informamos que los resultados de su <strong>Orden #{{ orden_id|stringformat:"05d" }}</strong> ya han sido procesados y verificados por nuestro equipo de bioanalistas.</p>
+            
+            <div class="alert-box">
+                <strong>Aviso:</strong> El documento que contiene sus resultados incluye imágenes o datos de alta calidad y supera el límite de peso permitido para ser enviado por correo electrónico.
+            </div>
+
+            <p>Por favor, <strong>puede pasar buscándolos directamente por el área de recepción del laboratorio</strong> en nuestro horario habitual, donde le entregaremos su reporte completo impreso o en formato digital (Traiga un pendrive si lo desea).</p>
+            <br>
+            <p>Detalles de la solicitud:</p>
+            <ul>
+                <li><strong>Fecha de proceso:</strong> {{ fecha_resultado|date:"d de F, Y" }}</li>
+                <li><strong>Médico:</strong> Dr(a). {{ medico_nombre }}</li>
+            </ul>
+            <p>Gracias por confiar en nuestros servicios.</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático generado por el sistema SIPCRE. Por favor no responda a este correo.</p>
+            <p>&copy; {% now "Y" %} Cruz Roja Venezolana - Sede Barcelona, Anzoátegui.</p>
+        </div>
+    </div>
+</body>
+</html>
