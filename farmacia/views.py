@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.db.models import F, Q, Sum, Count
@@ -90,113 +91,108 @@ def editar_perfil_farmacia(request):
 def despachar_orden(request, orden_id):
     orden = get_object_or_404(OrdenFarmacia, id=orden_id)
     
-    # Seguridad: Si ya se despachó, no dejamos que entren a modificarla
     if orden.estado != 'Pendiente':
-        messages.warning(request, "Esta orden ya fue procesada o cancelada.")
+        messages.warning(request, "Esta orden ya fue despachada.")
         return redirect('dashboard_farmacia')
 
-    # Traemos solo los medicamentos que tengan al menos 1 unidad en stock
-    medicamentos_disponibles = Medicamento.objects.filter(stock_actual__gt=0).order_by('nombre')
-    detalles = orden.detalles.all() # Lo que ya se ha agregado a la bolsa del paciente
+    medicamentos_db = Medicamento.objects.filter(stock_actual__gt=0).order_by('nombre')
+    catalogo = [
+        {
+            'id': m.id,
+            'nombre': m.nombre,
+            'presentacion': m.presentacion if m.presentacion else '',
+            'concentracion': m.concentracion if m.concentracion else '',
+            'stock': m.stock_actual,
+            'precio': float(m.precio) if m.precio else 0.0,
+            'es_controlado': m.es_controlado
+        } for m in medicamentos_db
+    ]
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
-
-        # Si el farmaceuta hace clic en "Agregar a la Bolsa"
-        if accion == 'agregar_item':
-            med_id = request.POST.get('medicamento_id')
-            cantidad = int(request.POST.get('cantidad', 0))
-            
-            if med_id and cantidad > 0:
-                medicamento = get_object_or_404(Medicamento, id=med_id)
-                
-                # Control de psicotrópicos
-                if getattr(medicamento, 'es_controlado', False): 
-                    
-                    # --- NUEVA REGLA: BLOQUEO A MÉDICO GENERAL ---
-                    # Verificamos si la orden viene de un médico interno y leemos su especialidad
-                    if orden.medico and getattr(orden.medico, 'especialidad', ''):
-                        especialidad_medico = orden.medico.especialidad.lower()
-                        if 'general' in especialidad_medico:
-                            messages.error(request, f"⛔ Bloqueo de Seguridad: No se permite despachar el psicotrópico '{medicamento.nombre}' bajo la indicación de un Médico General.")
-                            return redirect('despachar_orden', orden_id=orden.id)
-                    # ---------------------------------------------
-                    
-                    # Si NO hay un paciente registrado en el sistema (es paciente externo/de paso)
-                    if not orden.paciente:
-                        validacion_firma = request.POST.get('validacion_firma')
-                        if not validacion_firma:
-                            messages.error(request, f"ALERTA SEGURIDAD: {medicamento.nombre} es un psicotrópico. Para récipes externos DEBE confirmar físicamente el sello y firma del médico.")
-                            return redirect('despachar_orden', orden_id=orden.id)
-                    # Si hay paciente (interno), la firma digital del médico del sistema lo avala y pasa directo.
-
-                # Verificamos que no intenten sacar más de lo que hay
-                if cantidad <= medicamento.stock_actual:
-                    # 1. Creamos el registro de entrega
-                    DetalleDespacho.objects.create(
-                        orden=orden,
-                        medicamento=medicamento,
-                        cantidad=cantidad,
-                        precio_unitario=medicamento.precio
-                    )
-                    # 2. MAGIA: Descontamos del inventario físico
-                    medicamento.stock_actual -= cantidad
-                    medicamento.save()
-
-                    MovimientoInventario.objects.create(
-                        medicamento=medicamento,
-                        tipo_movimiento='SALIDA',
-                        cantidad=-cantidad, # Negativo porque es salida
-                        stock_resultante=medicamento.stock_actual,
-                        usuario=request.user,
-                        referencia=f"Despacho Orden #{orden.id}",
-                        orden_relacionada=orden
-                    )
-                    messages.success(request, f"Se agregaron {cantidad}x {medicamento.nombre} a la orden.")
-                else:
-                    messages.error(request, f"¡Stock insuficiente! Solo quedan {medicamento.stock_actual} unidades de {medicamento.nombre}.")
+        meds_ids = request.POST.getlist('medicamento_id[]')
+        cantidades = request.POST.getlist('cantidad[]')
         
-        # Si el farmaceuta hace clic en "Finalizar y Entregar"
-        elif accion == 'finalizar_despacho':
-            orden.estado = 'Despachado'
-            orden.fecha_despacho = timezone.now()
-            orden.save()
-            
-            # --- MAGIA ACTUALIZADA: FACTURAS PARA TODOS ---
-            if orden.paciente:
-                # Paciente formal registrado en Recepción
-                nueva_factura = Factura.objects.create(paciente=orden.paciente, estado='Pendiente')
-            else:
-                # Paciente de paso (Solo venía por el récipe)
-                nueva_factura = Factura.objects.create(
-                    nombre_cliente=orden.nombre_paciente,
-                    cedula_cliente=orden.cedula_paciente,
-                    estado='Pendiente'
-                )
-                
-            # Metemos los medicamentos a la factura
-            for detalle in detalles:
-                DetalleFactura.objects.create(
-                    factura=nueva_factura,
-                    departamento='Farmacia',
-                    descripcion=f"Med: {detalle.medicamento.nombre} {detalle.medicamento.concentracion}",
-                    cantidad=detalle.cantidad,
-                    precio_unitario=detalle.precio_unitario
-                )
-                
-            messages.success(request, f"Orden #{orden.id} despachada. La factura fue enviada a Caja Central.")
-            return redirect('dashboard_farmacia')
+        if not meds_ids:
+            messages.error(request, "Debe agregar medicamentos al carrito.")
+            return redirect('despachar_orden', orden_id=orden.id)
 
-    # Calculamos el total de la factura (sumando los subtotales de la bolsa)
-    total_factura = sum(detalle.subtotal() for detalle in detalles)
+        nombre_cli = orden.nombre_paciente if orden.nombre_paciente else (orden.paciente.nombres if orden.paciente else 'Paciente Desconocido')
+        cedula_cli = orden.cedula_paciente if orden.cedula_paciente else (orden.paciente.cedula if orden.paciente else '0000000')
+
+        estado_factura = 'Pagada' if accion == 'pagar_farmacia' else 'Pendiente'
+        
+        factura = Factura.objects.create(
+            nombre_cliente=nombre_cli,
+            cedula_cliente=cedula_cli,
+            total=0, 
+            estado=estado_factura
+        )
+        
+        total_acumulado = 0
+
+        for med_id, cant in zip(meds_ids, cantidades):
+            cant = int(cant)
+            med = Medicamento.objects.get(id=med_id)
+            
+            if cant > 0 and cant <= med.stock_actual:
+                med.stock_actual -= cant
+                med.save()
+                
+                MovimientoInventario.objects.create(
+                    medicamento=med,
+                    tipo_movimiento='SALIDA',
+                    cantidad=-cant, # <--- AQUÍ ESTÁ LA CORRECCIÓN: Guardamos como negativo
+                    stock_resultante=med.stock_actual,
+                    referencia=f'Despacho Orden #{orden.id}',
+                    orden_relacionada=orden,
+                    usuario=request.user
+                )
+                
+                precio_unit = float(med.precio) if med.precio else 0.0
+                subtotal = precio_unit * cant
+                total_acumulado += subtotal
+                
+                DetalleFactura.objects.create(
+                    factura=factura,
+                    descripcion=f"{med.nombre} {med.concentracion}",
+                    cantidad=cant,
+                    precio_unitario=precio_unit,
+                    subtotal=subtotal
+                )
+        
+        factura.total = total_acumulado
+        factura.save()
+        
+        orden.estado = 'Despachado'
+        orden.save()
+        
+        msg = f"Orden #{orden.id} finalizada. Factura #{factura.id} generada."
+        messages.success(request, msg)
+        return redirect('dashboard_farmacia')
 
     context = {
         'orden': orden,
-        'medicamentos_disponibles': medicamentos_disponibles,
-        'detalles': detalles,
-        'total_factura': total_factura
+        'catalogo_json': json.dumps(catalogo)
     }
     return render(request, 'farmacia/despachar_orden.html', context)
+
+@login_required
+@rol_requerido(['farmacia'])
+@require_POST
+def cancelar_orden_farmacia(request, orden_id):
+    """ Función para descartar una orden desde el dashboard de farmacia """
+    orden = get_object_or_404(OrdenFarmacia, id=orden_id)
+    
+    # Solo permitimos cancelar si la orden aún está pendiente
+    if orden.estado == 'Pendiente':
+        orden.estado = 'Cancelado'
+        orden.save()
+        messages.warning(request, f'La Orden #{orden.id} ha sido descartada exitosamente.')
+    else:
+        messages.error(request, f'No se puede cancelar la Orden #{orden.id} porque ya está en estado: {orden.estado}.')
+        
+    return redirect('dashboard_farmacia')
 
 @login_required
 @rol_requerido(['farmacia'])

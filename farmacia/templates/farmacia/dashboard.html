@@ -149,10 +149,19 @@
                             </span>
                         </td>
                         <td class="py-4 px-6 text-center">
-                            <a href="{% url 'despachar_orden' orden.id %}" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded shadow font-bold text-xs flex items-center justify-center mx-auto transition transform hover:scale-105 inline-flex">
-                                Despachar
-                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            </a>
+                            <div class="flex items-center justify-center space-x-2">
+                                <a href="{% url 'despachar_orden' orden.id %}" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded shadow font-bold text-xs flex items-center transition transform hover:scale-105">
+                                    Despachar
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                </a>
+                                
+                                <form action="{% url 'cancelar_orden_farmacia' orden.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea DESCARTAR esta orden de farmacia? Esta acción no se puede deshacer.');">
+                                    {% csrf_token %}
+                                    <button type="submit" title="Descartar Orden" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded shadow-sm transition flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
