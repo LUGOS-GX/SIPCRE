@@ -104,7 +104,7 @@
                     <input type="text" name="nombre_manual" id="nombre_manual" placeholder="Nombre completo del paciente" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
                 </div>
                 <div>
-                    <input type="text" name="cedula_manual" id="cedula_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="9" minlength="6" title="Ingrese una cédula válida (entre 6 y 9 números sin puntos)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="15" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
             </div>
         </div>
@@ -174,9 +174,8 @@ function togglePacienteType() {
     const divRegistrado = document.getElementById('div_registrado');
     const divManual = document.getElementById('div_manual');
     const inputNombre = document.getElementById('nombre_manual');
-    const inputCedula = document.getElementById('cedula_manual');
+    const inputCedula = document.getElementById('ci_manual');
     
-    // Variables adaptadas al buscador unificado
     const inputOculto = document.getElementById('control_paciente_id');
     const textoBtn = document.getElementById('texto_select_control');
     
@@ -191,7 +190,6 @@ function togglePacienteType() {
         divRegistrado.classList.add('hidden');
         divManual.classList.remove('hidden');
         
-        // Reseteamos el select custom al ir a manual
         inputOculto.value = '';
         textoBtn.innerText = 'Seleccione un paciente de su lista...';
         textoBtn.classList.add('text-gray-500');
@@ -205,19 +203,20 @@ function togglePacienteType() {
 document.addEventListener("DOMContentLoaded", function() {
     togglePacienteType();
 
-    // Lógica de autollenado si venimos de la Historia Clínica
-    const isPopup = "{{ is_popup }}";
-    const prePacienteId = "{{ pre_paciente_id }}";
-    const preNombre = "{{ pre_nombre }}";
-    const preCedula = "{{ pre_cedula }}";
+    // LÓGICA MÁGICA: Extraer datos directamente de la URL (URLSearchParams)
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    const isPopup = "{{ is_popup }}" === "1" || urlParams.get('popup') === '1';
+    const prePacienteId = "{{ pre_paciente_id }}" || urlParams.get('paciente_id');
+    const preNombre = "{{ pre_nombre }}" || urlParams.get('pre_nombre');
+    const preCedula = "{{ pre_cedula }}" || urlParams.get('pre_cedula');
 
-    if (isPopup === "1") {
-        if (prePacienteId) {
+    if (isPopup) {
+        if (prePacienteId && prePacienteId !== "undefined") {
             // 1. Es un paciente registrado
             document.querySelector('input[name="tipo_paciente"][value="registrado"]').click();
             document.getElementById('control_paciente_id').value = prePacienteId;
 
-            // Cambiar visualmente el botón inteligente para mostrar que ya se cargó
             const textoBtn = document.getElementById('texto_select_control');
             textoBtn.innerText = "Paciente pre-seleccionado de la historia actual";
             textoBtn.classList.remove('text-gray-500');
@@ -227,7 +226,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // 2. Es un paciente nuevo manual
             document.querySelector('input[name="tipo_paciente"][value="manual"]').click();
             document.getElementById('nombre_manual').value = preNombre;
-            document.getElementById('cedula_manual').value = preCedula;
+            document.getElementById('ci_manual').value = preCedula;
         }
     }
 });

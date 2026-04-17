@@ -48,7 +48,7 @@
                         
                         {% if modo_control %}
                             <input type="hidden" name="tipo_registro" value="control">
-                            <input type="hidden" name="paciente_control_id" value="{{ paciente_control.id }}">
+                            <input type="hidden" name="paciente_control_id" id="id_paciente_oculto" value="{{ paciente_control.id }}">
                             
                             <div class="space-y-2">
                                 <p class="text-gray-800 text-sm font-bold truncate">{{ paciente_control.nombres }}</p>
@@ -84,7 +84,7 @@
                             <div id="bloque_existente" class="animate-fade-in">
                                 <label class="block text-xs font-bold text-blue-900 mb-1">Paciente a Atender</label>
         
-                                <select name="paciente" class="w-full border border-blue-300 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-600 font-bold text-gray-700">
+                                <select name="paciente" id="id_paciente_oculto" class="w-full border border-blue-300 rounded px-2 py-2 text-sm bg-white focus:outline-none focus:border-blue-600 font-bold text-gray-700">
             
                                     <option value="" disabled {% if not cita_preseleccionada_id %}selected{% endif %}>
                                         -- Seleccione un paciente de la lista --
@@ -116,7 +116,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-blue-900 mb-1">Nombre Completo</label>
-                                    <input type="text" name="nuevo_nombre" placeholder="Juan Pérez" class="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-600">
+                                    <input type="text" id="nuevo_nombre" name="nuevo_nombre" placeholder="Juan Pérez" class="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-600">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-blue-900 mb-1">Tipo de Sangre</label>
@@ -203,7 +203,7 @@
                         Récipes
                     </div>
                     <div class="bg-indigo-50 p-4">
-                        <p class="text-[10px] text-indigo-800 mb-3 text-center font-medium leading-tight">Cree un récipe y/o envíelo a farmacia.</p>
+                        <p class="text-[10px] text-indigo-800 mb-3 text-center font-medium leading-tight">Cree un récipe sin salir de esta pantalla.</p>
                             <button type="button" onclick="abrirRecipePopup()" class="w-full bg-white hover:bg-indigo-100 text-indigo-700 font-bold py-2 px-4 rounded border border-indigo-300 shadow-sm transition flex justify-center items-center text-sm">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             Crear récipe nuevo
@@ -289,7 +289,7 @@
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Bronquitis aguda')"> Bronquitis aguda</li>
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('COVID-19')"> COVID-19</li>
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cefalea / Dolor de cabeza')"> Cefalea / Dolor de cabeza</li>
-                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Chikungunya')"> Chikungunya</li>                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cirrosis hepática')">Cirrosis hepática</li>
+                                <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Chikungunya')"> Chikungunya</li>                               <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Cirrosis hepática')">Cirrosis hepática</li>
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Colitis')"> Colitis</li>
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Colon Irritable')"> Colon Irritable</li>
                                 <li class="px-4 py-2 hover:bg-red-50 hover:text-red-700 cursor-pointer border-b border-gray-50 text-sm text-gray-700 transition" onclick="seleccionarCIE10('Conjuntivitis')"> Conjuntivitis</li>
@@ -504,6 +504,50 @@
             inputOtro.required = false;
             inputOtro.value = ""; // Limpiamos si se arrepintió
         }
+    }
+
+   // LÓGICA DE POPUP CORREGIDA PARA SOPORTAR PACIENTES NUEVOS
+    function abrirRecipePopup() {
+        let url = `{% url 'crear_recipe' %}?popup=1`;
+        const modoControl = "{{ modo_control }}";
+        
+        if (modoControl === "True") {
+            const pacienteId = document.getElementById('id_paciente_oculto').value;
+            if (!pacienteId) return;
+            url += `&paciente_id=${pacienteId}`;
+        } else {
+            const tipoRegistro = document.querySelector('input[name="tipo_registro"]:checked').value;
+            if (tipoRegistro === 'existente') {
+                const pacienteId = document.getElementById('id_paciente_oculto').value;
+                if (!pacienteId) {
+                    alert("⚠️ Por favor, seleccione un paciente agendado antes de elaborar el récipe.");
+                    return;
+                }
+                url += `&paciente_id=${pacienteId}`;
+            } else if (tipoRegistro === 'nuevo') {
+                // Usamos querySelector en lugar de getElementById para evitar errores
+                const inputNombre = document.querySelector('input[name="nuevo_nombre"]');
+                const inputCedula = document.querySelector('input[name="nuevo_cedula"]');
+                
+                const nombre = inputNombre ? inputNombre.value : '';
+                const cedula = inputCedula ? inputCedula.value : '';
+                
+                if (!nombre || !cedula) {
+                    alert("⚠️ Por favor, escriba el nombre y la cédula del paciente nuevo en la parte superior antes de crear el récipe.");
+                    return;
+                }
+                
+                // Mandamos los datos tipeados directo al popup para que abra en modo "Paciente de Paso"
+                url += `&pre_nombre=${encodeURIComponent(nombre)}&pre_cedula=${encodeURIComponent(cedula)}`;
+            }
+        }
+        
+        const width = 800;
+        const height = 700;
+        const left = (window.innerWidth - width) / 2;
+        const top = (window.innerHeight - height) / 2;
+        
+        window.open(url, 'RecipePopup', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`);
     }
 </script>
 {% endblock %}

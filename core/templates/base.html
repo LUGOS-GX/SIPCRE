@@ -45,7 +45,7 @@
                     {% if user.is_authenticated %}
                         <li class="mr-6 flex items-center relative">
                             
-                            {% if user.medico or user.rol == 'farmacia' %}
+                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
                             <button onclick="toggleMenuPerfil()" class="flex items-center focus:outline-none transition transform hover:scale-105">
                             {% else %}
                             <div class="flex items-center">
@@ -64,11 +64,11 @@
                                     {% endif %}
                                 </div>
                                 
-                                {% if user.medico or user.rol == 'farmacia' %}
+                                {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
                                     <svg class="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 {% endif %}
 
-                            {% if user.medico or user.rol == 'farmacia' %}
+                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
                             </button>
                             
                             <div id="menuPerfil" class="hidden absolute right-0 top-full mt-2 w-56 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-50">
@@ -78,6 +78,8 @@
                                         <a href="{% url 'cargar_firma_sello' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Cargar firma y sello</a>
                                     {% elif user.rol == 'farmacia' %}
                                         <a href="{% url 'editar_perfil_farmacia' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
+                                    {% elif user.rol == 'laboratorio' %}
+                                        <a href="{% url 'editar_perfil_lab' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
                                     {% endif %}
                                 </div>
                             </div>
