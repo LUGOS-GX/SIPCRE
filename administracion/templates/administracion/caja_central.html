@@ -1,226 +1,405 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="h-[calc(100vh-5rem)] flex flex-col -m-6 bg-gray-100">
     
-    <div class="mb-8 flex justify-between items-center border-b pb-4">
-        <div>
-            <h1 class="text-3xl font-extrabold text-gray-900 flex items-center">
-                <svg class="w-8 h-8 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                Caja Central y Facturación
-            </h1>
-            <p class="mt-2 text-sm text-gray-500">Gestión de cobros unificados de consultas, laboratorio y farmacia.</p>
+    <div class="bg-gray-800 text-white px-6 py-3 flex justify-between items-center shadow-md z-10">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'dashboard_admin' %}" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition" title="Volver al Dashboard">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <span class="font-bold text-lg tracking-wider">CAJA CENTRAL</span>
+            <span class="bg-gray-700 px-3 py-1 rounded text-sm text-gray-300 hidden md:inline">Cajero: {{ request.user.username }}</span>
         </div>
-        <a href="{% url 'dashboard_admin' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded shadow-sm transition">
-            ← Volver al Panel
-        </a>
+        <div class="flex items-center space-x-6">
+            <div class="flex flex-col text-right">
+                <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Tasa BCV Oficial</span>
+                <span class="text-xl font-bold text-green-400">Bs. {{ tasa_bcv|floatformat:2 }}</span>
+            </div>
+            <a href="{% url 'historico_caja' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-md border border-blue-800 flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                Histórico de operaciones
+            </a>
+            <a href="{% url 'cerrar_caja' %}" onclick="return confirm('¿Está seguro de que desea CERRAR LA CAJA? Se calcularán todos los pagos del turno y se emitirá el reporte.');" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg border border-red-800">
+                Cierre de Caja
+            </a>
+        </div>
     </div>
 
-    {% if messages %}
-        <div class="mb-6">
-            {% for message in messages %}
-                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' or message.tags == 'warning' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="flex-1 flex overflow-hidden">
         
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-xl shadow-lg border-t-4 border-blue-500 overflow-hidden">
-                <div class="p-6">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4">Buscar Paciente</h2>
-                    <form method="GET" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cédula de Identidad</label>
-                            <div class="relative">
-                                <input type="text" name="buscar_cedula" value="{{ query }}" placeholder="Ej. 12345678" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm" required>
-                                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition">
-                            Consultar Deudas
-                        </button>
-                    </form>
+        <div class="w-7/12 flex flex-col border-r border-gray-300 bg-white z-0">
+            
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Datos del Paciente</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="pos_buscador_px" class="w-full pl-3 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-0 font-bold text-gray-700" placeholder="Buscar Cédula o Nombre..." autocomplete="off">
+                        <ul id="pos_resultados_px" class="hidden absolute left-0 right-0 mt-1 bg-white shadow-2xl rounded border border-gray-200 max-h-48 overflow-y-auto z-50"></ul>
+                    </div>
+                    <input type="text" id="pos_cedula_px" class="w-1/3 px-3 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 font-mono text-center" placeholder="Cédula">
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-white">
+                <table class="w-full text-left">
+                    <thead class="border-b-2 border-gray-800 text-xs uppercase text-gray-500">
+                        <tr>
+                            <th class="pb-2 w-1/2">Descripción del Servicio</th>
+                            <th class="pb-2 text-center">Cant.</th>
+                            <th class="pb-2 text-right">Precio ($)</th>
+                            <th class="pb-2 text-right">Subtotal</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="pos_carrito_body">
+                        <tr id="pos_carrito_vacio"><td colspan="5" class="py-12 text-center text-gray-400 italic">Agregue servicios del panel derecho.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-gray-50 p-6 border-t border-gray-300">
+                <div class="flex justify-between items-end mb-4">
+                    <div class="text-gray-500 font-bold">TOTAL A PAGAR:</div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold text-gray-900">$<span id="pos_total_usd">0.00</span></div>
+                        <div class="text-lg font-bold text-gray-500 mt-1">Bs. <span id="pos_total_bs">0.00</span></div>
+                    </div>
+                </div>
+                <button onclick="abrirModalPago()" id="btn_procesar_pago" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex justify-center items-center text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Procesar Pago
+                </button>
+            </div>
+        </div>
+
+        <div class="w-5/12 bg-gray-200 flex flex-col">
+            <div class="p-4 flex gap-2 overflow-x-auto bg-gray-300 border-b border-gray-400">
+                <button onclick="filtrarCatalogo('Todo')" class="bg-gray-800 text-white px-4 py-2 rounded font-bold text-xs whitespace-nowrap">Todo</button>
+                <button onclick="filtrarCatalogo('Consulta')" class="bg-white text-gray-700 px-4 py-2 rounded font-bold text-xs whitespace-nowrap hover:bg-gray-100">Consultas</button>
+                <button onclick="filtrarCatalogo('Laboratorio')" class="bg-white text-gray-700 px-4 py-2 rounded font-bold text-xs whitespace-nowrap hover:bg-gray-100">Laboratorio</button>
+                <button onclick="filtrarCatalogo('Imagenologia')" class="bg-white text-gray-700 px-4 py-2 rounded font-bold text-xs whitespace-nowrap hover:bg-gray-100">Rayos X</button>
+            </div>
+            
+            <div class="flex-1 p-4 overflow-y-auto">
+                <div id="grid_catalogo" class="grid grid-cols-2 gap-3">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="modal_pago" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="bg-blue-600 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="font-bold text-xl">Recepción de Pago</h3>
+            <button onclick="cerrarModalPago()" class="text-white hover:text-gray-200"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        
+        <div class="p-6 grid grid-cols-2 gap-6 bg-gray-50">
+            <div class="border-r border-gray-200 pr-6">
+                <p class="text-xs font-bold text-gray-500 uppercase mb-4">Resumen de Cuenta</p>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-700">Total USD:</span>
+                    <span class="font-bold text-xl text-gray-900">$<span id="mp_total_usd">0.00</span></span>
+                </div>
+                <div class="flex justify-between items-center pb-4 border-b border-gray-200">
+                    <span class="text-gray-700">Total Bs:</span>
+                    <span class="font-bold text-lg text-gray-600">Bs. <span id="mp_total_bs">0.00</span></span>
                 </div>
                 
-                {% if paciente %}
-                <div class="bg-blue-50 p-6 border-t border-blue-100">
-                    <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Paciente Encontrado:</h3>
-                    <p class="text-lg font-bold text-gray-900">{{ paciente.nombres }} {{ paciente.apellidos }}</p>
-                    <p class="text-sm text-gray-600">CI: {{ paciente.nacionalidad }}-{{ paciente.cedula }}</p>
+                <div class="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <span class="text-xs font-bold text-red-800 uppercase block mb-1">Restante por cobrar</span>
+                    <div class="text-2xl font-bold text-red-600">$<span id="mp_restante_usd">0.00</span></div>
                 </div>
-                {% endif %}
             </div>
-        </div>
 
-       <div class="lg:col-span-2">
-            <div class="bg-white rounded-xl shadow-lg border-t-4 border-green-500 overflow-hidden min-h-[400px]">
-                <div class="p-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex justify-between items-center">
-                        Cuentas por Cobrar
-                        <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full">
-                            {{ facturas_pendientes|length }} Pendientes
-                        </span>
-                    </h2>
-                    
-                    {% if not facturas_pendientes %}
-                        {% if query %}
-                            <div class="flex flex-col items-center justify-center h-64 text-gray-400">
-                                <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <p>No se encontraron facturas pendientes para esa cédula.</p>
-                            </div>
-                        {% else %}
-                            <div class="flex flex-col items-center justify-center h-64 bg-green-50 rounded-lg border border-green-200">
-                                <svg class="w-16 h-16 mb-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <p class="text-green-800 font-bold text-lg">¡Todo al día!</p>
-                                <p class="text-green-600 text-sm">No hay facturas pendientes de cobro en la clínica.</p>
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        
-                        <div class="space-y-4">
-                            {% for factura in facturas_pendientes %}
-                            <div class="border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md transition duration-200 overflow-hidden">
-                                
-                                <div class="px-6 py-4 flex flex-col md:flex-row justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition" onclick="toggleDetalles('{{ factura.id }}')">
-                                    
-                                    <div class="flex-1 w-full md:w-auto mb-4 md:mb-0">
-                                        <div class="flex items-center space-x-3 mb-1">
-                                            <span class="font-bold text-gray-800 text-lg">{{ factura.numero_factura }}</span>
-                                            <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full border border-yellow-200">Cuenta Abierta</span>
-                                            <span class="text-xs text-gray-500 hidden md:inline-block">{{ factura.fecha_emision|date:"d/m/Y h:i A" }}</span>
-                                        </div>
-                                        <div class="text-sm font-bold text-blue-700">
-                                            {% if factura.paciente %}
-                                                {{ factura.paciente.nombres }} {{ factura.paciente.apellidos }} <span class="text-gray-500 font-normal text-xs ml-1">(CI: {{ factura.paciente.nacionalidad }}-{{ factura.paciente.cedula }})</span>
-                                            {% else %}
-                                                {{ factura.nombre_cliente }} <span class="text-gray-500 font-normal italic text-xs ml-1">- Paciente de Paso</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex items-center justify-between w-full md:w-auto space-x-6 border-t md:border-t-0 pt-3 md:pt-0">
-                                        <div class="text-right">
-                                            <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Total a Pagar</p>
-                                            <p class="text-2xl font-black text-green-600 font-mono">${{ factura.total }}</p>
-                                        </div>
-                                        <button type="button" class="bg-blue-100 text-blue-700 hover:bg-blue-200 p-2 rounded-full transition flex items-center justify-center">
-                                            <span class="sr-only">Ver Detalles</span>
-                                            <svg id="icon-{{ factura.id }}" class="w-6 h-6 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div id="detalles-{{ factura.id }}" class="hidden border-t border-gray-200 bg-white">
-                                    
-                                    <div class="px-6 py-4">
-                                        <h4 class="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider">Detalle de Consumos del Paciente</h4>
-                                        <table class="w-full text-sm text-left">
-                                            <thead class="text-xs text-gray-400 border-b border-gray-100">
-                                                <tr>
-                                                    <th class="pb-2 font-medium">Descripción</th>
-                                                    <th class="pb-2 text-center font-medium">Cant</th>
-                                                    <th class="pb-2 text-right font-medium">Subtotal</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-50">
-                                                {% for item in factura.detalles.all %}
-                                                <tr class="hover:bg-gray-50 transition">
-                                                    <td class="py-2">
-                                                        <span class="font-bold text-gray-800">{{ item.descripcion }}</span>
-                                                        <span class="block text-xs text-gray-400">{{ item.departamento }}</span>
-                                                    </td>
-                                                    <td class="py-2 text-center text-gray-600">{{ item.cantidad }}</td>
-                                                    <td class="py-2 text-right text-gray-800 font-mono font-bold">${{ item.subtotal }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    
-                                    <div class="bg-gray-100 px-6 py-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        
-                                        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                                            <p class="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                                                Añadir más servicios
-                                            </p>
-                                            <form method="POST" class="flex flex-col space-y-2">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="agregar_cargo">
-                                                <input type="hidden" name="factura_id" value="{{ factura.id }}">
-                                                
-                                                <div class="flex space-x-2">
-                                                    <select name="departamento" class="text-sm border-gray-300 rounded py-1.5 px-2 w-1/3 focus:ring-blue-500" required>
-                                                        <option value="Laboratorio">Lab.</option>
-                                                        <option value="Imagenología">Imag.</option>
-                                                        <option value="Insumos">Otros</option>
-                                                    </select>
-                                                    <input type="text" name="descripcion" placeholder="Ej. Perfil 20" class="text-sm border-gray-300 rounded py-1.5 px-2 w-2/3 focus:ring-blue-500" required>
-                                                </div>
-                                                <div class="flex space-x-2">
-                                                    <input type="number" step="0.01" name="precio" placeholder="Precio ($)" class="text-sm border-gray-300 rounded py-1.5 px-2 w-1/2 focus:ring-blue-500" required>
-                                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded text-sm w-1/2 transition">
-                                                        Añadir
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-
-                                        <div class="bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 flex flex-col justify-between">
-                                            <p class="text-xs font-bold text-green-800 uppercase mb-3 flex items-center">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                                                Pagar (Cerrar Cuenta)
-                                            </p>
-                                            <form method="POST" class="flex flex-col space-y-2">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="procesar_pago">
-                                                <input type="hidden" name="factura_id" value="{{ factura.id }}">
-                                                
-                                                <select name="metodo_pago" class="text-sm border-green-300 rounded py-1.5 px-2 w-full focus:ring-green-500 bg-white" required>
-                                                    <option value="" disabled selected>Método de Pago...</option>
-                                                    <option value="Punto de Venta">Punto de Venta</option>
-                                                    <option value="Pago Móvil">Pago Móvil</option>
-                                                    <option value="Efectivo (Divisas)">Efectivo (Divisas)</option>
-                                                    <option value="Efectivo (Bs)">Efectivo (Bs)</option>
-                                                    <option value="Seguro Médico">Seguro Médico</option>
-                                                </select>
-                                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1.5 px-3 rounded text-sm w-full transition shadow-sm">
-                                                    Procesar Pago
-                                                </button>
-                                            </form>
-                                        </div>
-                                        
-                                    </div>
-                                </div>
-                                
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    
+            <div class="space-y-3" id="contenedor_metodos">
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200">
+                    <label class="block text-xs font-bold text-green-700 mb-1">💵 Efectivo USD ($)</label>
+                    <input type="number" id="pay_usd_efectivo" class="input-pago w-full border-gray-300 rounded focus:ring-blue-500 text-right font-bold" placeholder="0.00" oninput="calcularRestante()">
+                </div>
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200">
+                    <label class="block text-xs font-bold text-blue-700 mb-1">📱 Pago Móvil (Bs)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="pay_bs_pm" class="input-pago w-1/2 border-gray-300 rounded focus:ring-blue-500 text-right font-bold" placeholder="Bs. 0.00" oninput="calcularRestante()">
+                        <input type="text" id="ref_bs_pm" class="w-1/2 border-gray-300 rounded focus:ring-blue-500 text-xs" placeholder="Nro. Referencia">
+                    </div>
+                </div>
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200">
+                    <label class="block text-xs font-bold text-purple-700 mb-1">🟣 Zelle ($)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="pay_usd_zelle" class="input-pago w-1/2 border-gray-300 rounded focus:ring-blue-500 text-right font-bold" placeholder="$ 0.00" oninput="calcularRestante()">
+                        <input type="text" id="ref_usd_zelle" class="w-1/2 border-gray-300 rounded focus:ring-blue-500 text-xs" placeholder="Titular / Ref">
+                    </div>
+                </div>
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">💳 Punto de Venta (Bs)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="pay_bs_punto" class="input-pago w-1/2 border-gray-300 rounded focus:ring-blue-500 text-right font-bold" placeholder="Bs. 0.00" oninput="calcularRestante()">
+                        <input type="text" id="ref_bs_punto" class="w-1/2 border-gray-300 rounded focus:ring-blue-500 text-xs" placeholder="Lote / Recibo">
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="p-4 border-t border-gray-200 flex justify-end space-x-3 bg-white">
+            <button onclick="cerrarModalPago()" class="px-6 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded transition">Cancelar</button>
+            <button onclick="finalizarFacturacion()" id="btn_finalizar" class="px-8 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-lg transition disabled:opacity-50" disabled>Facturar y Emitir Ticket</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    function toggleDetalles(facturaId) {
-        const detallesDiv = document.getElementById('detalles-' + facturaId);
-        const iconSvg = document.getElementById('icon-' + facturaId);
+    // Variables Globales
+    const TASA_BCV = parseFloat("{{ tasa_bcv }}".replace(',', '.'));
+    const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
+    const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
+    let carrito = [];
+    let facturasPendientesIds = [];
+
+    // INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', () => {
+        renderizarCatalogo('Todo');
+        configurarBuscadorPaciente();
+    });
+
+    // LÓGICA PACIENTE
+    function configurarBuscadorPaciente() {
+        const inputNombre = document.getElementById('pos_buscador_px');
+        const inputCedula = document.getElementById('pos_cedula_px');
+        const listResultados = document.getElementById('pos_resultados_px');
+
+        inputNombre.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            listResultados.innerHTML = '';
+            
+            if(query.length < 2) { listResultados.classList.add('hidden'); return; }
+
+            const filtrados = pacientes.filter(p => p.nombres.toLowerCase().includes(query) || p.cedula.includes(query)).slice(0, 5);
+            
+            if(filtrados.length > 0) {
+                listResultados.classList.remove('hidden');
+                filtrados.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-2 hover:bg-blue-50 cursor-pointer border-b text-sm font-bold text-gray-700';
+                    li.innerText = `${p.nombres} (V-${p.cedula})`;
+                    li.onclick = () => {
+                        inputNombre.value = p.nombres;
+                        inputCedula.value = p.cedula;
+                        listResultados.classList.add('hidden');
+                        
+                        // Cargar deudas automáticamente al seleccionar
+                        cargarDeudasPaciente(p.cedula);
+                    };
+                    listResultados.appendChild(li);
+                });
+            }
+        });
+    }
+
+    function cargarDeudasPaciente(cedula) {
+        fetch(`/administracion/caja/deudas/${cedula}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.deudas.length > 0) {
+                alert(`⚠️ ATENCIÓN: El paciente tiene ${data.deudas.length} servicio(s) pendiente(s) por pagar.`);
+                
+                data.deudas.forEach(deuda => {
+                    if (!carrito.find(i => i.id === deuda.id)) {
+                        carrito.push(deuda);
+                    }
+                });
+
+                data.facturas_ids.forEach(id => {
+                    if (!facturasPendientesIds.includes(id)) {
+                        facturasPendientesIds.push(id);
+                    }
+                });
+
+                actualizarCarrito();
+            }
+        })
+        .catch(err => console.error("Error buscando deudas:", err));
+    }
+
+    // LÓGICA CATÁLOGO
+    function renderizarCatalogo(categoria) {
+        const grid = document.getElementById('grid_catalogo');
+        grid.innerHTML = '';
         
-        if (detallesDiv.classList.contains('hidden')) {
-            detallesDiv.classList.remove('hidden');
-            // Rotamos la flechita para que apunte hacia arriba
-            iconSvg.classList.add('rotate-180');
-        } else {
-            detallesDiv.classList.add('hidden');
-            // Volvemos la flechita a la normalidad
-            iconSvg.classList.remove('rotate-180');
+        const filtrados = categoria === 'Todo' ? catalogo : catalogo.filter(c => c.categoria === categoria);
+        
+        filtrados.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'bg-white hover:bg-blue-50 border border-gray-200 p-4 rounded-xl shadow-sm text-left transition transform hover:scale-105 active:scale-95 flex flex-col justify-between h-24';
+            btn.innerHTML = `
+                <span class="text-sm font-bold text-gray-800 leading-tight">${item.nombre}</span>
+                <span class="text-blue-600 font-bold self-end text-lg">$${parseFloat(item.precio_usd).toFixed(2)}</span>
+            `;
+            btn.onclick = () => agregarAlCarrito(item);
+            grid.appendChild(btn);
+        });
+    }
+    window.filtrarCatalogo = renderizarCatalogo;
+
+    // LÓGICA CARRITO
+    function agregarAlCarrito(item) {
+        const existente = carrito.find(i => i.id === item.id);
+        // Evitamos sumar cantidades a las deudas pendientes, solo a los servicios nuevos
+        if (existente && !String(existente.id).startsWith('pendiente_')) { 
+            existente.cantidad++; 
+        } 
+        else if (!existente) { 
+            carrito.push({...item, cantidad: 1, precio: parseFloat(item.precio_usd)}); 
         }
+        actualizarCarrito();
+    }
+
+    function eliminarDelCarrito(id) {
+        carrito = carrito.filter(i => i.id !== id);
+        actualizarCarrito();
+    }
+
+    function actualizarCarrito() {
+        const tbody = document.getElementById('pos_carrito_body');
+        const btnCobrar = document.getElementById('btn_procesar_pago');
+        let totalUSD = 0;
+        
+        tbody.innerHTML = '';
+        if(carrito.length === 0) {
+            tbody.innerHTML = '<tr id="pos_carrito_vacio"><td colspan="5" class="py-12 text-center text-gray-400 italic">Agregue servicios del panel derecho.</td></tr>';
+            btnCobrar.disabled = true;
+        } else {
+            btnCobrar.disabled = false;
+            carrito.forEach(item => {
+                const subtotal = item.precio * item.cantidad;
+                totalUSD += subtotal;
+                tbody.innerHTML += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 text-sm">
+                        <td class="py-3 font-bold text-gray-700">${item.nombre}</td>
+                        <td class="py-3 text-center">${item.cantidad}</td>
+                        <td class="py-3 text-right text-gray-500">$${item.precio.toFixed(2)}</td>
+                        <td class="py-3 text-right font-bold text-gray-900">$${subtotal.toFixed(2)}</td>
+                        <td class="py-3 text-right text-red-400 hover:text-red-600 cursor-pointer" onclick="eliminarDelCarrito('${item.id}')">✖</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        document.getElementById('pos_total_usd').innerText = totalUSD.toFixed(2);
+        document.getElementById('pos_total_bs').innerText = (totalUSD * TASA_BCV).toFixed(2);
+    }
+
+    // LÓGICA MODAL DE PAGOS
+    let montoTotalUsd = 0;
+    function abrirModalPago() {
+        const pxNombre = document.getElementById('pos_buscador_px').value.trim();
+        const pxCedula = document.getElementById('pos_cedula_px').value.trim();
+        
+        if(!pxNombre || !pxCedula) {
+            alert("Por favor, ingrese o seleccione un paciente antes de cobrar.");
+            return;
+        }
+
+        montoTotalUsd = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+        document.getElementById('mp_total_usd').innerText = montoTotalUsd.toFixed(2);
+        document.getElementById('mp_total_bs').innerText = (montoTotalUsd * TASA_BCV).toFixed(2);
+        
+        document.querySelectorAll('.input-pago').forEach(i => i.value = '');
+        document.querySelectorAll('#modal_pago input[type="text"]').forEach(i => i.value = '');
+        
+        calcularRestante();
+        document.getElementById('modal_pago').classList.remove('hidden');
+    }
+
+    function cerrarModalPago() {
+        document.getElementById('modal_pago').classList.add('hidden');
+    }
+
+    function calcularRestante() {
+        const usdEf = parseFloat(document.getElementById('pay_usd_efectivo').value) || 0;
+        const usdZe = parseFloat(document.getElementById('pay_usd_zelle').value) || 0;
+        const bsPm = parseFloat(document.getElementById('pay_bs_pm').value) || 0;
+        const bsPu = parseFloat(document.getElementById('pay_bs_punto').value) || 0;
+        
+        const equivalentesUsdDeBs = (bsPm + bsPu) / TASA_BCV;
+        const totalPagadoUsd = usdEf + usdZe + equivalentesUsdDeBs;
+        
+        const restanteUsd = montoTotalUsd - totalPagadoUsd;
+        const spanRestante = document.getElementById('mp_restante_usd');
+        const btnFinalizar = document.getElementById('btn_finalizar');
+        
+        // Margen de tolerancia de $0.05 para resolver el bloqueo de decimales en Bs.
+        if (restanteUsd <= 0.05) { 
+            spanRestante.innerText = "0.00";
+            spanRestante.parentElement.classList.replace('text-red-600', 'text-green-600');
+            btnFinalizar.disabled = false;
+            if(restanteUsd < -0.05) spanRestante.innerText = `(Vuelto: $${Math.abs(restanteUsd).toFixed(2)})`;
+        } else {
+            spanRestante.innerText = restanteUsd.toFixed(2);
+            spanRestante.parentElement.classList.replace('text-green-600', 'text-red-600');
+            btnFinalizar.disabled = true;
+        }
+    }
+
+    // ENVÍO AL BACKEND VÍA AJAX
+    function finalizarFacturacion() {
+        const btnFinalizar = document.getElementById('btn_finalizar');
+        btnFinalizar.innerText = "Procesando...";
+        btnFinalizar.disabled = true;
+
+        let pagos = [];
+        const mapPagos = [
+            { id: 'pay_usd_efectivo', ref: null, metodo: 'Efectivo USD', moneda: 'usd' },
+            { id: 'pay_usd_zelle', ref: 'ref_usd_zelle', metodo: 'Zelle', moneda: 'usd' },
+            { id: 'pay_bs_pm', ref: 'ref_bs_pm', metodo: 'Pago Movil', moneda: 'bs' },
+            { id: 'pay_bs_punto', ref: 'ref_bs_punto', metodo: 'Punto de Venta', moneda: 'bs' }
+        ];
+
+        mapPagos.forEach(p => {
+            const val = parseFloat(document.getElementById(p.id).value) || 0;
+            if(val > 0) {
+                const eq_usd = p.moneda === 'usd' ? val : (val / TASA_BCV);
+                const referencia = p.ref ? document.getElementById(p.ref).value : '';
+                pagos.push({
+                    metodo: p.metodo,
+                    monto_ingresado: val,
+                    equivalente_usd: eq_usd,
+                    referencia: referencia
+                });
+            }
+        });
+
+        const payload = {
+            nombre: document.getElementById('pos_buscador_px').value,
+            cedula: document.getElementById('pos_cedula_px').value,
+            carrito: carrito,
+            pagos: pagos,
+            facturas_pendientes: facturasPendientesIds
+        };
+
+        fetch("{% url 'caja_central' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert(`✅ Factura #${data.factura_id} generada exitosamente.`);
+                window.location.reload(); 
+            } else {
+                alert("❌ Error al procesar: " + data.message);
+                btnFinalizar.innerText = "Facturar y Emitir Ticket";
+                btnFinalizar.disabled = false;
+            }
+        });
     }
 </script>
 {% endblock %}

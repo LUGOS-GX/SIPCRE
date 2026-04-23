@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from decimal import Decimal
 
 # GENERADOR DE NOMBRES ÚNICOS PARA ARCHIVOS
 def renombrar_archivo_seguro(instancia, nombre_archivo):
@@ -83,6 +84,20 @@ class Cita(models.Model):
     
     motivo = models.TextField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Pendiente')
+
+    @property
+    def esta_pagada(self):
+        """ 
+        Busca si existe una factura para este paciente en esta fecha 
+        que ya esté marcada como 'Pagada'.
+        """
+        # Importamos aquí para evitar importación circular
+        from .models import Factura
+        return Factura.objects.filter(
+            cedula_cliente=self.paciente.cedula,
+            fecha_emision=self.fecha,
+            estado='Pagada'
+        ).exists()
     
     def __str__(self):
         return f"{self.fecha} - {self.paciente} con {self.medico}"
@@ -138,3 +153,58 @@ class DetalleFactura(models.Model):
 
     def __str__(self):
         return f"{self.cantidad}x {self.descripcion} ({self.departamento})"
+
+class SesionCaja(models.Model):
+    """ Registro de apertura y cierre de caja por día/cajero para el reporte PDF """
+    cajero = models.ForeignKey('usuarios.Usuario', on_delete=models.PROTECT)
+    fecha_apertura = models.DateTimeField(auto_now_add=True)
+    fecha_cierre = models.DateTimeField(null=True, blank=True)
+    tasa_bcv_dia = models.DecimalField(max_digits=10, decimal_places=2, help_text="Tasa fijada al abrir la caja")
+    estado = models.CharField(max_length=20, default='Abierta', choices=[('Abierta', 'Abierta'), ('Cerrada', 'Cerrada')])
+    
+    # Totales calculados al momento del cierre (Auditoría)
+    total_usd_efectivo = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_zelle = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_bs_efectivo = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_pago_movil = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_punto_venta = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"Caja {self.id} - {self.cajero.username} - {self.estado}"
+
+class CatalogoServicio(models.Model):
+    """ Para poblar el panel derecho del POS con servicios rápidos """
+    CATEGORIAS = [
+        ('Consulta', 'Consulta Médica'),
+        ('Laboratorio', 'Laboratorio'),
+        ('Imagenologia', 'Rayos X / Eco'),
+        ('Enfermeria', 'Servicios de Enfermería'),
+        ('Otro', 'Otro')
+    ]
+    nombre = models.CharField(max_length=150)
+    categoria = models.CharField(max_length=50, choices=CATEGORIAS)
+    precio_usd = models.DecimalField(max_digits=10, decimal_places=2)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.nombre} (${self.precio_usd})"
+
+class PagoFactura(models.Model):
+    """ Permite pagos mixtos (Ej: $20 en efectivo y el resto en Pago Móvil) """
+    METODOS = [
+        ('Efectivo USD', 'Efectivo USD'),
+        ('Zelle', 'Zelle'),
+        ('Efectivo Bs', 'Efectivo Bs'),
+        ('Pago Movil', 'Pago Móvil'),
+        ('Punto de Venta', 'Punto de Venta')
+    ]
+    factura = models.ForeignKey(Factura, related_name='pagos', on_delete=models.CASCADE)
+    metodo = models.CharField(max_length=50, choices=METODOS)
+    monto_moneda_original = models.DecimalField(max_digits=15, decimal_places=2, help_text="Lo que entregó el px (Bs o USD)")
+    monto_equivalente_usd = models.DecimalField(max_digits=15, decimal_places=2, help_text="El valor que representa en la factura")
+    referencia = models.CharField(max_length=100, blank=True, null=True, help_text="Nro de recibo o Zelle")
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Pago {self.metodo} - Factura {self.factura.id}"
+    

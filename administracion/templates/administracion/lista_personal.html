@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6">
+    
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Directorio de Personal</h1>
+            <p class="text-gray-500 text-sm mt-1">Gestión y consulta de usuarios registrados en el sistema SIPCRE.</p>
+        </div>
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-600 font-bold text-sm transition flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Regresar
+        </a>
+    </div>
+
+    <div class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <form method="GET" action="{% url 'lista_personal' %}" class="flex gap-2">
+            <div class="relative flex-grow">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" name="q" value="{{ query }}" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Buscar por nombre, apellido o cédula...">
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition text-sm">
+                Buscar
+            </button>
+            {% if query %}
+                <a href="{% url 'lista_personal' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center">
+                    Limpiar
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="border-b border-gray-200 bg-gray-50">
+            <nav class="flex flex-wrap -mb-px" aria-label="Tabs">
+                <button onclick="switchTab('tab-medicos')" id="btn-tab-medicos" class="tab-btn border-b-2 border-cruzroja-500 py-4 px-6 text-sm font-bold text-cruzroja-600 focus:outline-none">
+                    Médicos ({{ personal.medicos.paginator.count }})
+                </button>
+                <button onclick="switchTab('tab-farmacia')" id="btn-tab-farmacia" class="tab-btn border-b-2 border-transparent py-4 px-6 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none">
+                    Farmacia ({{ personal.farmacia.paginator.count }})
+                </button>
+                <button onclick="switchTab('tab-laboratorio')" id="btn-tab-laboratorio" class="tab-btn border-b-2 border-transparent py-4 px-6 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none">
+                    Laboratorio ({{ personal.laboratorio.paginator.count }})
+                </button>
+                <button onclick="switchTab('tab-admin')" id="btn-tab-admin" class="tab-btn border-b-2 border-transparent py-4 px-6 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none">
+                    Administración ({{ personal.administracion.paginator.count }})
+                </button>
+            </nav>
+        </div>
+
+        <div class="p-6">
+            <div id="tab-medicos" class="tab-content block animate-fade-in">
+                {% include 'administracion/tabla_personal_snippet.html' with staff=personal.medicos rol_label="Especialista" %}
+            </div>
+
+            <div id="tab-farmacia" class="tab-content hidden animate-fade-in">
+                {% include 'administracion/tabla_personal_snippet.html' with staff=personal.farmacia rol_label="Farmaceuta" %}
+            </div>
+
+            <div id="tab-laboratorio" class="tab-content hidden animate-fade-in">
+                {% include 'administracion/tabla_personal_snippet.html' with staff=personal.laboratorio rol_label="Bioanalista" %}
+            </div>
+
+            <div id="tab-admin" class="tab-content hidden animate-fade-in">
+                {% include 'administracion/tabla_personal_snippet.html' with staff=personal.administracion rol_label="Administrador" %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId) {
+        // Ocultar todos los contenidos
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('block'));
+        
+        // Desactivar todos los botones
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.remove('border-cruzroja-500', 'text-cruzroja-600', 'font-bold');
+            b.classList.add('border-transparent', 'text-gray-500', 'font-medium');
+        });
+
+        // Activar la pestaña seleccionada
+        document.getElementById(tabId).classList.remove('hidden');
+        document.getElementById(tabId).classList.add('block');
+        
+        const activeBtn = document.getElementById('btn-' + tabId);
+        activeBtn.classList.remove('border-transparent', 'text-gray-500', 'font-medium');
+        activeBtn.classList.add('border-cruzroja-500', 'text-cruzroja-600', 'font-bold');
+    }
+</script>
+{% endblock %}

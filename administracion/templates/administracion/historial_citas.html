@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <span class="text-blue-500 mr-3 text-2xl"></span>
+                Historial
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">Registro histórico de pacientes atendidos en la institución.</p>
+        </div>
+        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-600 font-bold text-sm transition flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700 border-l-4 border-red-500{% else %}bg-green-100 text-green-700 border-l-4 border-green-500{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col min-h-[500px]">
+        
+        <div class="p-6 bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div class="relative w-full md:w-1/3">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" id="buscador_historial" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm transition shadow-sm" placeholder="Buscar en esta página...">
+            </div>
+
+            <div class="flex items-center space-x-3 w-full md:w-auto">
+                <span class="text-sm font-bold text-gray-600">Filtrar:</span>
+                <form method="GET" class="flex w-full md:w-auto">
+                    <input type="date" name="fecha" value="{{ fecha_actual_str }}" class="border border-gray-300 rounded-l-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500 w-full md:w-auto">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg font-bold transition text-sm">
+                        Buscar
+                    </button>
+                    {% if fecha_actual_str %}
+                        <a href="{% url 'historial_citas' %}" class="ml-2 text-gray-400 hover:text-red-500 p-2" title="Limpiar filtro">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </a>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto flex-grow">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-800 text-white uppercase text-xs sticky top-0">
+                    <tr>
+                        <th class="px-6 py-4 text-left font-bold tracking-wider rounded-tl-lg">Fecha y Hora</th>
+                        <th class="px-6 py-4 text-left font-bold tracking-wider">Paciente</th>
+                        <th class="px-6 py-4 text-left font-bold tracking-wider">Médico</th>
+                        <th class="px-6 py-4 text-center font-bold tracking-wider">Detalles</th>
+                        <th class="px-6 py-4 text-center font-bold tracking-wider">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="tabla_historial_body">
+                    {% for cita in citas %}
+                    <tr class="hover:bg-blue-50 transition cita-row bg-white">
+                        
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <p class="font-bold text-gray-800">{{ cita.fecha|date:"d/m/Y" }}</p>
+                            <p class="text-xs text-gray-500 font-mono">{{ cita.hora|time:"h:i A" }}</p>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <p class="font-bold text-gray-900">{{ cita.paciente.nombres }}</p>
+                            <p class="text-xs text-gray-500">C.I: {{ cita.paciente.cedula }}</p>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <span class="font-semibold text-gray-700">Dr(a). {{ cita.medico.usuario.last_name|default:cita.medico.nombre|default:"N/A" }}</span>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">{{ cita.medico.especialidad|default:"" }}</p>
+                        </td>
+                        
+                        <td class="px-6 py-4 text-center">
+                            <button type="button" onclick="abrirModalDetalle('{{ cita.id }}')" class="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white rounded-md text-xs font-bold transition shadow-sm border border-blue-200">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                Ver Info
+                            </button>
+                            
+                            <div id="data_cita_{{ cita.id }}" class="hidden" 
+                                 data-fecha="{{ cita.fecha|date:'d/m/Y' }}"
+                                 data-hora="{{ cita.hora|time:'h:i A' }}"
+                                 data-paciente="{{ cita.paciente.nombres }}"
+                                 data-cedula="{{ cita.paciente.cedula }}"
+                                 data-medico="Dr(a). {{ cita.medico.usuario.last_name|default:cita.medico.nombre }}"
+                                 data-motivo="{{ cita.motivo|default:'No especificado' }}"
+                                 data-pago="{% if cita.esta_pagada %}Pagado{% else %}Pendiente{% endif %}">
+                            </div>
+                        </td>
+                        
+                        <td class="px-6 py-4 text-center">
+                            <form action="{% url 'eliminar_cita' cita.id %}" method="POST" class="inline" onsubmit="return confirm('ATENCIÓN: ¿Está seguro de ELIMINAR permanentemente este registro del historial? Esta acción no se puede deshacer.');">
+                                {% csrf_token %}
+                                <button type="submit" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded transition" title="Eliminar Registro">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                            <p class="text-lg font-medium">No se encontraron registros de atención.</p>
+                            {% if fecha_actual_str %}<p class="text-sm mt-1">Intente buscar en otra fecha o limpie el filtro.</p>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if citas.has_other_pages %}
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center">
+                {% if citas.has_previous %}
+                    <a href="?page={{ citas.previous_page_number }}{% if fecha_actual_str %}&fecha={{ fecha_actual_str }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-blue-50">
+                        Anterior
+                    </a>
+                {% endif %}
+                
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-gray-100 text-sm font-bold text-gray-700">
+                    Página {{ citas.number }} de {{ citas.paginator.num_pages }}
+                </span>
+
+                {% if citas.has_next %}
+                    <a href="?page={{ citas.next_page_number }}{% if fecha_actual_str %}&fecha={{ fecha_actual_str }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-blue-50">
+                        Siguiente
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+        
+    </div>
+</div>
+
+<div id="modal_detalle" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="cerrarModalDetalle()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-gray-200">
+            <div class="bg-blue-600 px-4 py-4 sm:px-6 flex justify-between items-center">
+                <h3 class="text-lg leading-6 font-bold text-white" id="modal-title">Detalles de Atención</h3>
+                <button type="button" onclick="cerrarModalDetalle()" class="text-blue-200 hover:text-white focus:outline-none transition">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <div class="bg-white px-4 pt-5 pb-6 sm:p-6 sm:pb-4 space-y-4">
+                
+                <div class="flex justify-between items-start border-b border-gray-100 pb-3">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Paciente</p>
+                        <p class="text-lg font-bold text-gray-800" id="mod_paciente"></p>
+                        <p class="text-sm text-gray-500 font-mono">C.I: <span id="mod_cedula"></span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Fecha</p>
+                        <p class="text-sm font-bold text-gray-800" id="mod_fecha"></p>
+                        <p class="text-xs text-gray-500 font-mono" id="mod_hora"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 border-b border-gray-100 pb-3">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Médico Tratante</p>
+                        <div class="flex items-center text-sm font-bold text-gray-700 bg-gray-50 p-2 rounded">
+                            <span class="mr-2">👨‍⚕️</span> <span id="mod_medico"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Estado Administrativo</p>
+                        <div class="flex items-center text-sm font-bold text-gray-700 bg-gray-50 p-2 rounded">
+                            <span class="mr-2">💳</span> <span id="mod_pago" class="text-blue-600"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Motivo de Consulta (Registrado)</p>
+                    <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 border border-gray-100 italic" id="mod_motivo">
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200">
+                <button type="button" onclick="cerrarModalDetalle()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition">
+                    Cerrar Detalles
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Lógica del Buscador en Tabla
+    document.getElementById('buscador_historial').addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        const filas = document.querySelectorAll('.cita-row');
+        
+        filas.forEach(fila => {
+            const textoFila = fila.innerText.toLowerCase();
+            fila.style.display = textoFila.includes(query) ? '' : 'none';
+        });
+    });
+
+    // Lógica del Modal
+    function abrirModalDetalle(id) {
+        const dataDiv = document.getElementById('data_cita_' + id);
+        if (!dataDiv) return;
+
+        document.getElementById('mod_paciente').innerText = dataDiv.getAttribute('data-paciente');
+        document.getElementById('mod_cedula').innerText = dataDiv.getAttribute('data-cedula');
+        document.getElementById('mod_fecha').innerText = dataDiv.getAttribute('data-fecha');
+        document.getElementById('mod_hora').innerText = dataDiv.getAttribute('data-hora');
+        document.getElementById('mod_medico').innerText = dataDiv.getAttribute('data-medico');
+        document.getElementById('mod_motivo').innerText = dataDiv.getAttribute('data-motivo');
+        document.getElementById('mod_pago').innerText = dataDiv.getAttribute('data-pago');
+
+        const pagoEl = document.getElementById('mod_pago');
+        if(pagoEl.innerText.includes('Pendiente')) {
+            pagoEl.className = 'text-yellow-600';
+        } else {
+            pagoEl.className = 'text-green-600';
+        }
+
+        document.getElementById('modal_detalle').classList.remove('hidden');
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modal_detalle').classList.add('hidden');
+    }
+</script>
+{% endblock %}

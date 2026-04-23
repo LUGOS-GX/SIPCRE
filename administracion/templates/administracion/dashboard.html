@@ -13,7 +13,7 @@
         <div class="bg-white p-4 rounded shadow border border-gray-200">
             <p class="font-bold text-gray-700 mb-2 text-sm uppercase">Filtrar por Fecha:</p>
             <form method="GET" action="{% url 'dashboard_admin' %}">
-                <input type="date" name="fecha" value="{{ fecha_actual }}" class="w-full border border-gray-300 rounded p-2 mb-2 text-gray-700 focus:border-cruzroja-500" onchange="this.form.submit()">
+                <input type="date" name="fecha" value="{{ fecha_actual_str }}" class="w-full border border-gray-300 rounded p-2 mb-2 text-gray-700 focus:border-cruzroja-500" onchange="this.form.submit()">
                 <noscript>
                     <button class="w-full bg-gray-200 text-gray-700 text-xs font-bold py-1 rounded">Ver</button>
                 </noscript>
@@ -26,109 +26,359 @@
             </div>
             <div class="divide-y divide-gray-100">
                 <a href="{% url 'registrar_orden_externa' %}" class="w-full text-left px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold flex items-center transition cursor-pointer">
-                    <span class="text-yellow-500 font-bold mr-3 text-lg">🧪</span>
+                    <span class="text-yellow-500 font-bold mr-3 text-lg"></span>
                     Solicitud Lab/Img Externa
+                </a>
+                <a href="{% url 'historial_citas' %}" class="w-full text-left px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold flex items-center transition cursor-pointer">
+                    <span class="text-blue-500 font-bold mr-3 text-lg"></span>
+                    Historial de Citas
                 </a>
                 <a href="{% url 'caja_central' %}" class="w-full bg-green-100 hover:bg-green-200 text-green-800 font-bold py-3 px-4 rounded-lg text-left flex items-center transition shadow-sm border border-green-300 mt-4">
                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     Caja y Facturación
                 </a>
+                <a href="{% url 'lista_personal' %}" class="w-full text-left px-4 py-3 hover:bg-gray-50 text-gray-700 font-semibold flex items-center transition cursor-pointer">
+                    <span class="text-indigo-500 font-bold mr-3 text-lg"></span>
+                    Gestión de Personal
+                </a>
             </div>
         </div>
-                <a href="{% url 'sala_espera' %}" class="inline-flex items-center px-3 py-1 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-700 rounded-md opacity-80 transition duration-150 border border-gray-200 shadow-sm" title="Revisar solicitudes de registro">
-                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                    Sala de Espera
-                </a>
+        <a href="{% url 'sala_espera' %}" class="inline-flex items-center px-3 py-1 text-sm font-medium text-gray-500 bg-gray-50 hover:bg-gray-200 hover:text-gray-700 rounded-md opacity-80 transition duration-150 border border-gray-200 shadow-sm" title="Revisar solicitudes de registro">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            Sala de Espera
+        </a>
     </aside>
 
     <section class="lg:col-span-3">
         
-        <div class="bg-white rounded-lg shadow-lg overflow-hidden min-h-[500px]">
-            <div class="px-6 py-6 border-b flex justify-between items-center bg-gray-50">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden min-h-[500px] flex flex-col">
+            
+            <div class="px-6 py-4 border-b flex flex-wrap justify-between items-center bg-gray-50 gap-4">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">Itinerario de Citas</h3>
                     <p class="text-sm text-gray-500">
-                        Mostrando agenda del: <span class="font-bold text-cruzroja-600">{{ fecha_actual }}</span>
+                        Mostrando agenda del: <span class="font-bold text-cruzroja-600">{{ fecha_actual_str }}</span>
                     </p>
                 </div>
+                
+                <div class="relative w-full md:w-64">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="buscador_paciente" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cruzroja-500 focus:border-cruzroja-500 sm:text-sm transition" placeholder="Buscar paciente o cédula...">
+                </div>
+
                 <div class="hidden md:block">
-                    <span class="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded">
-                        Total citas: {{ citas.count }}
+                    <span class="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded shadow-inner">
+                        Total en agenda: {{ citas.paginator.count }}
                     </span>
                 </div>
             </div>
 
-            <table class="min-w-full text-sm">
-                <thead class="bg-cruzroja-500 text-white uppercase text-xs">
-                    <tr>
-                        <th class="px-6 py-4 text-left font-bold tracking-wider">Hora</th>
-                        <th class="px-6 py-4 text-left font-bold tracking-wider">Paciente</th>
-                        <th class="px-6 py-4 text-left font-bold tracking-wider">Doctor / Especialidad</th>
-                        <th class="px-6 py-4 text-center font-bold tracking-wider">Estado</th>
-                        <th class="px-6 py-4 text-center font-bold tracking-wider">Editar</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for cita in citas %}
-                    <tr class="hover:bg-red-50 transition">
-                        
-                        <td class="px-6 py-4 font-mono font-bold text-gray-700 border-r">
-                            {{ cita.hora|time:"h:i A" }}
-                        </td>
-                        
-                        <td class="px-6 py-4">
-                            <p class="font-bold text-gray-900 text-base">{{ cita.paciente.nombres }}</p>
-                            <p class="text-xs text-gray-500">{{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}</p>
-                            <p class="text-xs text-gray-400 italic mt-1">{{ cita.motivo|truncatechars:30 }}</p>
-                        </td>
-                        
-                        <td class="px-6 py-4 text-gray-700">
-                            {% if cita.medico %}
-                                <div class="flex flex-col">
-                                    <span class="font-bold text-gray-800">{{ cita.medico.nombre }}</span>
-                                    <span class="text-xs text-gray-500">{{ cita.medico.especialidad }}</span>
+            <div class="overflow-x-auto flex-grow">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-cruzroja-500 text-white uppercase text-xs sticky top-0">
+                        <tr>
+                            <th class="px-6 py-4 text-left font-bold tracking-wider">Hora</th>
+                            <th class="px-6 py-4 text-left font-bold tracking-wider">Paciente</th>
+                            <th class="px-6 py-4 text-left font-bold tracking-wider">Doctor / Especialidad</th>
+                            <th class="px-6 py-4 text-center font-bold tracking-wider">Estado</th>
+                            <th class="px-6 py-4 text-center font-bold tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200" id="tabla_citas_body">
+                        {% for cita in citas %}
+                        <tr class="hover:bg-red-50 transition cita-row">
+                            
+                            <td class="px-6 py-4 font-mono font-bold text-gray-700 border-r">
+                                {{ cita.hora|time:"h:i A" }}
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                <p class="font-bold text-gray-900 text-base">{{ cita.paciente.nombres }}</p>
+                                <p class="text-xs text-gray-500">{{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}</p>
+                                <p class="text-xs text-gray-400 italic mt-1">{{ cita.motivo|truncatechars:30 }}</p>
+                            </td>
+                            
+                            <td class="px-6 py-4 text-gray-700">
+                                {% if cita.medico %}
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-gray-800">{{ cita.medico.nombre }}</span>
+                                        <span class="text-xs text-gray-500">{{ cita.medico.especialidad }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-red-400 italic text-xs">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="px-6 py-4 text-center">
+                                {% if cita.estado == 'Pendiente' %}
+                                    <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200">{{ cita.estado }}</span>
+                                {% elif cita.estado == 'Atendido' %}
+                                    <span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">{{ cita.estado }}</span>
+                                {% elif cita.estado == 'En Sala' %}
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold border border-blue-200">{{ cita.estado }}</span>
+                                {% else %}
+                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold border border-red-200">{{ cita.estado }}</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="px-6 py-4 text-center">
+                                {% if cita.id %}
+                                <div class="flex items-center justify-center space-x-3">
+                                    <a href="{% url 'editar_cita' cita.id %}" class="text-gray-400 hover:text-blue-500 transition" title="Modificar Cita">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </a>
+                                    
+                                    <form action="{% url 'eliminar_cita' cita.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro que desea ELIMINAR permanentemente esta cita? Esta acción no se puede deshacer.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-gray-400 hover:text-red-500 transition" title="Eliminar Cita">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </form>
                                 </div>
-                            {% else %}
-                                <span class="text-red-400 italic text-xs">Sin asignar</span>
-                            {% endif %}
-                        </td>
-                        
-                        <td class="px-6 py-4 text-center">
-                            {% if cita.estado == 'Pendiente' %}
-                                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200">{{ cita.estado }}</span>
-                            {% elif cita.estado == 'Atendido' %}
-                                <span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">{{ cita.estado }}</span>
-                            {% elif cita.estado == 'En Sala' %}
-                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold border border-blue-200">{{ cita.estado }}</span>
-                            {% else %}
-                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold border border-red-200">{{ cita.estado }}</span>
-                            {% endif %}
-                        </td>
-                        
-                        <td class="px-6 py-4 text-center">
-                            {% if cita.id %}
-                                <a href="{% url 'editar_cita' cita.id %}" class="text-gray-400 hover:text-blue-500 transition" title="Modificar Cita">
-                                    <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr id="fila_vacia">
+                            <td colspan="5" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center justify-center text-gray-400">
+                                    <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <p class="text-lg font-medium">No hay citas registradas para esta fecha.</p>
+                                    <p class="text-sm">Utiliza el botón "Agendar Nueva Cita" para comenzar.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if citas.has_other_pages %}
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div class="flex-1 flex justify-between sm:hidden">
+                    {% if citas.has_previous %}
+                        <a href="?fecha={{ fecha_actual_str }}&page={{ citas.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Anterior</a>
+                    {% endif %}
+                    {% if citas.has_next %}
+                        <a href="?fecha={{ fecha_actual_str }}&page={{ citas.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Siguiente</a>
+                    {% endif %}
+                </div>
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Mostrando del <span class="font-bold">{{ citas.start_index }}</span> al <span class="font-bold">{{ citas.end_index }}</span> de <span class="font-bold">{{ citas.paginator.count }}</span> citas
+                        </p>
+                    </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            {% if citas.has_previous %}
+                                <a href="?fecha={{ fecha_actual_str }}&page={{ citas.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span class="sr-only">Anterior</span>
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                                 </a>
                             {% endif %}
-                        </td>
+                            
+                            {% for i in citas.paginator.page_range %}
+                                {% if citas.number == i %}
+                                    <span class="relative inline-flex items-center px-4 py-2 border border-cruzroja-500 bg-red-50 text-sm font-bold text-cruzroja-600 z-10">{{ i }}</span>
+                                {% else %}
+                                    <a href="?fecha={{ fecha_actual_str }}&page={{ i }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition">{{ i }}</a>
+                                {% endif %}
+                            {% endfor %}
 
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center justify-center text-gray-400">
-                                <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                <p class="text-lg font-medium">No hay citas registradas para esta fecha.</p>
-                                <p class="text-sm">Utiliza el botón "Agendar Nueva Cita" para comenzar.</p>
+                            {% if citas.has_next %}
+                                <a href="?fecha={{ fecha_actual_str }}&page={{ citas.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span class="sr-only">Siguiente</span>
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="px-6 py-6 border-t border-gray-200 bg-white">
+                <div class="flex justify-between items-center w-full mb-2">
+                    <button onclick="toggleEstadisticas()" id="btn_toggle_stats" class="text-cruzroja-600 hover:text-cruzroja-800 font-bold text-lg flex items-center transition group focus:outline-none">
+                        <svg id="icono_flecha_stats" class="w-6 h-6 mr-2 transform transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        Análisis Global
+                    </button>
+                    <span class="text-xs text-gray-400 font-medium uppercase tracking-widest hidden sm:block">Reportes Globales</span>
+                </div>
+
+                <div id="panel_estadisticas" class="hidden mt-4 bg-white p-6 rounded-lg shadow-lg border border-gray-200 opacity-0 transition-opacity duration-500 mb-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 border-b border-gray-100 pb-4 gap-4">
+                        <h3 class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="bg-cruzroja-500 w-2 h-8 mr-3 rounded-full"></span>
+                            Estadísticas del Ambulatorio
+                        </h3>
+                        <div class="flex items-center gap-3">
+                            <select id="filtro_periodo_global" class="border border-gray-300 rounded-lg px-4 py-2 text-sm font-bold text-gray-700 bg-gray-50 focus:ring-2 focus:ring-cruzroja-500 outline-none" onchange="cargarDatosYDibujar()">
+                                <option value="semana">Últimos 7 días</option>
+                                <option value="mes" selected>Últimos 30 días</option>
+                                <option value="ano">Último año</option>
+                            </select>
+                            <a href="{% url 'pdf_estadisticas' %}" target="_blank" class="bg-cruzroja-500 hover:bg-cruzroja-600 text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md transition flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"></path></svg>
+                                PDF General
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner flex flex-col">
+                            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest m-0">Morbilidad (Diagnósticos)</h4>
+                                <a href="{% url 'exportar_excel_estadisticas' 'morbilidad' %}" title="Descargar Excel" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded-full border border-red-200 transition flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Excel
+                                </a>
                             </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                            <div class="flex-1 relative h-56 flex justify-center"><canvas id="chart_morbilidad"></canvas></div>
+                        </div>
 
+                        <div class="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-inner flex flex-col">
+                            <div class="flex justify-between items-center mb-4 border-b border-red-200 pb-2">
+                                <h4 class="text-xs font-bold text-cruzroja-600 uppercase tracking-widest m-0">Insumos Despachados</h4>
+                                <a href="{% url 'exportar_excel_estadisticas' 'medicamentos' %}" title="Descargar Excel" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded-full border border-red-200 transition flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Excel
+                                </a>
+                            </div>
+                            <div class="flex-1 relative h-56 flex justify-center"><canvas id="chart_medicamentos"></canvas></div>
+                        </div>
+
+                        <div class="bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner flex flex-col">
+                            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest m-0">Demanda de Laboratorio</h4>
+                                <a href="{% url 'exportar_excel_estadisticas' 'examenes' %}" title="Descargar Excel" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded-full border border-red-200 transition flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Excel
+                                </a>
+                            </div>
+                            <div class="flex-1 relative h-56 flex justify-center"><canvas id="chart_examenes"></canvas></div>
+                        </div>
+
+                        <div class="bg-gray-50 p-5 rounded-2xl border border-gray-100 shadow-inner flex flex-col">
+                            <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest m-0">Afluencia de Pacientes</h4>
+                                <a href="{% url 'exportar_excel_estadisticas' 'flujo' %}" title="Descargar Excel" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 font-bold py-1 px-3 rounded-full border border-red-200 transition flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    Excel
+                                </a>
+                            </div>
+                            <div class="flex-1 relative h-56 flex justify-center"><canvas id="chart_flujo"></canvas></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
     </section>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const buscador = document.getElementById('buscador_paciente');
+        const filas = document.querySelectorAll('.cita-row');
+
+        if(buscador) {
+            buscador.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                
+                filas.forEach(fila => {
+                    const textoFila = fila.innerText.toLowerCase();
+                    if (textoFila.includes(query)) {
+                        fila.style.display = '';
+                    } else {
+                        fila.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+    
+    let myCharts = {};
+    let chartsCargados = false;
+
+    function toggleEstadisticas() {
+        const panel = document.getElementById('panel_estadisticas');
+        const icono = document.getElementById('icono_flecha_stats');
+        
+        if (panel.classList.contains('hidden')) {
+            // Mostrar
+            panel.classList.remove('hidden');
+            setTimeout(() => { panel.classList.replace('opacity-0', 'opacity-100'); }, 10);
+            icono.classList.add('rotate-90');
+            
+            if (!chartsCargados) {
+                cargarDatosYDibujar();
+                chartsCargados = true;
+            }
+        } else {
+            // Ocultar
+            panel.classList.replace('opacity-100', 'opacity-0');
+            icono.classList.remove('rotate-90');
+            setTimeout(() => { panel.classList.add('hidden'); }, 500); 
+        }
+    }
+
+    function cargarDatosYDibujar() {
+        const periodo = document.getElementById('filtro_periodo_global').value;
+        
+        fetch(`{% url 'datos_estadisticas' %}?periodo=${periodo}`)
+            .then(res => res.json())
+            .then(data => {
+                const configBase = { responsive: true, maintainAspectRatio: false };
+                
+                Object.values(myCharts).forEach(chart => chart.destroy());
+
+                // 1. Morbilidad (Doughnut)
+                myCharts.morbilidad = new Chart(document.getElementById('chart_morbilidad'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.morbilidad.map(i => i.motivo),
+                        datasets: [{ data: data.morbilidad.map(i => i.total), backgroundColor: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2', '#991b1b'] }]
+                    },
+                    options: configBase
+                });
+
+                // 2. Medicamentos (Barras Rojas)
+                myCharts.medicamentos = new Chart(document.getElementById('chart_medicamentos'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.medicamentos.map(i => i.descripcion),
+                        datasets: [{ label: 'Unidades Despachadas', data: data.medicamentos.map(i => i.total), backgroundColor: '#ef4444' }]
+                    },
+                    options: configBase
+                });
+
+                // 3. Exámenes (Barras Horizontales Grises)
+                myCharts.examenes = new Chart(document.getElementById('chart_examenes'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.examenes.map(i => i.descripcion),
+                        datasets: [{ label: 'Solicitudes', data: data.examenes.map(i => i.total), backgroundColor: '#6b7280' }]
+                    },
+                    options: { ...configBase, indexAxis: 'y' }
+                });
+
+                // 4. Flujo (Línea Roja)
+                myCharts.flujo = new Chart(document.getElementById('chart_flujo'), {
+                    type: 'line',
+                    data: {
+                        labels: data.flujo.map(i => i.fecha),
+                        datasets: [{ label: 'Pacientes Atendidos', data: data.flujo.map(i => i.total), borderColor: '#ef4444', fill: true, backgroundColor: 'rgba(239, 68, 68, 0.1)' }]
+                    },
+                    options: configBase
+                });
+            });
+    }
+</script>
 {% endblock %}

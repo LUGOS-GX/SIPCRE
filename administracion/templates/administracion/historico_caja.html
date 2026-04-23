@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <span class="text-blue-500 mr-3 text-2xl"></span>
+                Histórico de Transacciones
+            </h1>
+            <p class="text-gray-500 text-sm mt-1">Registro general de facturas emitidas y pagos recibidos en la Caja Central.</p>
+        </div>
+        <a href="{% url 'caja_central' %}" class="text-gray-500 hover:text-blue-600 font-bold text-sm transition flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Volver a la Caja
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-6">
+        <form method="GET" class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="w-full md:w-1/2">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar Paciente / Nro. Factura</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" name="q" value="{{ query }}" class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Ej: V-12345678, Juan Pérez...">
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/3">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Filtrar por Fecha</label>
+                <input type="date" name="fecha" value="{{ fecha_filtro }}" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+
+            <div class="flex gap-2 w-full md:w-auto">
+                <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-lg font-bold transition text-sm flex-1 md:flex-none">
+                    Filtrar
+                </button>
+                {% if query or fecha_filtro %}
+                    <a href="{% url 'historico_caja' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-bold transition text-sm flex items-center justify-center" title="Limpiar Filtros">
+                        ✖
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Factura Nro.</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha de Emisión</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Paciente</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Total Generado</th>
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-100">
+                    {% for fac in facturas %}
+                    <tr class="hover:bg-blue-50 transition">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="font-mono font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded">#{{ fac.id|stringformat:"05d" }}</span>
+                            <span class="ml-2 text-[10px] uppercase font-bold px-2 py-0.5 rounded {% if fac.estado == 'Pagada' %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ fac.estado }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {{ fac.fecha_emision|date:"d/m/Y - h:i A" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <p class="font-bold text-gray-900">{{ fac.paciente.nombres|default:fac.nombre_cliente|default:"Paciente de Paso" }}</p>
+                            <p class="text-xs text-gray-500">V-{{ fac.paciente.cedula|default:fac.cedula_cliente|default:"N/A" }}</p>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right font-bold text-gray-900 text-lg">
+                            ${{ fac.total|floatformat:2 }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <button onclick="abrirModalDetalle('{{ fac.id }}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg font-semibold text-xs transition shadow-sm border border-blue-200">
+                                Ver Desglose
+                            </button>
+
+                            <div id="data_fac_{{ fac.id }}" class="hidden"
+                                 data-paciente="{{ fac.paciente.nombres|default:fac.nombre_cliente|default:'Paciente de Paso' }}"
+                                 data-cedula="{{ fac.paciente.cedula|default:fac.cedula_cliente|default:'N/A' }}"
+                                 data-fecha="{{ fac.fecha_emision|date:'d/m/Y h:i A' }}"
+                                 data-total="{{ fac.total }}">
+                                
+                                <ul class="data-servicios">
+                                    {% for det in fac.detalles.all %}
+                                    <li data-desc="{{ det.descripcion }}" data-cant="{{ det.cantidad }}" data-sub="{{ det.subtotal }}"></li>
+                                    {% endfor %}
+                                </ul>
+                                <ul class="data-pagos">
+                                    {% for p in fac.pagos.all %}
+                                    <li data-metodo="{{ p.metodo }}" data-monto="{{ p.monto_equivalente_usd }}" data-original="{{ p.monto_moneda_original }}"></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <p class="text-gray-500 text-lg font-medium">No se encontraron facturas.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if facturas.has_other_pages %}
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center">
+                {% if facturas.has_previous %}
+                    <a href="?page={{ facturas.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if fecha_filtro %}&fecha={{ fecha_filtro }}{% endif %}" class="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        Anterior
+                    </a>
+                {% endif %}
+                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-gray-100 text-sm font-bold text-gray-700">
+                    Pág. {{ facturas.number }} / {{ facturas.paginator.num_pages }}
+                </span>
+                {% if facturas.has_next %}
+                    <a href="?page={{ facturas.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if fecha_filtro %}&fecha={{ fecha_filtro }}{% endif %}" class="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        Siguiente
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="modal_factura" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <div class="bg-gray-800 px-6 py-4 flex justify-between items-center text-white">
+            <h3 class="font-bold text-lg" id="mod_titulo_fac">Desglose de Factura</h3>
+            <button onclick="cerrarModalDetalle()" class="text-gray-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+        </div>
+        
+        <div class="overflow-y-auto p-6">
+            
+            <div class="bg-gray-50 rounded border border-gray-200 p-4 mb-6 flex justify-between">
+                <div>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Titular</p>
+                    <p class="font-bold text-gray-800" id="mod_paciente"></p>
+                    <p class="text-xs text-gray-500 font-mono">C.I: <span id="mod_cedula"></span></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Procesado el</p>
+                    <p class="text-sm text-gray-700 font-bold" id="mod_fecha"></p>
+                </div>
+            </div>
+
+            <h4 class="text-xs font-bold text-gray-500 uppercase border-b border-gray-200 pb-2 mb-3">Servicios Facturados</h4>
+            <table class="w-full text-sm text-left mb-6">
+                <thead class="text-gray-400 bg-gray-50 border-y border-gray-100">
+                    <tr>
+                        <th class="py-2 px-2">Concepto</th>
+                        <th class="py-2 px-2 text-center">Cant.</th>
+                        <th class="py-2 px-2 text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="mod_tbody_servicios" class="divide-y divide-gray-100">
+                    </tbody>
+            </table>
+
+            <h4 class="text-xs font-bold text-gray-500 uppercase border-b border-gray-200 pb-2 mb-3">Auditoría de Pago (Métodos)</h4>
+            <div id="mod_div_pagos" class="bg-gray-50 rounded border border-gray-200 p-3">
+                </div>
+
+            <div class="mt-6 flex justify-end">
+                <div class="bg-green-50 border border-green-200 p-4 rounded-lg text-right w-1/2 shadow-inner">
+                    <p class="text-xs font-bold text-green-700 uppercase tracking-widest">Total Facturado</p>
+                    <p class="text-3xl font-black text-green-800">$<span id="mod_total"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gray-100 px-6 py-4 border-t border-gray-200 text-right">
+            <button onclick="cerrarModalDetalle()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-2 px-6 rounded shadow-sm transition">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalDetalle(id) {
+        const cajaData = document.getElementById('data_fac_' + id);
+        if(!cajaData) return;
+
+        // Cabeceras
+        document.getElementById('mod_titulo_fac').innerText = 'Desglose de Factura #' + id.padStart(5, '0');
+        document.getElementById('mod_paciente').innerText = cajaData.getAttribute('data-paciente');
+        document.getElementById('mod_cedula').innerText = cajaData.getAttribute('data-cedula');
+        document.getElementById('mod_fecha').innerText = cajaData.getAttribute('data-fecha');
+        document.getElementById('mod_total').innerText = parseFloat(cajaData.getAttribute('data-total')).toFixed(2);
+
+        // Servicios
+        const tbodyServ = document.getElementById('mod_tbody_servicios');
+        tbodyServ.innerHTML = '';
+        const listaServ = cajaData.querySelectorAll('.data-servicios li');
+        
+        listaServ.forEach(li => {
+            tbodyServ.innerHTML += `
+                <tr class="text-gray-700">
+                    <td class="py-2 px-2 font-medium">${li.getAttribute('data-desc')}</td>
+                    <td class="py-2 px-2 text-center font-mono">${li.getAttribute('data-cant')}</td>
+                    <td class="py-2 px-2 text-right font-bold">$${parseFloat(li.getAttribute('data-sub')).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        // Pagos Mixtos
+        const divPagos = document.getElementById('mod_div_pagos');
+        divPagos.innerHTML = '';
+        const listaPagos = cajaData.querySelectorAll('.data-pagos li');
+        
+        if (listaPagos.length === 0) {
+            divPagos.innerHTML = '<p class="text-xs text-gray-500 italic">No hay registros de pago en base de datos.</p>';
+        } else {
+            listaPagos.forEach(li => {
+                const met = li.getAttribute('data-metodo');
+                const montoUsd = parseFloat(li.getAttribute('data-monto')).toFixed(2);
+                const original = parseFloat(li.getAttribute('data-original')).toFixed(2);
+                
+                // Formateamos visualmente dependiendo si fue en Bs o USD
+                let detalleOriginal = '';
+                if(met.includes('Bs') || met.includes('Movil') || met.includes('Punto')) {
+                    detalleOriginal = `(Bs. ${original})`;
+                }
+
+                divPagos.innerHTML += `
+                    <div class="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                        <span class="text-sm font-bold text-gray-600">▪ ${met} <span class="text-xs text-gray-400 font-normal ml-1">${detalleOriginal}</span></span>
+                        <span class="text-sm font-bold text-gray-900">$${montoUsd}</span>
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('modal_factura').classList.remove('hidden');
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modal_factura').classList.add('hidden');
+    }
+</script>
+{% endblock %}

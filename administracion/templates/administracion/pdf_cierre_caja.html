@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cierre de Caja #{{ sesion.id }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f3f4f6; }
+        .hoja {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            padding: 40px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        /* Configuración para que al imprimir solo salga la hoja y sin márgenes del navegador */
+        @media print {
+            body { background: white; margin: 0; padding: 0; }
+            .hoja { width: 100%; box-shadow: none; margin: 0; padding: 20mm; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 font-sans">
+
+    <div class="text-center py-4 bg-gray-800 text-white no-print flex justify-center space-x-4">
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded font-bold shadow">Imprimir / Guardar PDF</button>
+        <a href="{% url 'dashboard_admin' %}" class="bg-gray-600 hover:bg-gray-500 px-6 py-2 rounded font-bold">Volver al Dashboard</a>
+    </div>
+
+    <div class="hoja border border-gray-200">
+        
+        <div class="border-b-2 border-gray-800 pb-6 mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-black text-gray-900 tracking-tighter">SIPCRE</h1>
+                <p class="text-sm font-bold text-gray-500 uppercase tracking-widest">Sistema Administrativo</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-2xl font-bold text-gray-800 uppercase">Arqueo de Caja</h2>
+                <p class="text-gray-500">Reporte #{{ sesion.id|stringformat:"05d" }}</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-8 grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <p><span class="font-bold text-gray-600">Cajero Responsable:</span> {{ sesion.cajero.get_full_name|default:sesion.cajero.username }}</p>
+                <p><span class="font-bold text-gray-600">Estado de Sesión:</span> <span class="text-green-600 font-bold uppercase">{{ sesion.estado }}</span></p>
+                <p><span class="font-bold text-gray-600">Tasa BCV del Turno:</span> Bs. {{ sesion.tasa_bcv_dia }} / USD</p>
+            </div>
+            <div class="text-right">
+                <p><span class="font-bold text-gray-600">Fecha de Apertura:</span> {{ sesion.fecha_apertura|date:"d/m/Y h:i A" }}</p>
+                <p><span class="font-bold text-gray-600">Fecha de Cierre:</span> {{ sesion.fecha_cierre|date:"d/m/Y h:i A" }}</p>
+            </div>
+        </div>
+
+        <h3 class="text-lg font-bold text-gray-800 border-b border-gray-300 pb-2 mb-4 uppercase tracking-wider">Desglose de Ingresos</h3>
+        
+        <table class="w-full mb-8 text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
+                    <th class="py-2 px-4 border border-gray-200">Método de Pago</th>
+                    <th class="py-2 px-4 border border-gray-200 text-right">Moneda</th>
+                    <th class="py-2 px-4 border border-gray-200 text-right">Monto Recaudado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200 font-medium text-green-700">Efectivo USD</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right text-gray-500">USD</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-bold">$ {{ sesion.total_usd_efectivo|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200 font-medium text-purple-700">Transferencia Zelle</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right text-gray-500">USD</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-bold">$ {{ sesion.total_zelle|floatformat:2 }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td colspan="2" class="py-2 px-4 border border-gray-200 text-right font-bold text-gray-600 text-xs uppercase">Subtotal Divisas:</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-black text-gray-800">$ {{ total_usd_puro|floatformat:2 }}</td>
+                </tr>
+
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200 font-medium text-gray-700">Efectivo Bs.</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right text-gray-500">VES</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-bold">Bs. {{ sesion.total_bs_efectivo|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200 font-medium text-blue-700">Pago Móvil</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right text-gray-500">VES</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-bold">Bs. {{ sesion.total_pago_movil|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200 font-medium text-gray-700">Punto de Venta</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right text-gray-500">VES</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-bold">Bs. {{ sesion.total_punto_venta|floatformat:2 }}</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td colspan="2" class="py-2 px-4 border border-gray-200 text-right font-bold text-gray-600 text-xs uppercase">Subtotal Bolívares Nacionales:</td>
+                    <td class="py-2 px-4 border border-gray-200 text-right font-black text-gray-800">Bs. {{ total_bs|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="flex justify-end mt-8">
+            <div class="w-1/2 bg-gray-800 text-white rounded-lg p-6 shadow-md">
+                <p class="text-sm text-gray-300 font-bold uppercase tracking-wider mb-2">Total Consolidado (Eq. USD)</p>
+                <p class="text-4xl font-black text-right">$ {{ gran_total_usd|floatformat:2 }}</p>
+                <p class="text-xs text-gray-400 text-right mt-2">*Bolívares calculados a tasa BCV del turno.</p>
+            </div>
+        </div>
+
+        <div class="mt-24 grid grid-cols-2 gap-12 pt-8">
+            <div class="text-center">
+                <div class="border-b border-gray-400 w-3/4 mx-auto mb-2"></div>
+                <p class="text-sm font-bold text-gray-700 uppercase">Firma del Cajero</p>
+                <p class="text-xs text-gray-500">{{ sesion.cajero.get_full_name|default:sesion.cajero.username }}</p>
+            </div>
+            <div class="text-center">
+                <div class="border-b border-gray-400 w-3/4 mx-auto mb-2"></div>
+                <p class="text-sm font-bold text-gray-700 uppercase">Firma Gerencia / Auditoría</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Disparar la ventana de impresión automáticamente al abrir el reporte
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>
