@@ -20,4 +20,6 @@ urlpatterns = [
     path('estadisticas/datos/', views.datos_estadisticas, name='datos_estadisticas'),
     path('estadisticas/excel/<str:tipo>/', views.exportar_excel_estadisticas, name='exportar_excel_estadisticas'),
     path('estadisticas/pdf/', views.pdf_estadisticas, name='pdf_estadisticas'),
+    path('perfil/editar/', views.editar_perfil_admin, name='editar_perfil_admin'),
+    path('citas/verificar-disponibilidad/', views.verificar_disponibilidad, name='verificar_disponibilidad'),
 ]

@@ -45,7 +45,7 @@
                     {% if user.is_authenticated %}
                         <li class="mr-6 flex items-center relative">
                             
-                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
+                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' or user.rol == 'admin' %}
                             <button onclick="toggleMenuPerfil()" class="flex items-center focus:outline-none transition transform hover:scale-105">
                             {% else %}
                             <div class="flex items-center">
@@ -59,16 +59,18 @@
                                 <div class="h-10 w-10 rounded-full bg-red-100 text-cruzroja-600 flex items-center justify-center font-bold border border-red-200 overflow-hidden">
                                     {% if user.medico and user.medico.foto_perfil %}
                                         <img src="{{ user.medico.foto_perfil.url }}" alt="Perfil" class="h-full w-full object-cover">
+                                    {% elif user.foto_perfil %}
+                                        <img src="{{ user.foto_perfil.url }}" alt="Perfil" class="h-full w-full object-cover">
                                     {% else %}
                                         {{ user.first_name|slice:":1" }}
                                     {% endif %}
                                 </div>
                                 
-                                {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
+                                {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' or user.rol == 'admin' %}
                                     <svg class="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                 {% endif %}
 
-                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' %}
+                            {% if user.medico or user.rol == 'farmacia' or user.rol == 'laboratorio' or user.rol == 'admin' %}
                             </button>
                             
                             <div id="menuPerfil" class="hidden absolute right-0 top-full mt-2 w-56 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-50">
@@ -80,6 +82,8 @@
                                         <a href="{% url 'editar_perfil_farmacia' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
                                     {% elif user.rol == 'laboratorio' %}
                                         <a href="{% url 'editar_perfil_lab' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
+                                    {% elif user.rol == 'admin' %}
+                                        <a href="{% url 'editar_perfil_admin' %}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-cruzroja-600 transition">Mi Perfil</a>
                                     {% endif %}
                                 </div>
                             </div>

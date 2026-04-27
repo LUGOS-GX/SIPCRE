@@ -60,81 +60,84 @@ def dashboard_admin(request):
 @login_required
 @rol_requerido(['admin'])
 def agendar_cita(request):
-    # Obtenemos todos los médicos para el desplegable
-    medicos = Medico.objects.all()
-
     if request.method == 'POST':
-        # Datos del Paciente
-        nombre = request.POST.get('nombre')
-        cedula_num = request.POST.get('cedula')
-        nacionalidad = request.POST.get('nacionalidad')
-        fecha_cita = request.POST.get('fecha_cita')
-        hora_cita = request.POST.get('hora_cita') 
+        # 1. Recuperar datos del nuevo formulario
+        cedula = request.POST.get('cedula').strip()
+        nombre = request.POST.get('nombre_nuevo').strip()
+        email = request.POST.get('email', '').strip()
+        tipo_sangre = request.POST.get('tipo_sangre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        fecha_nacimiento = request.POST.get('fecha_nacimiento', '').strip()
+        tiene_seguro = request.POST.get('tiene_seguro') == 'on'
+        nombre_seguro = request.POST.get('nombre_seguro', '').strip()
         
-        if not hora_cita:
-            hora_cita = '08:00'
+        medico_id = request.POST.get('medico_id')
+        fecha = request.POST.get('fecha')
+        hora = request.POST.get('hora')
+        servicios_ids = request.POST.getlist('servicios[]')
 
-        medico_id = request.POST.get('medico')
-        motivo = request.POST.get('motivo')
-        costo_consulta = request.POST.get('costo_consulta')
-        opcion_pago = request.POST.get('opcion_pago')
-        metodo_pago = request.POST.get('metodo_pago')
+        # Manejar fecha vacía para evitar errores en la base de datos (Date no acepta strings vacíos)
+        fecha_nac = fecha_nacimiento if fecha_nacimiento else None
 
-        # VALIDACIÓN 1: Verificar Cupo Disponible
-        medico_obj = Medico.objects.get(id=medico_id)
-        citas_existentes = Cita.objects.filter(medico=medico_obj, fecha=fecha_cita).count()
-
-        if citas_existentes >= medico_obj.cupo_diario:
-            # ERROR: No hay cupo
-            messages.error(request, f"El {medico_obj.nombre} ya no tiene cupos para el {fecha_cita}.")
-            return render(request, 'administracion/agendar_cita.html', {'medicos': medicos})
-
-        paciente, _ = Paciente.objects.get_or_create(
-            cedula=cedula_num,
-            defaults={'nacionalidad': nacionalidad, 'nombres': nombre, 'tipo_sangre': 'O+'} # Simplificado
-        )
-
-        # Crear Cita
-        Cita.objects.create(
-            paciente=paciente, # (asumiendo que ya buscaste/creaste al paciente arriba)
-            medico=medico_obj,
-            fecha=fecha_cita,
-            hora=hora_cita, 
-            motivo=motivo
+        # 2. Búsqueda Inteligente: Si el paciente no existe, lo crea automáticamente
+        paciente, created = Paciente.objects.get_or_create(
+            cedula=cedula,
+            defaults={
+                'nombres': nombre,
+                'email': email,
+                'tipo_sangre': tipo_sangre,
+                'telefono': telefono,
+                'fecha_nacimiento': fecha_nac,
+                'tiene_seguro': tiene_seguro,
+                'nombre_seguro': nombre_seguro if tiene_seguro else '',
+                'nacionalidad': 'V' 
+            }
         )
         
-        #logica de pago
-        if costo_consulta:
-            #1.Buscamos si el paciente ya tiene una "Cuenta Abierta", si no, la creamos
-            factura, creada = Factura.objects.get_or_create(
-                paciente=paciente,
-                estado='Pendiente'
-            )
-            
-            #2.Añadimos el costo de la consulta a esa cuenta
-            DetalleFactura.objects.create(
-                factura=factura,
-                departamento='Consulta',
-                descripcion=f"Consulta Médica - {medico_obj.especialidad} ({medico_obj.nombre})",
-                cantidad=1,
-                precio_unitario=float(costo_consulta)
-            )
-            
-            #3.Verificamos si decidió pagar de una vez
-            if opcion_pago == 'pagar_ahora' and metodo_pago:
-                factura.estado = 'Pagada'
-                factura.metodo_pago = metodo_pago
-                factura.fecha_pago = timezone.now()
-                factura.save()
-                messages.success(request, f"Cita agendada y pagada exitosamente ({metodo_pago}).")
-            else:
-                messages.success(request, "Cita agendada. El cobro fue enviado a la Caja Central (Cuenta Abierta).")
-        else:
-            messages.success(request, "Cita agendada exitosamente.")
+        # 3. Si ya existía, actualizamos sus datos si la recepcionista los llenó o modificó
+        if not created:
+            if email: paciente.email = email
+            if tipo_sangre: paciente.tipo_sangre = tipo_sangre
+            if telefono: paciente.telefono = telefono
+            if fecha_nac: paciente.fecha_nacimiento = fecha_nac
+            paciente.tiene_seguro = tiene_seguro
+            paciente.nombre_seguro = nombre_seguro if tiene_seguro else ''
+            paciente.save()
 
+        # 4. Crear la Cita
+        cita = Cita.objects.create(
+            paciente=paciente,
+            medico_id=medico_id,
+            fecha=fecha,
+            hora=hora,
+            motivo=request.POST.get('motivo'),
+            estado='Pendiente'
+        )
+
+        # 5. Redirección a caja con los servicios (Carrito Express)
+        if 'pagar_ahora' in request.POST:
+            request.session['carrito_express'] = {
+                'paciente_cedula': paciente.cedula,
+                'servicios_ids': servicios_ids,
+                'cita_id': cita.id
+            }
+            messages.success(request, "Cita agendada. Redirigiendo a caja...")
+            return redirect('caja_central')
+        
+        messages.success(request, "Cita agendada exitosamente.")
         return redirect('dashboard_admin')
-        
-    return render(request, 'administracion/agendar_cita.html', {'medicos': medicos})
+
+    # GET: Cargar datos para el frontend (Añadimos telefono y fecha_nacimiento a la consulta)
+    catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'precio_usd'))
+    pacientes = list(Paciente.objects.all().values('id', 'cedula', 'nombres', 'email', 'tipo_sangre', 'telefono', 'fecha_nacimiento'))
+    
+    context = {
+        'medicos': Medico.objects.all(),
+        'fecha_actual': timezone.now().date().strftime('%Y-%m-%d'),
+        'catalogo_json': json.dumps(catalogo, default=str),
+        'pacientes_json': json.dumps(pacientes, default=str)
+    }
+    return render(request, 'administracion/agendar_cita.html', context)
 
 @login_required
 @rol_requerido(['admin'])
@@ -175,35 +178,53 @@ def registrar_orden_externa(request):
 @login_required
 @rol_requerido(['admin'])
 def editar_cita(request, id_cita):
-    # Buscamos la cita o devolvemos error 404 si no existe
     cita = get_object_or_404(Cita, id=id_cita)
-    medicos = Medico.objects.all()
+    paciente = cita.paciente
 
     if request.method == 'POST':
-        # Actualizamos los campos
-        cita.fecha = request.POST.get('fecha_cita')
-        cita.hora = request.POST.get('hora_cita')
-        cita.motivo = request.POST.get('motivo')
+        # Actualizar Datos del Paciente (Incluyendo Cédula)
+        paciente.cedula = request.POST.get('cedula', paciente.cedula).strip()
+        paciente.nombres = request.POST.get('nombre_nuevo', paciente.nombres).strip()
+        paciente.email = request.POST.get('email', '').strip()
+        paciente.telefono = request.POST.get('telefono', '').strip()
+        paciente.tipo_sangre = request.POST.get('tipo_sangre', '').strip()
         
-        # Actualizar médico
-        medico_id = request.POST.get('medico')
+        f_nac = request.POST.get('fecha_nacimiento', '').strip()
+        paciente.fecha_nacimiento = f_nac if f_nac else None
+        
+        tiene_seguro = request.POST.get('tiene_seguro') == 'on'
+        paciente.tiene_seguro = tiene_seguro
+        paciente.nombre_seguro = request.POST.get('nombre_seguro', '').strip() if tiene_seguro else ''
+        
+        try:
+            paciente.save()
+        except Exception as e:
+            messages.error(request, "Error al actualizar los datos del paciente: La cédula podría ya estar registrada.")
+            return redirect('editar_cita', id_cita=id_cita)
+
+        # Actualizar Datos de la Cita
+        medico_id = request.POST.get('medico_id')
         if medico_id:
-            cita.medico = Medico.objects.get(id=medico_id)
-        
-        # Actualizar estado (por si acaso quieres cambiarlo manual)
+            cita.medico_id = medico_id
+            
+        cita.fecha = request.POST.get('fecha')
+        cita.hora = request.POST.get('hora')
+        cita.motivo = request.POST.get('motivo')
         cita.estado = request.POST.get('estado')
         
         cita.save()
-        
-        messages.success(request, "Cita modificada correctamente.")
-        # Redirigimos al dashboard con la fecha de la cita para ver el cambio
+
+        messages.success(request, f"La cita #{cita.id} de {paciente.nombres} ha sido actualizada correctamente.")
         return redirect(f'/administracion/?fecha={cita.fecha}')
+
+    tipos_sangre = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
     context = {
         'cita': cita,
-        'medicos': medicos,
-        # Formateamos la hora para que el select la reconozca (HH:MM)
-        'hora_actual': cita.hora.strftime('%H:%M') if cita.hora else '' 
+        'paciente': paciente,
+        'medicos': Medico.objects.all(),
+        'tipos_sangre': tipos_sangre,
+        'fecha_actual': timezone.now().date().strftime('%Y-%m-%d'),
     }
     return render(request, 'administracion/editar_cita.html', context)
 
@@ -267,7 +288,7 @@ def caja_central(request):
                 total_nuevos = sum(Decimal(str(item['precio'])) * int(item['cantidad']) for item in items_nuevos)
                 factura_maestra = Factura.objects.create(
                     paciente=paciente, 
-                    nombre_cliente=nombre, #nombre en pdf
+                    nombre_cliente=nombre,
                     cedula_cliente=cedula,
                     total=total_nuevos,
                     estado='Pagada'
@@ -282,7 +303,7 @@ def caja_central(request):
                         subtotal=precio_u * int(item['cantidad'])
                     )
                     
-            # 4. Registrar los pagos en la factura generada (o en la primera pendiente si no hay nueva)
+            # 4. Registrar los pagos en la factura generada
             factura_id_destino = factura_maestra.id if factura_maestra else facturas_pendientes_ids[0]
             factura_destino = Factura.objects.get(id=factura_id_destino)
             
@@ -300,8 +321,20 @@ def caja_central(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
+    # Sacamos los datos de la sesión (usamos pop para que se limpie tras el primer uso)
+    carrito_express = request.session.pop('carrito_express', None)
+    paciente_express = None
+    servicios_express = []
+
+    if carrito_express:
+        cedula_ex = carrito_express.get('paciente_cedula')
+        paciente_express = Paciente.objects.filter(cedula=cedula_ex).first()
+        servicios_ids = carrito_express.get('servicios_ids', [])
+        
+        # Obtenemos los datos mínimos necesarios de los servicios para el JS
+        servicios_express = list(CatalogoServicio.objects.filter(id__in=servicios_ids).values('id', 'nombre', 'precio_usd'))
+
     # 3. GET: ENVIAR DATOS AL FRONTEND
-    # Pasamos el catálogo y los pacientes a formato JSON para el buscador en tiempo real
     catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'categoria', 'precio_usd'))
     pacientes = list(Paciente.objects.all().values('cedula', 'nombres'))
     
@@ -309,7 +342,9 @@ def caja_central(request):
         'sesion': sesion,
         'tasa_bcv': float(sesion.tasa_bcv_dia),
         'catalogo_json': json.dumps(catalogo, default=str),
-        'pacientes_json': json.dumps(pacientes)
+        'pacientes_json': json.dumps(pacientes),
+        'paciente_express': paciente_express,
+        'servicios_express': json.dumps(servicios_express, default=str)
     }
     return render(request, 'administracion/caja_central.html', context)
 
@@ -566,60 +601,62 @@ def datos_estadisticas(request):
                           .values('diagnostico')
                           .annotate(total=Count('id'))
                           .order_by('-total')[:5])
-        for i in morbilidad: 
-            i['motivo'] = i.pop('diagnostico')
+        for i in morbilidad: i['motivo'] = i.pop('diagnostico')
 
         # 2. FLUJO DE PACIENTES 
-        flujo = list(ConsultaEvolucion.objects.filter(fecha__gte=inicio)
+        flujo_data = list(ConsultaEvolucion.objects.filter(fecha__gte=inicio)
                      .annotate(fecha_dia=TruncDate('fecha'))
                      .values('fecha_dia')
                      .annotate(total=Count('id'))
                      .order_by('fecha_dia'))
-                     
-        for i in flujo:
-            f_dia = i.pop('fecha_dia')
-            if hasattr(f_dia, 'strftime'):
-                i['fecha'] = f_dia.strftime('%d/%m/%Y')
-            else:
-                i['fecha'] = str(f_dia) if f_dia else 'N/A'
+        
+        flujo = []
+        for i in flujo_data:
+            f_dia = i.get('fecha_dia')
+            flujo.append({
+                'fecha': f_dia.strftime('%d/%m/%Y') if hasattr(f_dia, 'strftime') else str(f_dia),
+                'total': i['total']
+            })
 
         # 3. MEDICAMENTOS
-        medicamentos = list(MovimientoInventario.objects.filter(tipo_movimiento='SALIDA', fecha__gte=inicio)
+        medicamentos_data = list(MovimientoInventario.objects.filter(tipo_movimiento='SALIDA', fecha__gte=inicio)
                             .values('medicamento__nombre')
                             .annotate(total=Sum('cantidad'))
                             .order_by('total')[:5])
-        for i in medicamentos: 
-            i['descripcion'] = i.pop('medicamento__nombre')
-            i['total'] = abs(i['total']) if i['total'] else 0
+        medicamentos = []
+        for i in medicamentos_data: 
+            medicamentos.append({
+                'descripcion': i['medicamento__nombre'],
+                'total': abs(i['total']) if i['total'] else 0
+            })
 
-        # 4. EXÁMENES
+        # 4. EXÁMENES (Lógica exacta del laboratorio)
         ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=inicio)
-
-        todos_examenes = []
+        todos_examenes_lista = []
         for orden in ordenes:
             if orden.examenes_solicitados:
-                # Cambiamos el nombre de la variable temporal a 'lista_ex' para que no choque
-                lista_ex = [e.strip() for e in orden.examenes_solicitados.split(',') if e.strip()]
-                todos_examenes.extend(lista_ex)
+                # Usamos una variable temporal distinta para no pisar el resultado final
+                lista_temp = [e.strip() for e in orden.examenes_solicitados.split(',') if e.strip()]
+                todos_examenes_lista.extend(lista_temp)
 
-        # Contamos cuántas veces se repite cada examen y sacamos el Top 10
-        contador = Counter(todos_examenes)
-        top_examenes = contador.most_common(10)
+        contador = Counter(todos_examenes_lista)
+        top_diez = contador.most_common(10)
 
-        examenes_formateados = []
-        for ex in top_examenes:
-            examenes_formateados.append({
-                'descripcion': ex[0], # El nombre del examen
-                'total': ex[1]        # La cantidad de veces que se pidió
+        # Formateamos para el .map() de tu JS en el dashboard
+        examenes_final = []
+        for item in top_diez:
+            examenes_final.append({
+                'descripcion': item[0],
+                'total': item[1]
             })
 
         return JsonResponse({
             'morbilidad': morbilidad,
             'flujo': flujo,
             'medicamentos': medicamentos,
-            'examenes': examenes_formateados # <- Enviamos la lista ya formateada
+            'examenes': examenes_final 
         })
-   
+
     except Exception as e:
         print("ERROR EN ESTADISTICAS:", traceback.format_exc())
         return JsonResponse({'error': str(e)}, status=500)
@@ -678,3 +715,54 @@ def pdf_estadisticas(request):
     context = json.loads(datos_estadisticas(request).content)
     context['fecha_hoy'] = timezone.now().strftime("%d/%m/%Y")
     return render(request, 'administracion/pdf_estadisticas.html', context)
+
+@login_required
+@rol_requerido(['admin'])
+def editar_perfil_admin(request):
+    usuario = request.user
+    
+    if request.method == 'POST':
+        try:
+            # 1. Procesar Nombre y Apellido
+            nombre_completo = request.POST.get('nombre_completo', '').strip()
+            if nombre_completo:
+                partes = nombre_completo.split(' ', 1)
+                usuario.first_name = partes[0]
+                usuario.last_name = partes[1] if len(partes) > 1 else ''
+
+            # 2. Procesar Datos de Contacto
+            usuario.cedula = request.POST.get('cedula', usuario.cedula)
+            usuario.telefono = request.POST.get('telefono', usuario.telefono)
+            usuario.email = request.POST.get('email', usuario.email)
+
+            # 3. Procesar Foto de Perfil
+            if 'foto_perfil' in request.FILES:
+                usuario.foto_perfil = request.FILES['foto_perfil']
+
+            usuario.save()
+            messages.success(request, "Tu perfil administrativo ha sido actualizado exitosamente.")
+            return redirect('editar_perfil_admin')
+
+        except Exception as e:
+            messages.error(request, f"Hubo un error al actualizar el perfil: {e}")
+            return redirect('editar_perfil_admin')
+
+    return render(request, 'administracion/editar_perfil.html', {'usuario': usuario})
+
+@login_required
+@rol_requerido(['admin'])
+def verificar_disponibilidad(request):
+    medico_id = request.GET.get('medico_id')
+    fecha = request.GET.get('fecha')
+    
+    # Buscamos las horas ya ocupadas para ese médico en ese día
+    horas_ocupadas = list(Cita.objects.filter(
+        medico_id=medico_id, 
+        fecha=fecha, 
+        estado__in=['Pendiente', 'En Sala', 'Atendido']
+    ).values_list('hora', flat=True))
+    
+    # Formateamos las horas (HH:MM) para que JS las reconozca
+    horas_formateadas = [h.strftime('%H:%M') for h in horas_ocupadas]
+    
+    return JsonResponse({'ocupadas': horas_formateadas})

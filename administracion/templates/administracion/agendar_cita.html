@@ -1,213 +1,349 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="max-w-6xl mx-auto py-8 px-4">
     
-    {% if messages %}
-        <div id="alerta-flotante" class="fixed top-5 right-5 z-50">
-            {% for message in messages %}
-            <div class="p-4 mb-2 text-white rounded-lg shadow-lg transition-opacity duration-500 {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-600{% endif %}">
-                <span class="font-bold flex items-center">
-                    {% if message.tags == 'success' %}✓{% else %}⚠️{% endif %}
-                    <span class="ml-2">{{ message }}</span>
-                </span>
-            </div>
-            {% endfor %}
+    <div class="flex justify-between items-end mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <span class="bg-cruzroja-500 w-3 h-8 mr-3 rounded-full"></span>
+                Agendar Cita Médica
+            </h1>
+            <p class="text-gray-500 text-sm mt-1 ml-6">Complete los datos para registrar un nuevo paciente en la agenda.</p>
         </div>
-    {% endif %}
-
-    <div class="mb-6">
-        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-500 text-sm flex items-center">
-            ← Volver al Itinerario
+        <a href="{% url 'dashboard_admin' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center shadow-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Volver al tablero principal
         </a>
     </div>
 
-    <div class="bg-white rounded-lg shadow-xl overflow-hidden border border-gray-200">
-        <div class="bg-gray-800 px-8 py-6">
-            <h1 class="text-2xl font-bold text-white">Agendar Nueva Cita</h1>
-        </div>
-
-        <form method="POST" class="p-8 space-y-6">
-            {% csrf_token %}
+    <form method="POST" id="form_cita" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {% csrf_token %}
+        
+        <div class="lg:col-span-8 space-y-6">
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="md:col-span-2">
-                    <label class="block text-gray-700 font-bold mb-2">Nombre Completo</label>
-                    <input type="text" name="nombre" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500 transition" placeholder="Ej. María Pérez" required>
-                </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 border-b pb-2">Datos del Paciente</h2>
 
-                <div>
-                    <label class="block text-gray-700 font-bold mb-2">Cédula</label>
-                    <div class="flex">
-                        <select name="nacionalidad" class="bg-gray-100 border border-gray-300 border-r-0 rounded-l px-2 py-2 font-bold text-gray-600">
-                            <option value="V">V</option>
-                            <option value="E">E</option>
-                        </select>
-                        <input type="text" name="cedula" class="w-full border border-gray-300 rounded-r px-3 py-2 font-mono" placeholder="12.345.678" required>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-gray-700 font-bold mb-2">Sangre</label>
-                    <select name="sangre" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500">
-                        <option value="" disabled selected>Seleccione...</option>
-                        <option value="O+">O Positivo (O+)</option>
-                        <option value="O-">O Negativo (O-)</option>
-                        <option value="A+">A Positivo (A+)</option>
-                        <option value="A-">A Negativo (A-)</option>
-                        <option value="B+">B Positivo (B+)</option>
-                        <option value="B-">B Negativo (B-)</option>
-                        <option value="AB+">AB Positivo (AB+)</option>
-                        <option value="AB-">AB Negativo (AB-)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="bg-gray-50 p-4 rounded border border-gray-200">
-                <label class="block text-gray-700 font-bold mb-2">¿Posee Seguro Médico?</label>
-                <div class="flex space-x-6">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="radio" name="tiene_seguro" value="Si" class="text-cruzroja-500 focus:ring-cruzroja-500" onclick="toggleSeguro(true)"> 
-                        <span class="ml-2">Sí</span>
-                    </label>
-                    <label class="flex items-center cursor-pointer">
-                        <input type="radio" name="tiene_seguro" value="No" checked class="text-cruzroja-500 focus:ring-cruzroja-500" onclick="toggleSeguro(false)"> 
-                        <span class="ml-2">No</span>
-                    </label>
-                </div>
-                <input type="text" name="seguro_detalle" id="input_seguro" class="hidden w-full border border-blue-300 bg-white rounded px-3 py-2 mt-3 focus:outline-none focus:border-blue-500" placeholder="Ej. Seguros Caracas - Póliza #998811">
-            </div>
-
-            <div class="bg-green-50 p-6 rounded-lg border border-green-200 mt-6">
-                <h3 class="font-bold text-green-800 mb-4 border-b border-green-200 pb-2 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Facturación de la Consulta
-                </h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Costo de la Consulta ($)</label>
-                        <input type="number" step="0.01" name="costo_consulta" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500" placeholder="Ej. 30.00" required>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-4 relative">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cédula <span class="text-cruzroja-500">*</span></label>
+                        <input type="text" name="cedula" id="cedula_px" placeholder="Ej. 12345678" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" autocomplete="off" required>
+                        <ul id="resultados_px" class="hidden absolute z-50 w-full bg-white shadow-xl rounded-b-lg border border-t-0 max-h-40 overflow-y-auto mt-1"></ul>
                     </div>
 
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Opciones de Pago</label>
-                        <select name="opcion_pago" id="opcion_pago" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500 bg-white" onchange="toggleMetodoPago(this.value)">
-                            <option value="abierta" selected>Dejar cuenta abierta (Añadir a Caja Central)</option>
-                            <option value="pagar_ahora">Pagar consulta ahora</option>
+                    <div class="md:col-span-8">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Completo <span class="text-cruzroja-500">*</span></label>
+                        <input type="text" name="nombre_nuevo" id="nombre_px" placeholder="Nombre del paciente..." class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-bold text-gray-700" required>
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Sangre</label>
+                        <select name="tipo_sangre" id="tipo_sangre_px" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                            <option value="">Desconocido</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
                         </select>
                     </div>
 
-                    <div id="div_metodo_pago" class="hidden md:col-span-2 mt-2">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Método de Pago (Cobro Inmediato)</label>
-                        <select name="metodo_pago" id="select_metodo_pago" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-green-500 bg-white">
-                            <option value="" disabled selected>Seleccione cómo está pagando...</option>
-                            <option value="Punto de Venta">Punto de Venta</option>
-                            <option value="Pago Móvil">Pago Móvil</option>
-                            <option value="Efectivo (Divisas)">Efectivo (Divisas)</option>
-                            <option value="Efectivo (Bs)">Efectivo (Bs)</option>
-                            <option value="Seguro Médico">Seguro Médico</option>
-                        </select>
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
+                        <input type="text" name="telefono" id="telefono_px" maxlength="11" oninput="this.value = this.value.replace(/[^0-9\-+ ]/g, '')" placeholder="Ej. 0414-1234567" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" id="fecha_nacimiento_px" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    </div>
+
+                    <div class="md:col-span-12">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex justify-between">
+                            Correo Electrónico 
+                            <span class="text-[10px] text-blue-500 lowercase normal-case font-normal">(Requerido para recordatorios y exámenes)</span>
+                        </label>
+                        <input type="email" name="email" id="email_px" placeholder="paciente@ejemplo.com" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
                     </div>
                 </div>
             </div>
 
-            <hr class="border-gray-100">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 border-b pb-2">Datos de la Consulta</h2>
 
-            <div class="bg-gray-50 p-6 rounded-lg border border-gray-300">
-                <h3 class="font-bold text-gray-800 mb-4 border-b pb-2 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Programación de la Cita
-                </h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Fecha</label>
-                        <input type="date" name="fecha_cita" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500" required>
-                    </div>
-
-                   <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Hora Estimada</label>
-                        <div class="relative">
-                            <select name="hora_cita" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500 appearance-none bg-white" required>
-                                <option value="" disabled selected>--Seleccionar Hora--</option>
-                                <option value="08:00">08:00 AM</option>
-                                <option value="08:30">08:30 AM</option>
-                                <option value="09:00">09:00 AM</option>
-                                <option value="09:30">09:30 AM</option>
-                                <option value="10:00">10:00 AM</option>
-                                <option value="10:30">10:30 AM</option>
-                                <option value="11:00">11:00 AM</option>
-                                <option value="11:30">11:30 AM</option>
-                                <option value="12:00">12:00 PM (Mediodía)</option>
-                                <option value="13:00">01:00 PM</option>
-                                <option value="13:30">01:30 PM</option>
-                                <option value="14:00">02:00 PM</option>
-                                <option value="14:30">02:30 PM</option>
-                                <option value="15:00">03:00 PM</option>
-                                <option value="15:30">03:30 PM</option>
-                                <option value="16:00">04:00 PM</option>
-                                <option value="16:30">04:30 PM</option>
-                                <option value="17:00">05:00 PM</option>
-                                    </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Especialista</label>
-                        <select name="medico" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500" required>
-                            <option value="" disabled selected>Seleccionar Dr...</option>
-                            {% for medico in medicos %}
-                                <option value="{{ medico.id }}">
-                                    {{ medico.nombre }} - {{ medico.especialidad }}
-                                </option>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Especialista <span class="text-cruzroja-500">*</span></label>
+                        <select name="medico_id" id="select_medico" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
+                            <option value="">Seleccione Médico...</option>
+                            {% for m in medicos %}
+                            <option value="{{ m.id }}">{{ m.nombre }} ({{ m.especialidad }})</option>
                             {% endfor %}
                         </select>
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha <span class="text-cruzroja-500">*</span></label>
+                        <input type="date" name="fecha" id="fecha_cita" value="{{ fecha_actual }}" min="{{ fecha_actual }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Horario Disponible <span class="text-cruzroja-500">*</span></label>
+                    <input type="hidden" name="hora" id="hora_seleccionada" required>
+                    <div class="grid grid-cols-4 md:grid-cols-6 gap-2" id="grid_horas">
+                        <p class="col-span-full text-center text-sm text-gray-400 py-4 italic border-2 border-dashed border-gray-200 rounded-lg">
+                            Seleccione un especialista para visualizar los horarios.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Motivo de Consulta / Observaciones</label>
+                    <textarea name="motivo" rows="3" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 resize-none" placeholder="Ej. Control sucesivo, dolor abdominal, etc..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-4 space-y-6">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 transition-all duration-300">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-gray-700">Seguro Médico</p>
+                        <p class="text-xs text-gray-400">¿El paciente posee póliza?</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="tiene_seguro" id="toggle_seguro" class="sr-only peer" onchange="togglePoliza()">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cruzroja-600"></div>
+                    </label>
+                </div>
+                
+                <div id="contenedor_poliza" class="hidden mt-4 pt-4 border-t border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Seguro / Póliza</label>
+                    <input type="text" name="nombre_seguro" id="nombre_seguro_px" placeholder="Ej. Seguros Caracas, Mercantil..." class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
                 </div>
             </div>
 
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Motivo de Consulta</label>
-                <textarea name="motivo" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-cruzroja-500" placeholder="Ej. Dolor de cabeza frecuente, mareos, control de tensión..." required></textarea>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[350px]">
+                <h3 class="font-bold text-gray-700 mb-2">Servicios a Facturar</h3>
+                
+                <div class="relative mb-4">
+                    <input type="text" id="buscador_servicios" placeholder="Buscar servicio (ej. Consulta)..." class="w-full border-gray-300 rounded-lg text-sm focus:ring-cruzroja-500" autocomplete="off">
+                    <ul id="resultados_servicios" class="hidden absolute z-50 w-full bg-white shadow-lg rounded-b-lg border border-gray-200 max-h-40 overflow-y-auto mt-1"></ul>
+                </div>
+
+                <div id="contenedor_carrito" class="flex-1 overflow-y-auto space-y-2 border-t pt-2">
+                    <div id="carrito_vacio" class="h-full flex items-center justify-center text-xs text-gray-400 italic text-center px-4">
+                        Busque y seleccione los servicios para enviarlos a caja.
+                    </div>
+                </div>
+                
+                <div id="inputs_servicios_ocultos"></div>
             </div>
 
-            <button type="submit" class="w-full bg-cruzroja-500 text-white font-bold py-4 rounded-lg shadow-lg hover:bg-cruzroja-600 transition transform hover:-translate-y-1">
-                Confirmar y Agendar
-            </button>
-        </form>
-    </div>
+            <div class="space-y-3 pt-2">
+                <button type="submit" name="pagar_ahora" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Agendar y Cobrar YA
+                </button>
+                <button type="submit" name="cuenta_abierta" class="w-full bg-gray-800 hover:bg-black text-white font-bold py-3 rounded-xl transition shadow-md">
+                    Agendar (Cuenta Abierta)
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
 
-<script>    
-    function toggleSeguro(mostrar) {
-        const input = document.getElementById('input_seguro');
-        mostrar ? input.classList.remove('hidden') : input.classList.add('hidden');
+<script>
+    const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
+    const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
+    const HORAS_BASE = ["08:00 A.M.", "08:30 A.M.", "09:00 A.M.", "09:30 A.M.", "10:00 A.M.", "10:30 A.M.", "11:00 A.M.", "11:30 A.M.", "1:00 P.M.", "1:30 P.M.", "2:00 P.M.", "2:30 P.M.", "3:00 P.M.", "3:30 P.M.", "4:00 P.M.", "4:30 P.M."];
+    let serviciosSeleccionados = [];
+
+    // --- LÓGICA DEL PACIENTE ---
+    const inputCedula = document.getElementById('cedula_px');
+    const listResultadosPx = document.getElementById('resultados_px');
+    
+    inputCedula.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        listResultadosPx.innerHTML = '';
+        
+        if(query.length < 2) { listResultadosPx.classList.add('hidden'); return; }
+
+        const filtrados = pacientes.filter(p => p.cedula.includes(query)).slice(0, 5);
+        
+        if(filtrados.length > 0) {
+            listResultadosPx.classList.remove('hidden');
+            filtrados.forEach(p => {
+                const li = document.createElement('li');
+                li.className = 'px-4 py-2 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
+                li.innerText = `${p.nombres} (V-${p.cedula})`;
+                li.onclick = () => {
+                    document.getElementById('cedula_px').value = p.cedula;
+                    document.getElementById('nombre_px').value = p.nombres;
+                    document.getElementById('email_px').value = p.email || '';
+                    document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
+                    document.getElementById('telefono_px').value = p.telefono || '';
+                    document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
+                    
+                    listResultadosPx.classList.add('hidden');
+                };
+                listResultadosPx.appendChild(li);
+            });
+        }
+    });
+
+    // --- LÓGICA DEL SEGURO MÉDICO (Mostrar/Ocultar Póliza) ---
+    function togglePoliza() {
+        const checkbox = document.getElementById('toggle_seguro');
+        const contenedor = document.getElementById('contenedor_poliza');
+        
+        if (checkbox.checked) {
+            contenedor.classList.remove('hidden');
+        } else {
+            contenedor.classList.add('hidden');
+            document.getElementById('nombre_seguro_px').value = ''; // Limpiamos si se desmarca
+        }
     }
 
-    // NUEVO: Ocultar mensajes automáticamente después de 4 segundos
-    setTimeout(function() {
-        const alerta = document.getElementById('alerta-flotante');
-        if (alerta) {
-            alerta.style.opacity = '0';
-            setTimeout(() => alerta.remove(), 500); // Esperar a que termine la transición
-        }
-    }, 4000);
+    // --- LÓGICA DE SERVICIOS ---
+    const inputServicios = document.getElementById('buscador_servicios');
+    const listResultadosServicios = document.getElementById('resultados_servicios');
 
-    function toggleMetodoPago(valor) {
-            const div = document.getElementById('div_metodo_pago');
-            const select = document.getElementById('select_metodo_pago');
-            if (valor === 'pagar_ahora') {
-                div.classList.remove('hidden');
-                select.required = true;
-            } else {
-                div.classList.add('hidden');
-                select.required = false;
+    inputServicios.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        listResultadosServicios.innerHTML = '';
+        
+        if(query.length < 2) { listResultadosServicios.classList.add('hidden'); return; }
+
+        const filtrados = catalogo.filter(s => s.nombre.toLowerCase().includes(query)).slice(0, 6);
+        
+        if(filtrados.length > 0) {
+            listResultadosServicios.classList.remove('hidden');
+            filtrados.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer border-b text-xs flex justify-between';
+                li.innerHTML = `<span class="font-bold text-gray-700 truncate mr-2">${s.nombre}</span> <span class="text-blue-600 font-bold">$${parseFloat(s.precio_usd).toFixed(2)}</span>`;
+                li.onclick = () => {
+                    agregarServicio(s);
+                    inputServicios.value = '';
+                    listResultadosServicios.classList.add('hidden');
+                };
+                listResultadosServicios.appendChild(li);
+            });
+        }
+    });
+
+    function agregarServicio(servicio) {
+        if(!serviciosSeleccionados.find(s => s.id === servicio.id)) {
+            serviciosSeleccionados.push(servicio);
+            renderizarCarrito();
+        }
+    }
+
+    function removerServicio(id) {
+        serviciosSeleccionados = serviciosSeleccionados.filter(s => s.id !== id);
+        renderizarCarrito();
+    }
+
+    function renderizarCarrito() {
+        const contenedor = document.getElementById('contenedor_carrito');
+        const inputsOcultos = document.getElementById('inputs_servicios_ocultos');
+        
+        contenedor.innerHTML = '';
+        inputsOcultos.innerHTML = '';
+
+        if(serviciosSeleccionados.length === 0) {
+            contenedor.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-gray-400 italic text-center px-4">Busque y seleccione los servicios para enviarlos a caja.</div>';
+            return;
+        }
+
+        serviciosSeleccionados.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 text-sm';
+            item.innerHTML = `
+                <div class="flex-1 truncate mr-2">
+                    <p class="font-bold text-gray-700 truncate text-xs">${s.nombre}</p>
+                    <p class="text-blue-600 font-bold text-[10px]">$${parseFloat(s.precio_usd).toFixed(2)}</p>
+                </div>
+                <button type="button" onclick="removerServicio(${s.id})" class="text-red-400 hover:text-red-600 font-bold p-1">✖</button>
+            `;
+            contenedor.appendChild(item);
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'servicios[]';
+            input.value = s.id;
+            inputsOcultos.appendChild(input);
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if(e.target !== inputCedula) listResultadosPx.classList.add('hidden');
+        if(e.target !== inputServicios) listResultadosServicios.classList.add('hidden');
+    });
+
+    // --- LÓGICA DE HORARIOS ---
+    function actualizarHoras() {
+        const medicoId = document.getElementById('select_medico').value;
+        const fecha = document.getElementById('fecha_cita').value;
+        const grid = document.getElementById('grid_horas');
+        
+        if(!medicoId || !fecha) {
+            grid.innerHTML = '<p class="col-span-full text-center text-sm text-gray-400 py-4 italic border-2 border-dashed border-gray-200 rounded-lg">Seleccione un especialista para visualizar los horarios.</p>';
+            return;
+        }
+
+        grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-4">Consultando disponibilidad en tiempo real...</p>';
+
+        // CORRECCIÓN DE RUTA: Esto evita el redireccionamiento 301 y hace que cargue al instante
+        const urlFetch = `{% url 'verificar_disponibilidad' %}?medico_id=${medicoId}&fecha=${fecha}`;
+
+        fetch(urlFetch)
+        .then(res => res.json())
+        .then(data => {
+            grid.innerHTML = '';
+            HORAS_BASE.forEach(hora => {
+                const isOcupada = data.ocupadas.includes(hora);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = hora;
+                btn.className = isOcupada 
+                    ? "py-2 text-xs font-bold rounded-lg border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "py-2 text-xs font-bold rounded-lg border border-cruzroja-100 bg-white text-gray-700 hover:bg-cruzroja-500 hover:text-white transition shadow-sm";
+                
+                if(!isOcupada) {
+                    btn.onclick = () => seleccionarHora(btn, hora);
+                } else {
+                    btn.title = "Horario ya reservado";
+                }
+                grid.appendChild(btn);
+            });
+        });
+    }
+
+    function seleccionarHora(btn, hora) {
+        document.querySelectorAll('#grid_horas button').forEach(b => {
+            if(!b.classList.contains('bg-gray-100')) {
+                b.classList.replace('bg-cruzroja-500', 'bg-white');
+                b.classList.replace('text-white', 'text-gray-700');
             }
-        }
+        });
+        btn.classList.replace('bg-white', 'bg-cruzroja-500');
+        btn.classList.replace('text-gray-700', 'text-white');
+        document.getElementById('hora_seleccionada').value = hora;
+    }
 
+    document.getElementById('form_cita').addEventListener('submit', function(e) {
+        if(!document.getElementById('hora_seleccionada').value) {
+            e.preventDefault();
+            alert("Por favor, seleccione una hora disponible en la cuadrícula de horarios.");
+        }
+    });
 </script>
 {% endblock %}

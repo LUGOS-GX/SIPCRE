@@ -49,7 +49,7 @@
                             <th class="pb-2 text-center">Cant.</th>
                             <th class="pb-2 text-right">Precio ($)</th>
                             <th class="pb-2 text-right">Subtotal</th>
-                            <th></th>
+                            <th class="pb-2 text-right"></th>
                         </tr>
                     </thead>
                     <tbody id="pos_carrito_body">
@@ -163,6 +163,31 @@
     document.addEventListener('DOMContentLoaded', () => {
         renderizarCatalogo('Todo');
         configurarBuscadorPaciente();
+
+        // --- NUEVO: LÓGICA DE CARRITO EXPRESS ---
+        const cedulaExpress = '{{ paciente_express.cedula|default:"" }}';
+        const nombreExpress = '{{ paciente_express.nombres|default:"" }}';
+        const serviciosExpress = JSON.parse('{{ servicios_express|escapejs|default:"[]" }}');
+
+        if (cedulaExpress && nombreExpress) {
+            // 1. Llenamos los inputs de paciente
+            document.getElementById('pos_buscador_px').value = nombreExpress;
+            document.getElementById('pos_cedula_px').value = cedulaExpress;
+            
+            // 2. Buscamos si tiene deudas viejas
+            cargarDeudasPaciente(cedulaExpress);
+            
+            // 3. Cargamos los servicios que trajo de la agenda
+            if (serviciosExpress.length > 0) {
+                serviciosExpress.forEach(item => {
+                    agregarAlCarrito({
+                        id: item.id,
+                        nombre: item.nombre,
+                        precio_usd: parseFloat(item.precio_usd)
+                    });
+                });
+            }
+        }
     });
 
     // LÓGICA PACIENTE

@@ -1,98 +1,202 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-xl mx-auto">
-    <div class="mb-6">
-        <a href="{% url 'dashboard_admin' %}" class="text-gray-500 hover:text-cruzroja-500 flex items-center">
-            ← Cancelar y Volver
+<div class="max-w-6xl mx-auto py-8 px-4">
+    
+    <div class="flex justify-between items-end mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <span class="bg-gray-700 w-3 h-8 mr-3 rounded-full"></span>
+                Modificar Cita #{{ cita.id }}
+            </h1>
+            <p class="text-gray-500 text-sm mt-1 ml-6">Editando registro de atención para <strong>{{ paciente.nombres }}</strong>.</p>
+        </div>
+        <a href="{% url 'historial_citas' %}" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Cancelar y Volver
         </a>
     </div>
 
-    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Modificar Cita #{{ cita.id }}</h2>
+    <form method="POST" id="form_cita" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {% csrf_token %}
         
-        <div class="bg-blue-50 p-4 rounded mb-6 text-sm text-blue-800">
-            <strong>Paciente:</strong> {{ cita.paciente.nombres }} <br>
-            <strong>Cédula:</strong> {{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}
+        <div class="lg:col-span-8 space-y-6">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Información del Paciente</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cédula <span class="text-cruzroja-500">*</span></label>
+                        <input type="text" name="cedula" value="{{ paciente.cedula }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" required>
+                    </div>
+
+                    <div class="md:col-span-8">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Completo</label>
+                        <input type="text" name="nombre_nuevo" value="{{ paciente.nombres }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-bold text-gray-700" required>
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Sangre</label>
+                        <select name="tipo_sangre" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                            <option value="" {% if not paciente.tipo_sangre %}selected{% endif %}>Desconocido</option>
+                            {% for tipo in tipos_sangre %}
+                                <option value="{{ tipo }}" {% if paciente.tipo_sangre == tipo %}selected{% endif %}>{{ tipo }}</option>
+                                {% endfor %}
+                        </select>
+                    </div>      
+
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
+                        <input type="text" name="telefono" value="{{ paciente.telefono|default:'' }}" maxlength="15" oninput="this.value = this.value.replace(/[^0-9\-+ ]/g, '')" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    </div>
+
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" value="{{ paciente.fecha_nacimiento|date:'Y-m-d' }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    </div>
+
+                    <div class="md:col-span-12">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Correo Electrónico</label>
+                        <input type="email" name="email" value="{{ paciente.email|default:'' }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 border-b pb-2">Planificación Médica</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Especialista</label>
+                        <select name="medico_id" id="select_medico" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
+                            {% for m in medicos %}
+                            <option value="{{ m.id }}" {% if cita.medico.id == m.id %}selected{% endif %}>{{ m.nombre }} ({{ m.especialidad }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Programada</label>
+                        <input type="date" name="fecha" id="fecha_cita" value="{{ cita.fecha|date:'Y-m-d' }}" min="{{ fecha_actual }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Horario Disponible</label>
+                    <input type="hidden" name="hora" id="hora_seleccionada" value="{{ cita.hora|time:'H:i' }}" required>
+                    <div class="grid grid-cols-4 md:grid-cols-6 gap-2" id="grid_horas">
+                        </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Motivo / Observaciones Actualizadas</label>
+                    <textarea name="motivo" rows="3" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 resize-none">{{ cita.motivo }}</textarea>
+                </div>
+            </div>
         </div>
 
-        <form method="POST" class="space-y-4">
-            {% csrf_token %}
-
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Fecha</label>
-                <input type="date" name="fecha_cita" value="{{ cita.fecha|date:'Y-m-d' }}" class="w-full border rounded px-3 py-2">
-            </div>
-
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Hora</label>
-                <select name="hora_cita" class="w-full border rounded px-3 py-2 bg-white">
-                    <option value="08:00">08:00 AM</option>
-                                <option value="08:30">08:30 AM</option>
-                                <option value="09:00">09:00 AM</option>
-                                <option value="09:30">09:30 AM</option>
-                                <option value="10:00">10:00 AM</option>
-                                <option value="10:30">10:30 AM</option>
-                                <option value="11:00">11:00 AM</option>
-                                <option value="11:30">11:30 AM</option>
-                                <option value="12:00">12:00 PM (Mediodía)</option>
-                                <option value="13:00">01:00 PM</option>
-                                <option value="13:30">01:30 PM</option>
-                                <option value="14:00">02:00 PM</option>
-                                <option value="14:30">02:30 PM</option>
-                                <option value="15:00">03:00 PM</option>
-                                <option value="15:30">03:30 PM</option>
-                                <option value="16:00">04:00 PM</option>
-                                <option value="16:30">04:30 PM</option>
-                                <option value="17:00">05:00 PM</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Sangre</label>
-                    <select name="sangre" class="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:border-cruzroja-500">
-                        <option value="" disabled selected>Seleccione...</option>
-                        <option value="O+">O Positivo (O+)</option>
-                        <option value="O-">O Negativo (O-)</option>
-                        <option value="A+">A Positivo (A+)</option>
-                        <option value="A-">A Negativo (A-)</option>
-                        <option value="B+">B Positivo (B+)</option>
-                        <option value="B-">B Negativo (B-)</option>
-                        <option value="AB+">AB Positivo (AB+)</option>
-                        <option value="AB-">AB Negativo (AB-)</option>
-                    </select>
-            </div>
-
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Médico</label>
-                <select name="medico" class="w-full border rounded px-3 py-2 bg-white">
-                    {% for doc in medicos %}
-                        <option value="{{ doc.id }}" {% if cita.medico.id == doc.id %}selected{% endif %}>
-                            {{ doc.nombre }} ({{ doc.especialidad }})
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="lg:col-span-4 space-y-6">
             
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Estado</label>
-                <select name="estado" class="w-full border rounded px-3 py-2 bg-white">
-                    <option value="Pendiente" {% if cita.estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                    <option value="En Sala" {% if cita.estado == 'En Sala' %}selected{% endif %}>En Sala</option>
-                    <option value="Atendido" {% if cita.estado == 'Atendido' %}selected{% endif %}>Atendido</option>
-                    <option value="Cancelado" {% if cita.estado == 'Cancelado' %}selected{% endif %}>Cancelado</option>
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Estado de la Cita</label>
+                <select name="estado" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg focus:ring-cruzroja-500 font-bold py-3 px-4">
+                    <option value="Pendiente" {% if cita.estado == 'Pendiente' %}selected{% endif %}>🕒 Pendiente</option>
+                    <option value="En Sala" {% if cita.estado == 'En Sala' %}selected{% endif %}>🚪 En Sala</option>
+                    <option value="Atendido" {% if cita.estado == 'Atendido' %}selected{% endif %}>✅ Atendido</option>
+                    <option value="Cancelado" {% if cita.estado == 'Cancelado' %}selected{% endif %}>✖ Cancelado</option>
                 </select>
             </div>
 
-            <div>
-                <label class="block text-gray-700 font-bold mb-2">Motivo</label>
-                <textarea name="motivo" rows="2" class="w-full border rounded px-3 py-2">{{ cita.motivo }}</textarea>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-bold text-gray-700">Seguro Médico</p>
+                        <p class="text-xs text-gray-400">Estado de cobertura</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="tiene_seguro" id="toggle_seguro" class="sr-only peer" onchange="togglePoliza()" {% if paciente.tiene_seguro %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cruzroja-600"></div>
+                    </label>
+                </div>
+                
+                <div id="contenedor_poliza" class="{% if not paciente.tiene_seguro %}hidden{% endif %} mt-4 pt-4 border-t border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre de Póliza</label>
+                    <input type="text" name="nombre_seguro" id="nombre_seguro_px" value="{{ paciente.nombre_seguro|default:'' }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 mt-4">
-                Guardar Cambios
-            </button>
-        </form>
-    </div>
+            <div class="pt-4">
+                <button type="submit" class="w-full bg-gray-800 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </form>
 </div>
+
+<script>
+    const HORAS_BASE = ["08:00 A.M.", "08:30 A.M.", "09:00 A.M.", "09:30 A.M.", "10:00 A.M.", "10:30 A.M.", "11:00 A.M.", "11:30 A.M.", "1:00 P.M.", "1:30 P.M.", "2:00 P.M.", "2:30 P.M.", "3:00 P.M.", "3:30 P.M.", "4:00 P.M.", "4:30 P.M."];
+    const HORA_ACTUAL_CITA = "{{ cita.hora|time:'H:i' }}";
+
+    function togglePoliza() {
+        const checkbox = document.getElementById('toggle_seguro');
+        const contenedor = document.getElementById('contenedor_poliza');
+        contenedor.classList.toggle('hidden', !checkbox.checked);
+    }
+
+    function actualizarHoras() {
+        const medicoId = document.getElementById('select_medico').value;
+        const fecha = document.getElementById('fecha_cita').value;
+        const grid = document.getElementById('grid_horas');
+        const horaSeleccionadaInput = document.getElementById('hora_seleccionada');
+        
+        grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-4">Verificando horarios...</p>';
+
+        const urlFetch = `{% url 'verificar_disponibilidad' %}?medico_id=${medicoId}&fecha=${fecha}`;
+
+        fetch(urlFetch)
+        .then(res => res.json())
+        .then(data => {
+            grid.innerHTML = '';
+            HORAS_BASE.forEach(hora => {
+                // IMPORTANTE: Si la hora ocupada es la misma que ya tiene esta cita, la mostramos como disponible
+                const isOcupada = data.ocupadas.includes(hora) && hora !== HORA_ACTUAL_CITA;
+                const isSeleccionada = hora === horaSeleccionadaInput.value;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.innerText = hora;
+                
+                let clases = "py-2 text-xs font-bold rounded-lg border transition shadow-sm ";
+                if (isOcupada) {
+                    clases += "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed";
+                } else if (isSeleccionada) {
+                    clases += "bg-cruzroja-500 text-white border-cruzroja-600";
+                } else {
+                    clases += "bg-white text-gray-700 border-cruzroja-100 hover:bg-cruzroja-500 hover:text-white";
+                }
+                
+                btn.className = clases;
+                
+                if (!isOcupada) {
+                    btn.onclick = () => {
+                        document.querySelectorAll('#grid_horas button').forEach(b => {
+                            if (!b.classList.contains('bg-gray-100')) {
+                                b.className = "py-2 text-xs font-bold rounded-lg border bg-white text-gray-700 border-cruzroja-100 hover:bg-cruzroja-500 hover:text-white transition shadow-sm";
+                            }
+                        });
+                        btn.className = "py-2 text-xs font-bold rounded-lg border bg-cruzroja-500 text-white border-cruzroja-600 transition shadow-sm";
+                        horaSeleccionadaInput.value = hora;
+                    };
+                }
+                grid.appendChild(btn);
+            });
+        });
+    }
+
+    // Inicializar al cargar
+    document.addEventListener('DOMContentLoaded', actualizarHoras);
+</script>
 {% endblock %}
