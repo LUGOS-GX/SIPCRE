@@ -342,7 +342,13 @@
     document.getElementById('form_cita').addEventListener('submit', function(e) {
         if(!document.getElementById('hora_seleccionada').value) {
             e.preventDefault();
-            alert("Por favor, seleccione una hora disponible en la cuadrícula de horarios.");
+            // CORRECCIÓN: Alerta elegante con SweetAlert2
+            Swal.fire({
+                title: '¡Faltan datos!',
+                text: 'Por favor, seleccione una hora disponible en la cuadrícula de horarios.',
+                icon: 'warning',
+                confirmButtonColor: '#B71C1C'
+            });
         }
     });
 </script>

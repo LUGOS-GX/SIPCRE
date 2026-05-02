@@ -92,7 +92,8 @@
                                     {% if orden.estado == 'Pendiente' %}Abrir Orden{% else %}Subir Resultado{% endif %}
                                 </a>
                                 
-                                <form action="{% url 'cancelar_orden_lab' orden.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea DESCARTAR esta orden?\n\nEl paciente no recibirá resultados y la orden se moverá al historial como CANCELADA.');">
+                                <!-- CORRECCIÓN AQUÍ: Agregado form-eliminar y data-msg -->
+                                <form action="{% url 'cancelar_orden_lab' orden.id %}" method="POST" class="inline form-eliminar" data-msg="¿Está seguro de que desea DESCARTAR esta orden? El paciente no recibirá resultados y la orden se moverá al historial como CANCELADA.">
                                     {% csrf_token %}
                                     <button type="submit" title="Descartar Orden" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded transition flex items-center justify-center">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -251,7 +252,7 @@
                         {% if page_historial.has_next %}
                             <a href="?page_historial={{ page_historial.next_page_number }}&q={{ query }}&fecha={{ fecha_filtro }}&tab=historial" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                                 <span class="sr-only">Siguiente</span>
-                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l-4-4a1 1 0 010 1.414l-4-4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
                             </a>
                         {% endif %}
                     </nav>

@@ -177,7 +177,13 @@
             if (existente.cantidad < med.stock_actual) {
                 existente.cantidad++;
             } else {
-                alert(`Stock máximo alcanzado para ${med.nombre}`);
+                // CORRECCIÓN: Alerta elegante para stock máximo
+                Swal.fire({
+                    title: 'Stock Límite',
+                    text: `Stock máximo alcanzado para ${med.nombre}`,
+                    icon: 'info',
+                    confirmButtonColor: '#4F46E5' // Indigo
+                });
             }
         } else {
             carrito.push({ ...med, cantidad: 1 });
@@ -273,7 +279,13 @@
         const checkPsico = document.getElementById('check_psico').checked;
 
         if (requierePsico && !checkPsico) {
-            alert("Debe confirmar que validó el récipe original físico para proceder con la venta del psicotrópico.");
+            // CORRECCIÓN: Alerta de validación requerida
+            Swal.fire({
+                title: 'Validación Requerida',
+                text: 'Debe confirmar que validó el récipe original físico para proceder con la venta del psicotrópico.',
+                icon: 'warning',
+                confirmButtonColor: '#B71C1C'
+            });
             return;
         }
 
@@ -300,17 +312,36 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(`¡Venta Procesada con Éxito! Orden Generada: #${data.orden_id}`);
-                window.location.href = "{% url 'dashboard_farmacia' %}";
+                // CORRECCIÓN: Alerta de éxito con redirección
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: `Venta Procesada con Éxito. Orden Generada: #${data.orden_id}`,
+                    icon: 'success',
+                    confirmButtonColor: '#10B981'
+                }).then(() => {
+                    window.location.href = "{% url 'dashboard_farmacia' %}";
+                });
             } else {
-                alert("Error al procesar: " + data.error);
+                // CORRECCIÓN: Alerta de error
+                Swal.fire({
+                    title: '¡Error!',
+                    text: data.error,
+                    icon: 'error',
+                    confirmButtonColor: '#B71C1C'
+                });
                 btn.innerHTML = 'PROCESAR VENTA';
                 btn.disabled = false;
             }
         })
         .catch(error => {
             console.error("Error:", error);
-            alert("Error de conexión con el servidor.");
+            // CORRECCIÓN: Alerta de fallo de red
+            Swal.fire({
+                title: 'Error de Red',
+                text: 'Ha ocurrido un error de conexión con el servidor.',
+                icon: 'error',
+                confirmButtonColor: '#B71C1C'
+            });
             btn.innerHTML = 'PROCESAR VENTA';
             btn.disabled = false;
         });

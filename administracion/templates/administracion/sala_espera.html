@@ -12,15 +12,7 @@
         </a>
     </div>
 
-    {% if messages %}
-        <div class="mb-6">
-            {% for message in messages %}
-                <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-green-100 text-green-700{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    <!-- Nota: Eliminé el bloque de messages de Django porque ya tienes el manejador global (Toast) en tu base.html -->
 
     <div class="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
         <table class="min-w-full divide-y divide-gray-200">
@@ -51,7 +43,8 @@
                         <a href="{% url 'aprobar_usuario' u.id %}" class="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-2 rounded text-xs font-bold border border-green-200 mr-2 transition">
                             Aprobar
                         </a>
-                        <a href="{% url 'rechazar_usuario' u.id %}" onclick="return confirm('¿Seguro que desea rechazar y eliminar a este usuario permanentemente?');" class="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded text-xs font-bold border border-red-200 transition">
+                        <!-- CORRECCIÓN AQUÍ: Cambiado a link-eliminar con data-msg -->
+                        <a href="{% url 'rechazar_usuario' u.id %}" class="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded text-xs font-bold border border-red-200 transition link-eliminar" data-msg="¿Seguro que desea rechazar y eliminar a este usuario permanentemente?">
                             Rechazar
                         </a>
                     </td>

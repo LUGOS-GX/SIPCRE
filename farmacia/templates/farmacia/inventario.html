@@ -49,7 +49,15 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Presentación</th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Actual</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio ($)</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider relative group cursor-help z-20">
+                            Estado
+                        <svg class="w-4 h-4 inline-block text-gray-400 ml-1 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>    
+                        <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-56 p-3 bg-gray-800 text-white text-xs rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50 font-normal normal-case text-center">
+                            Indica el nivel de unidades en almacén (Crítico vs Óptimo).
+                        </div>
+                    </th>
                     <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
             </thead>
@@ -86,7 +94,8 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </a>
                             
-                            <form action="{% url 'eliminar_medicamento' med.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea eliminar {{ med.nombre }}? Esta acción no se puede deshacer.');">
+                            <!-- CORRECCIÓN 1: Formulario en la tabla -->
+                            <form action="{% url 'eliminar_medicamento' med.id %}" method="POST" class="inline form-eliminar" data-msg="¿Está seguro de que desea eliminar {{ med.nombre }}? Esta acción no se puede deshacer.">
                                 {% csrf_token %}
                                 <button type="submit" class="text-red-600 hover:text-red-900 transition bg-red-50 hover:bg-red-100 p-2 rounded-full" title="Eliminar">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -194,7 +203,8 @@
                 Modificar
             </a>
             
-            <form id="form_modal_eliminar" action="#" method="POST" onsubmit="return confirm('¿Está seguro de que desea eliminar este medicamento? Esta acción es irreversible.');">
+            <!-- CORRECCIÓN 2: Formulario en el modal -->
+            <form id="form_modal_eliminar" action="#" method="POST" class="form-eliminar" data-msg="¿Está seguro de que desea eliminar este medicamento? Esta acción es irreversible.">
                 {% csrf_token %}
                 <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow transition">
                     Eliminar

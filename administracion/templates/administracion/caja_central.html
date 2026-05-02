@@ -20,7 +20,8 @@
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                 Histórico de operaciones
             </a>
-            <a href="{% url 'cerrar_caja' %}" onclick="return confirm('¿Está seguro de que desea CERRAR LA CAJA? Se calcularán todos los pagos del turno y se emitirá el reporte.');" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg border border-red-800">
+            <!-- CORRECCIÓN AQUÍ: Se eliminó onclick y se agregó link-eliminar y data-msg -->
+            <a href="{% url 'cerrar_caja' %}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg border border-red-800 link-eliminar" data-msg="¿Está seguro de que desea CERRAR LA CAJA? Se calcularán todos los pagos del turno y se emitirá el reporte.">
                 Cierre de Caja
             </a>
         </div>
@@ -229,7 +230,13 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success' && data.deudas.length > 0) {
-                alert(`⚠️ ATENCIÓN: El paciente tiene ${data.deudas.length} servicio(s) pendiente(s) por pagar.`);
+                // CORRECCIÓN: Alerta de deudas pendientes
+                Swal.fire({
+                    title: '¡Atención!',
+                    text: `El paciente tiene ${data.deudas.length} servicio(s) pendiente(s) por pagar.`,
+                    icon: 'warning',
+                    confirmButtonColor: '#B71C1C'
+                });
                 
                 data.deudas.forEach(deuda => {
                     if (!carrito.find(i => i.id === deuda.id)) {
@@ -324,7 +331,13 @@
         const pxCedula = document.getElementById('pos_cedula_px').value.trim();
         
         if(!pxNombre || !pxCedula) {
-            alert("Por favor, ingrese o seleccione un paciente antes de cobrar.");
+            // CORRECCIÓN: Alerta de falta de datos
+            Swal.fire({
+                title: '¡Faltan datos!',
+                text: 'Por favor, ingrese o seleccione un paciente antes de cobrar.',
+                icon: 'warning',
+                confirmButtonColor: '#B71C1C'
+            });
             return;
         }
 
@@ -417,10 +430,23 @@
         .then(response => response.json())
         .then(data => {
             if(data.status === 'success') {
-                alert(`✅ Factura #${data.factura_id} generada exitosamente.`);
-                window.location.reload(); 
+                // CORRECCIÓN: Alerta de éxito elegante
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: `Factura #${data.factura_id} generada exitosamente.`,
+                    icon: 'success',
+                    confirmButtonColor: '#10B981' // Verde
+                }).then(() => {
+                    window.location.reload(); 
+                });
             } else {
-                alert("❌ Error al procesar: " + data.message);
+                // CORRECCIÓN: Alerta de error
+                Swal.fire({
+                    title: '¡Error!',
+                    text: data.message,
+                    icon: 'error',
+                    confirmButtonColor: '#B71C1C'
+                });
                 btnFinalizar.innerText = "Facturar y Emitir Ticket";
                 btnFinalizar.disabled = false;
             }

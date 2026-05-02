@@ -10,7 +10,7 @@
         </h1>
         <a href="{% url 'dashboard_farmacia' %}" class="text-gray-500 hover:text-emerald-600 font-bold text-sm transition flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Volver al Dashboard
+            Volver
         </a>
     </div>
 
@@ -127,7 +127,6 @@
             return; 
         }
 
-        // FIX 1: Ahora busca por nombre, presentación O concentración
         const filtrados = catalogo.filter(m => 
             m.nombre.toLowerCase().includes(query) || 
             m.concentracion.toLowerCase().includes(query) ||
@@ -143,7 +142,6 @@
                 // Etiqueta de psicotrópico
                 const tagControlado = med.es_controlado ? '<span class="ml-2 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded border border-red-200 animate-pulse">CONTROLADO</span>' : '';
                 
-                // FIX 2: Diseño restaurado con la Concentración (mg/ml) y Presentación
                 li.innerHTML = `
                     <div>
                         <p class="font-bold text-gray-800">
@@ -160,15 +158,25 @@
                 `;
                 
                 li.onclick = () => {
+                    // CORRECCIÓN: Alerta de Psicotrópico con SweetAlert2
                     if (med.es_controlado) {
-                        if (!confirm("⚠️ MEDICAMENTO CONTROLADO: Este producto requiere récipe médico archivado. ¿Ha verificado el récipe físico del paciente?")) {
-                            return;
-                        }
+                        Swal.fire({
+                            title: '⚠️ MEDICAMENTO CONTROLADO',
+                            text: 'Este producto requiere récipe médico archivado. ¿Ha verificado el récipe físico del paciente?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#10B981', // Emerald
+                            cancelButtonColor: '#EF4444', // Rojo
+                            confirmButtonText: 'Sí, he verificado',
+                            cancelButtonText: 'Cancelar'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                ejecutarAgregadoAlCarrito(med);
+                            }
+                        });
+                    } else {
+                        ejecutarAgregadoAlCarrito(med);
                     }
-                    agregarAlCarrito(med);
-                    inputBuscador.value = '';
-                    menuResultados.classList.add('hidden');
-                    inputBuscador.focus();
                 };
                 menuResultados.appendChild(li);
             });
@@ -177,6 +185,14 @@
             menuResultados.innerHTML = '<li class="px-4 py-4 text-sm text-gray-500 italic text-center">No se encontraron medicamentos en stock</li>';
         }
     });
+
+    // Función separada para que el código quede limpio
+    function ejecutarAgregadoAlCarrito(med) {
+        agregarAlCarrito(med);
+        inputBuscador.value = '';
+        menuResultados.classList.add('hidden');
+        inputBuscador.focus();
+    }
 
     // Cerrar buscador al hacer clic afuera
     document.addEventListener('click', function(event) {
@@ -193,7 +209,13 @@
             if (existe.cantidad < med.stock) {
                 existe.cantidad += 1;
             } else {
-                alert(`No hay más stock disponible para ${med.nombre}.`);
+                // CORRECCIÓN: Alerta de stock máximo con SweetAlert2
+                Swal.fire({
+                    title: 'Stock Límite',
+                    text: `No hay más stock disponible para ${med.nombre}.`,
+                    icon: 'info',
+                    confirmButtonColor: '#10B981'
+                });
             }
         } else {
             carrito.push({ ...med, cantidad: 1 });
@@ -209,7 +231,13 @@
         let cant = parseInt(nuevaCant);
         if (isNaN(cant) || cant < 1) cant = 1;
         if (cant > item.stock) {
-            alert(`Stock máximo superado. Se ajustará a ${item.stock}.`);
+            // CORRECCIÓN: Alerta de ajuste de stock con SweetAlert2
+            Swal.fire({
+                title: 'Ajuste de Stock',
+                text: `Stock máximo superado. Se ajustará a ${item.stock}.`,
+                icon: 'warning',
+                confirmButtonColor: '#10B981'
+            });
             cant = item.stock;
         }
 
@@ -245,7 +273,6 @@
             const tr = document.createElement('tr');
             tr.className = 'border-b border-gray-100 fila-item hover:bg-gray-50 transition';
             
-            // FIX 3: Se añade la concentración al listado del carrito también
             tr.innerHTML = `
                 <td class="py-3">
                     <p class="font-bold text-gray-800 text-sm">${item.nombre} <span class="text-xs font-normal text-gray-500">${item.concentracion}</span></p>

@@ -151,11 +151,23 @@
                 });
 
             } else {
-                alert("Error de la IA: " + result.error);
+                // CORRECCIÓN: Alerta elegante de error de IA
+                Swal.fire({
+                    title: 'Error en el Análisis',
+                    text: result.error,
+                    icon: 'error',
+                    confirmButtonColor: '#B71C1C'
+                });
             }
         } catch (error) {
             console.error("Error:", error);
-            alert("Error de conexión al procesar la imagen.");
+            // CORRECCIÓN: Alerta elegante de error de conexión
+            Swal.fire({
+                title: 'Fallo de Conexión',
+                text: 'No se pudo conectar con el servidor para procesar la imagen.',
+                icon: 'error',
+                confirmButtonColor: '#B71C1C'
+            });
         } finally {
             btn.disabled = false;
             spinner.classList.add('hidden');

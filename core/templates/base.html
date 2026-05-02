@@ -27,7 +27,7 @@
 <body class="bg-gray-100 font-sans leading-normal tracking-normal flex flex-col min-h-screen">
 
     {% if is_popup != '1' %}
-    <nav class="bg-white shadow-md fixed w-full z-10 top-0">
+    <nav class="bg-white shadow-md fixed w-full z-50 top-0">
         <div class="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-3 px-6">
             
             <div class="flex items-center">
@@ -114,16 +114,6 @@
 
     <div class="container mx-auto {% if is_popup != '1' %}mt-24{% else %}mt-6{% endif %} px-4 md:px-0 flex-grow pb-10">
         
-        {% if messages %}
-            <div class="max-w-4xl mx-auto mb-6">
-                {% for message in messages %}
-                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 shadow-sm rounded-r mb-2" role="alert">
-                    <p>{{ message }}</p>
-                </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
         {% block content %}
         {% endblock %}
     
@@ -147,6 +137,15 @@
     </footer>
     {% endif %}
 
+    <!-- 1. Contenedor invisible para los mensajes de Django -->
+    {% if messages %}
+        <ul id="django-messages" style="display: none;">
+            {% for message in messages %}
+                <li data-tag="{{ message.tags }}" data-msg="{{ message }}"></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <script>
         function toggleMenuPerfil() {
             const menu = document.getElementById('menuPerfil');
@@ -168,6 +167,98 @@
 
     <script src="{% static 'js/validar_cedula.js' %}"></script>
     <script src="{% static 'js/botones_carga.js' %}"></script>
+    
+    <!-- 2. SweetAlert2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- 3. Lógica limpia de JavaScript para Notificaciones y Eliminación -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // --- A. LÓGICA DE NOTIFICACIONES TOAST ---
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onmouseenter = Swal.stopTimer;
+                    toast.onmouseleave = Swal.resumeTimer;
+                }
+            });
+
+            const messageContainer = document.getElementById('django-messages');
+            if (messageContainer) {
+                const messagesList = messageContainer.querySelectorAll('li');
+                messagesList.forEach(item => {
+                    const tag = item.getAttribute('data-tag') || '';
+                    const text = item.getAttribute('data-msg') || '';
+                    let iconType = 'info';
+                    
+                    if (tag.includes('error')) iconType = 'error';
+                    else if (tag.includes('success')) iconType = 'success';
+                    else if (tag.includes('warning')) iconType = 'warning';
+
+                    Toast.fire({
+                        icon: iconType,
+                        title: text
+                    });
+                });
+            }
+
+            // --- B. LÓGICA DEL DESTRUCTOR UNIVERSAL (ELIMINAR) ---
+            const formsEliminar = document.querySelectorAll('.form-eliminar');
+            formsEliminar.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const mensaje = this.getAttribute('data-msg') || '¿Está seguro de realizar esta acción?';
+
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: mensaje,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#4b5563',
+                        confirmButtonText: 'Sí, continuar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            this.submit();
+                        }
+                    });
+                });
+            });
+
+            // --- C. LÓGICA DEL DESTRUCTOR PARA ENLACES <a> ---
+            const linksEliminar = document.querySelectorAll('.link-eliminar');
+            linksEliminar.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault(); // Evita que el enlace te lleve de una vez
+                    const url = this.getAttribute('href');
+                    const mensaje = this.getAttribute('data-msg') || '¿Está seguro de realizar esta acción?';
+
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: mensaje,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#4b5563',
+                        confirmButtonText: 'Sí, continuar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = url; // Redirige si dice que sí
+                        }
+                    });
+                });
+            });
+            
+        });
+    </script>
 
 </body>
 </html>

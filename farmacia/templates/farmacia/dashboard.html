@@ -98,16 +98,6 @@
             </div>
         </div>
 
-        {% if messages %}
-            <div class="mb-6">
-                {% for message in messages %}
-                    <div class="p-4 rounded shadow-sm {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <table class="min-w-full leading-normal">
                 <thead>
@@ -155,7 +145,8 @@
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 </a>
                                 
-                                <form action="{% url 'cancelar_orden_farmacia' orden.id %}" method="POST" class="inline" onsubmit="return confirm('¿Está seguro de que desea DESCARTAR esta orden de farmacia? Esta acción no se puede deshacer.');">
+                                <!-- CORRECCIÓN AQUÍ: Cambiado a form-eliminar con data-msg -->
+                                <form action="{% url 'cancelar_orden_farmacia' orden.id %}" method="POST" class="inline form-eliminar" data-msg="¿Está seguro de que desea DESCARTAR esta orden de farmacia? Esta acción no se puede deshacer.">
                                     {% csrf_token %}
                                     <button type="submit" title="Descartar Orden" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded shadow-sm transition flex items-center justify-center">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
