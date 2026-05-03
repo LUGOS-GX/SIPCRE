@@ -15,6 +15,8 @@ from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
 import json
 import io
+import os
+import base64
 import xlsxwriter
 
 @login_required
@@ -716,28 +718,34 @@ def caja_farmacia(request):
 def analizar_imagen_medicamento(request):
     if request.method == 'POST':
         try:
-            import google.generativeai as genai
-            import os
+            from google import genai
+            from google.genai import types
             API_KEY = os.getenv("GEMINI_API_KEY")
             if not API_KEY:
                 raise ValueError("¡Falta la GEMINI_API_KEY en el archivo .env!")
-            genai.configure(api_key=API_KEY)
+            
+            # 1. Instanciamos el nuevo cliente
+            client = genai.Client(api_key=API_KEY)
 
-            #captura img
+            # Captura de imagen desde el frontend
             data = json.loads(request.body)
             imagen_base64 = data.get('imagen')
             
             if not imagen_base64:
                 return JsonResponse({'success': False, 'error': 'No se recibió ninguna imagen.'})
 
+            # Separamos el encabezado (data:image/jpeg;base64) del contenido
             formato, imgstr = imagen_base64.split(';base64,')
+            mime_type = formato.split(':')[-1]
             
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            # 2. Decodificamos el string a bytes (Requisito del nuevo SDK)
+            image_bytes = base64.b64decode(imgstr)
             
-            imagen_data = {
-                "mime_type": formato.split(':')[-1],
-                "data": imgstr
-            }
+            # 3. Preparamos la imagen usando el nuevo formato Part.from_bytes
+            imagen_data = types.Part.from_bytes(
+                data=image_bytes,
+                mime_type=mime_type
+            )
 
             prompt = """
             Eres un asistente experto en farmacia. Analiza esta imagen de un medicamento.
@@ -753,10 +761,16 @@ def analizar_imagen_medicamento(request):
             }
             """
 
-            # Hacemos la petición a la IA
-            response = model.generate_content([prompt, imagen_data])
+            # 4. Hacemos la petición con el nuevo cliente y forzamos salida JSON nativa
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[prompt, imagen_data],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                )
+            )
             
-            # Limpiamos la respuesta por si la IA añade markdown de código (```json ... ```)
+            # Limpiamos la respuesta por precaución (aunque el config de arriba ya lo garantiza)
             texto_limpio = response.text.replace('```json', '').replace('```', '').strip()
             
             # Convertimos el texto de la IA a un diccionario de Python

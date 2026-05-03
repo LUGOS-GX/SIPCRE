@@ -8,7 +8,8 @@
             <h1 class="text-3xl font-bold text-gray-900">Recepción de Lote</h1>
             <p class="mt-1 text-sm text-gray-500">Ingreso de nuevas cajas/unidades al inventario físico.</p>
         </div>
-        <a href="{% url 'dashboard_farmacia' %}" class="text-gray-500 hover:text-green-600 font-bold text-sm transition flex items-center">
+        <!-- Se agregó id="btn-volver" para controlarlo con JavaScript -->
+        <a href="{% url 'dashboard_farmacia' %}" id="btn-volver" class="text-gray-500 hover:text-green-600 font-bold text-sm transition flex items-center">
             ← Volver
         </a>
     </div>
@@ -76,7 +77,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // 1. Estilos de Tailwind para los inputs de Django (evitamos tocar nuestro buscador custom)
+        // 1. Estilos de Tailwind para los inputs de Django
         let inputs = document.querySelectorAll('input, select');
         inputs.forEach(input => {
             if (input.type !== 'checkbox' && input.id !== 'input_buscador_med') {
@@ -86,7 +87,33 @@
 
         // 2. Iniciar la magia del buscador
         inicializarBuscadorMeds();
+
+        // 3. Lógica del Botón Volver Inteligente
+        configurarBotonVolver();
     });
+
+    function configurarBotonVolver() {
+        const btnVolver = document.getElementById('btn-volver');
+        if (!btnVolver) return;
+
+        let origen = sessionStorage.getItem('origen_registro_lote');
+        const referrer = document.referrer;
+        
+        // Evaluamos el referer solo si venimos de otra vista (no de un recargo por POST)
+        if (referrer && !referrer.includes(window.location.pathname)) {
+            if (referrer.includes('inventario')) {
+                origen = "{% url 'inventario_farmacia' %}";
+            } else {
+                origen = "{% url 'dashboard_farmacia' %}";
+            }
+            sessionStorage.setItem('origen_registro_lote', origen);
+        }
+        
+        // Aplicamos la ruta correcta al botón
+        if (origen) {
+            btnVolver.href = origen;
+        }
+    }
 
     function inicializarBuscadorMeds() {
         const selectOriginal = document.getElementById('id_medicamento');
@@ -95,30 +122,25 @@
         const listaUls = document.getElementById('lista_meds');
         const inputBuscador = document.getElementById('input_buscador_med');
         
-        // Verificamos si ya había algo seleccionado (Por ejemplo, si la página recarga por un error de validación)
         const valorInicial = selectOriginal.value;
 
-        // Leemos cada <option> del select original y creamos un hermoso <li>
         Array.from(selectOriginal.options).forEach(opcion => {
-            if (opcion.value !== "") { // Ignoramos la primera opción vacía de Django ("---------")
+            if (opcion.value !== "") { 
                 let li = document.createElement('li');
                 li.className = 'px-4 py-2 hover:bg-green-50 hover:text-green-700 cursor-pointer text-sm text-gray-700 transition border-b border-gray-50';
                 li.textContent = opcion.text;
                 
-                // Al hacer clic, actualiza el select oculto y el input visible
                 li.onclick = function() {
                     seleccionarMed(opcion.value, opcion.text);
                 };
                 listaUls.appendChild(li);
 
-                // Si por defecto estaba seleccionado, lo mostramos en el input visual
                 if (valorInicial && valorInicial === opcion.value) {
                     inputBuscador.value = opcion.text;
                 }
             }
         });
 
-        // Ocultar el menú si hacemos clic fuera de él
         document.addEventListener('click', function(e) {
             if (!document.getElementById('input_buscador_med').contains(e.target) && !document.getElementById('menu_meds').contains(e.target)) {
                 document.getElementById('menu_meds').classList.add('hidden');
@@ -129,8 +151,6 @@
     function toggleMenuMed() {
         const input = document.getElementById('input_buscador_med');
         document.getElementById('menu_meds').classList.remove('hidden');
-        
-        // Si ya había algo escrito, seleccionamos todo el texto para que pueda sobreescribir rápido
         input.select();
         filtrarMeds();
     }
@@ -139,21 +159,16 @@
         const filtro = document.getElementById('input_buscador_med').value.toLowerCase();
         const items = document.querySelectorAll('#lista_meds li');
         
-        let encontrados = 0;
         items.forEach(item => {
             if (item.textContent.toLowerCase().includes(filtro)) {
                 item.style.display = 'block';
-                encontrados++;
             } else {
                 item.style.display = 'none';
             }
         });
-        
-        // Si todo falla, podrías agregar un mensaje de "No encontrado" aquí si lo deseas
     }
 
     function seleccionarMed(id, texto) {
-        // Magia: El backend recibe el ID correcto, pero el humano ve el texto bonito
         document.getElementById('id_medicamento').value = id;
         document.getElementById('input_buscador_med').value = texto;
         document.getElementById('menu_meds').classList.add('hidden');
