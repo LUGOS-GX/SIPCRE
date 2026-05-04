@@ -1,5 +1,9 @@
-# Create your views here.
-from django.shortcuts import render
+import os
+from django.http import FileResponse, Http404
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.shortcuts import render, redirect
+from django.contrib import messages
 
 def home(request):
     return render(request, 'core/home.html')
@@ -27,3 +31,35 @@ def error_500(request):
         'mensaje': '¡Ups! Algo salió mal en nuestro sistema. El equipo técnico ya ha sido notificado.'
     }
     return render(request, 'error.html', contexto, status=500)
+
+@login_required
+def serve_media_protegida(request, ruta):
+    """
+    Sirve archivos de media solo a usuarios autenticados.
+    Cualquier intento de acceder a /media/... sin sesión activa
+    redirige al login automáticamente.
+    """
+    ruta_absoluta = os.path.join(settings.MEDIA_ROOT, ruta)
+
+    # Verificar que el archivo existe
+    if not os.path.exists(ruta_absoluta):
+        raise Http404
+
+    # Verificar que la ruta no intenta salir de MEDIA_ROOT (path traversal)
+    ruta_real = os.path.realpath(ruta_absoluta)
+    media_real = os.path.realpath(settings.MEDIA_ROOT)
+    if not ruta_real.startswith(media_real):
+        raise Http404
+
+    return FileResponse(open(ruta_absoluta, 'rb'))
+
+def lockout_view(request, credentials=None, *args, **kwargs):
+    """
+    Se muestra cuando un usuario es bloqueado por demasiados intentos fallidos.
+    """
+    messages.error(
+        request,
+        'Tu cuenta ha sido bloqueada temporalmente por demasiados intentos fallidos. '
+        'Intenta de nuevo en 1 hora.'
+    )
+    return redirect('login')

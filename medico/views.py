@@ -21,6 +21,8 @@ import json
 import base64
 import io
 import xlsxwriter
+import logging
+logger = logging.getLogger('sipcre')
 
 #FUNCIÓN AUXILIAR DE LIMPIEZA (altura)--NO BORRAR
 def limpiar_numero(valor):
@@ -826,7 +828,7 @@ def eliminar_historia(request, historia_id):
 @rol_requerido(['medico'])
 def ver_expediente_unificado(request, paciente_id):
     paciente = get_object_or_404(Paciente, id=paciente_id)
-    
+    logger.info(f"EXPEDIENTE ACCEDIDO | medico={request.user.email} | paciente_id={paciente_id} | paciente={paciente.nombres} | ip={request.META.get('REMOTE_ADDR')}")
     # Obtenemos el expediente (o lo creamos por seguridad si no existe)
     expediente, creado = ExpedienteBase.objects.get_or_create(paciente=paciente)
     

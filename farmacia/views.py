@@ -9,7 +9,7 @@ from django.db import transaction
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import timedelta
-from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario
+from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario, AuditoriaControlado
 from administracion.models import Factura, DetalleFactura
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
@@ -18,6 +18,8 @@ import io
 import os
 import base64
 import xlsxwriter
+import logging
+logger = logging.getLogger('sipcre')
 
 @login_required
 @rol_requerido(['farmacia'])
@@ -138,13 +140,29 @@ def despachar_orden(request, orden_id):
             med = Medicamento.objects.get(id=med_id)
             
             if cant > 0 and cant <= med.stock_actual:
+                stock_antes = med.stock_actual  # ← guardar antes de restar
                 med.stock_actual -= cant
                 med.save()
+
+                # Auditoría para medicamentos controlados
+                if med.es_controlado:
+                    AuditoriaControlado.objects.create(
+                        medicamento=med,
+                        usuario_despacho=request.user,
+                        orden=orden,
+                        nombre_paciente=nombre_cli,
+                        cedula_paciente=cedula_cli,
+                        cantidad_despachada=cant,
+                        stock_antes=stock_antes,
+                        stock_despues=med.stock_actual,
+                        ip_origen=request.META.get('REMOTE_ADDR'),
+                    )
+                    logger.warning(f"CONTROLADO DESPACHADO | medicamento={med.nombre} | cantidad={cant} | paciente={cedula_cli} | usuario={request.user.email} | orden={orden.id}")
                 
                 MovimientoInventario.objects.create(
                     medicamento=med,
                     tipo_movimiento='SALIDA',
-                    cantidad=-cant, # <--- AQUÍ ESTÁ LA CORRECCIÓN: Guardamos como negativo
+                    cantidad=-cant,
                     stock_resultante=med.stock_actual,
                     referencia=f'Despacho Orden #{orden.id}',
                     orden_relacionada=orden,
@@ -529,8 +547,8 @@ def ajuste_inventario(request):
         medicamento = get_object_or_404(Medicamento, id=med_id)
 
         try:
-            # 1. DEVOLUCIÓN (Suma al stock)
             if tipo_accion == 'devolucion':
+                stock_antes = medicamento.stock_actual
                 medicamento.stock_actual += cantidad
                 medicamento.save()
                 MovimientoInventario.objects.create(
@@ -538,14 +556,29 @@ def ajuste_inventario(request):
                     cantidad=cantidad, stock_resultante=medicamento.stock_actual,
                     usuario=request.user, referencia=f"Devolución manual: {motivo}"
                 )
+                # Auditoría si es controlado — registramos la devolución también
+                if medicamento.es_controlado:
+                    AuditoriaControlado.objects.create(
+                        medicamento=medicamento,
+                        usuario_despacho=request.user,
+                        orden=None,  # No hay orden en ajuste manual
+                        nombre_paciente='N/A',
+                        cedula_paciente='N/A',
+                        cantidad_despachada=cantidad,
+                        stock_antes=stock_antes,
+                        stock_despues=medicamento.stock_actual,
+                        ip_origen=request.META.get('REMOTE_ADDR'),
+                        observacion=f"Devolución manual: {motivo}"
+                    )
+                    logger.warning(f"CONTROLADO AJUSTE | tipo=DEVOLUCION | medicamento={medicamento.nombre} | cantidad={cantidad} | usuario={request.user.email} | motivo={motivo}")
                 messages.success(request, f"Se reintegraron {cantidad} uds de {medicamento.nombre} al inventario.")
 
-            # 2. MERMA / DAÑO (Resta del stock)
             elif tipo_accion == 'merma':
                 if cantidad > medicamento.stock_actual:
                     messages.error(request, f"Error: No puede dar de baja más unidades de las que existen en stock ({medicamento.stock_actual}).")
                     return redirect('ajuste_inventario')
                 
+                stock_antes = medicamento.stock_actual
                 medicamento.stock_actual -= cantidad
                 medicamento.save()
                 MovimientoInventario.objects.create(
@@ -553,9 +586,23 @@ def ajuste_inventario(request):
                     cantidad=-cantidad, stock_resultante=medicamento.stock_actual,
                     usuario=request.user, referencia=f"Merma/Dañado: {motivo}"
                 )
+                # Auditoría si es controlado — una merma de controlado es crítica
+                if medicamento.es_controlado:
+                    AuditoriaControlado.objects.create(
+                        medicamento=medicamento,
+                        usuario_despacho=request.user,
+                        orden=None,
+                        nombre_paciente='N/A',
+                        cedula_paciente='N/A',
+                        cantidad_despachada=cantidad,
+                        stock_antes=stock_antes,
+                        stock_despues=medicamento.stock_actual,
+                        ip_origen=request.META.get('REMOTE_ADDR'),
+                        observacion=f"Merma/Dañado: {motivo}"
+                    )
+                    logger.warning(f"CONTROLADO AJUSTE | tipo=MERMA | medicamento={medicamento.nombre} | cantidad={cantidad} | usuario={request.user.email} | motivo={motivo}")
                 messages.warning(request, f"Se dio de baja {cantidad} uds de {medicamento.nombre} por merma.")
 
-            # 3. CAMBIO POR OTRO MEDICAMENTO (Suma el devuelto, Resta el entregado)
             elif tipo_accion == 'cambio':
                 med_nuevo_id = request.POST.get('medicamento_nuevo')
                 if not med_nuevo_id:
@@ -569,6 +616,7 @@ def ajuste_inventario(request):
                     return redirect('ajuste_inventario')
 
                 # A. Reintegro del que devuelven
+                stock_antes_devuelto = medicamento.stock_actual
                 medicamento.stock_actual += cantidad
                 medicamento.save()
                 MovimientoInventario.objects.create(
@@ -576,8 +624,23 @@ def ajuste_inventario(request):
                     cantidad=cantidad, stock_resultante=medicamento.stock_actual,
                     usuario=request.user, referencia=f"Cambio (Reintegro): {motivo}"
                 )
-                
+                if medicamento.es_controlado:
+                    AuditoriaControlado.objects.create(
+                        medicamento=medicamento,
+                        usuario_despacho=request.user,
+                        orden=None,
+                        nombre_paciente='N/A',
+                        cedula_paciente='N/A',
+                        cantidad_despachada=cantidad,
+                        stock_antes=stock_antes_devuelto,
+                        stock_despues=medicamento.stock_actual,
+                        ip_origen=request.META.get('REMOTE_ADDR'),
+                        observacion=f"Cambio (Reintegro): {motivo}"
+                    )
+                    logger.warning(f"CONTROLADO AJUSTE | tipo=REINTEGRO | medicamento={medicamento.nombre} | cantidad={cantidad} | usuario={request.user.email} | motivo={motivo}")
+
                 # B. Salida del nuevo que entregamos
+                stock_antes_nuevo = medicamento_nuevo.stock_actual
                 medicamento_nuevo.stock_actual -= cantidad
                 medicamento_nuevo.save()
                 MovimientoInventario.objects.create(
@@ -585,6 +648,20 @@ def ajuste_inventario(request):
                     cantidad=-cantidad, stock_resultante=medicamento_nuevo.stock_actual,
                     usuario=request.user, referencia=f"Cambio (Entrega): Reemplaza a {medicamento.nombre}"
                 )
+                if medicamento_nuevo.es_controlado:
+                    AuditoriaControlado.objects.create(
+                        medicamento=medicamento_nuevo,
+                        usuario_despacho=request.user,
+                        orden=None,
+                        nombre_paciente='N/A',
+                        cedula_paciente='N/A',
+                        cantidad_despachada=cantidad,
+                        stock_antes=stock_antes_nuevo,
+                        stock_despues=medicamento_nuevo.stock_actual,
+                        ip_origen=request.META.get('REMOTE_ADDR'),
+                        observacion=f"Cambio (Entrega): Reemplaza a {medicamento.nombre}. {motivo}"
+                    )
+                    logger.warning(f"CONTROLADO AJUSTE | tipo=CAMBIO_ENTREGA | medicamento={medicamento_nuevo.nombre} | cantidad={cantidad} | usuario={request.user.email} | motivo={motivo}")
                 messages.success(request, f"Cambio exitoso: Reintegrado {medicamento.nombre} | Entregado {medicamento_nuevo.nombre}.")
 
             return redirect('kardex_farmacia')
@@ -593,7 +670,6 @@ def ajuste_inventario(request):
             messages.error(request, f"Ocurrió un error al procesar el ajuste: {str(e)}")
             return redirect('ajuste_inventario')
 
-    # Para cargar la vista GET
     medicamentos = Medicamento.objects.all().order_by('nombre')
     return render(request, 'farmacia/ajuste_inventario.html', {'medicamentos': medicamentos})
 
@@ -645,7 +721,6 @@ def requisicion_compra(request):
 def caja_farmacia(request):
     if request.method == 'POST':
         try:
-            # Capturamos el carrito enviado por JavaScript
             datos = json.loads(request.body)
             paciente_nombre = datos.get('paciente_nombre', 'Paciente de Paso')
             paciente_cedula = datos.get('paciente_cedula', 'S/N')
@@ -655,17 +730,13 @@ def caja_farmacia(request):
             if not carrito:
                 return JsonResponse({'success': False, 'error': 'El carrito está vacío.'})
 
-            # Usamos transacciones para que si ocurre un error, no se guarde nada a medias
             with transaction.atomic():
-                # 1. Creamos la orden "Express" (Estado Completada automáticamente)
                 orden = OrdenFarmacia.objects.create(
                     nombre_paciente=paciente_nombre,
                     cedula_paciente=paciente_cedula,
                     estado='COMPLETADA',
-                    # No asignamos paciente ni medico porque es venta directa de paso
                 )
 
-                # 2. Procesamos cada artículo
                 for item in carrito:
                     med = Medicamento.objects.select_for_update().get(id=item['id'])
                     cant = int(item['cantidad'])
@@ -676,11 +747,26 @@ def caja_farmacia(request):
                     if med.es_controlado and not validacion_psicotropicos:
                         raise Exception(f"Falta validación física del récipe para el psicotrópico: {med.nombre}")
 
-                    # Descontamos stock
+                    stock_antes = med.stock_actual  # ← guardar antes de restar
                     med.stock_actual -= cant
                     med.save()
 
-                    # Creamos el detalle de la factura
+                    # Auditoría para controlados
+                    if med.es_controlado:
+                        AuditoriaControlado.objects.create(
+                            medicamento=med,
+                            usuario_despacho=request.user,
+                            orden=orden,
+                            nombre_paciente=paciente_nombre,
+                            cedula_paciente=paciente_cedula,
+                            cantidad_despachada=cant,
+                            stock_antes=stock_antes,
+                            stock_despues=med.stock_actual,
+                            ip_origen=request.META.get('REMOTE_ADDR'),
+                            observacion='Venta directa en caja farmacia'
+                        )
+                        logger.warning(f"CONTROLADO DESPACHADO | medicamento={med.nombre} | cantidad={cant} | paciente={paciente_cedula} | usuario={request.user.email} | orden={orden.id}")
+
                     DetalleDespacho.objects.create(
                         orden=orden,
                         medicamento=med,
@@ -688,7 +774,6 @@ def caja_farmacia(request):
                         precio_unitario=med.precio
                     )
 
-                    # Escribimos en el Kardex
                     MovimientoInventario.objects.create(
                         medicamento=med,
                         tipo_movimiento='SALIDA',
@@ -704,8 +789,6 @@ def caja_farmacia(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
-    # GET: Preparamos el inventario para enviarlo a JavaScript y que el escaneo sea instantáneo
-    # Convertimos los datos a un formato que JS entienda fácilmente
     medicamentos_raw = Medicamento.objects.filter(stock_actual__gt=0).values(
         'id', 'nombre', 'concentracion', 'precio', 'stock_actual', 'codigo_barras', 'es_controlado'
     )

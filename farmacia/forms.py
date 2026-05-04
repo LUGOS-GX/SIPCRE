@@ -1,14 +1,22 @@
 from django import forms
 from .models import Medicamento, LoteMedicamento
+from core.validators import validar_imagen 
 
 class MedicamentoForm(forms.ModelForm):
     class Meta:
         model = Medicamento
-        fields = ['nombre', 'concentracion', 'presentacion', 'descripcion', 'foto', 'stock_actual', 'stock_minimo', 'precio', 'fecha_vencimiento', 'es_controlado']
+        fields = ['nombre', 'concentracion', 'presentacion', 'descripcion', 'foto',
+                  'stock_actual', 'stock_minimo', 'precio', 'fecha_vencimiento', 'es_controlado']
         widgets = {
             'fecha_vencimiento': forms.DateInput(attrs={'type': 'date'}),
             'descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Ej. Laboratorios Pfizer. Indicado para...'}),
         }
+
+    def clean_foto(self): 
+        foto = self.cleaned_data.get('foto')
+        if foto:
+            validar_imagen(foto)
+        return foto
 
 class LoteMedicamentoForm(forms.ModelForm):
     class Meta:

@@ -5,7 +5,8 @@ from django.contrib import messages
 from .forms import RegistroAdminForm, RegistroMedicoForm, LoginUsuarioForm, RegistroLaboratorioForm, RegistroFarmaciaForm
 from administracion.models import Medico
 from .models import Usuario
-
+import logging
+logger = logging.getLogger('sipcre')
 
 # 1. LANDING PAGE (Página Principal)
 def landing_page(request):
@@ -124,12 +125,16 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            logger.info(f"LOGIN exitoso | usuario={user.email} | rol={user.rol} | ip={request.META.get('REMOTE_ADDR')}")
             return redirigir_segun_rol(user)
+        else:
+            logger.warning(f"LOGIN fallido | usuario={request.POST.get('username')} | ip={request.META.get('REMOTE_ADDR')}")
     else:
         form = LoginUsuarioForm()
     return render(request, 'usuarios/login.html', {'form': form})
 
 #logout
 def logout_view(request):
+    logger.info(f"LOGOUT | usuario={request.user.email} | ip={request.META.get('REMOTE_ADDR')}")
     logout(request)
     return redirect('landing_page')

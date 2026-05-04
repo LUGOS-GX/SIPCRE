@@ -3,6 +3,7 @@ from django.utils import timezone
 from administracion.models import Paciente, Medico, Cita
 import os
 import uuid
+from core.validators import validar_imagen
 
 #Para que no se repitan nombres de arhivos
 def renombrar_archivo_seguro(instancia, nombre_archivo):
@@ -78,9 +79,7 @@ class ConsultaEvolucion(models.Model):
     #------ 5. ANEXOS --------
     TIPO_ANEXO = [('Lab', 'Laboratorio'), ('Img', 'Imagenología'), ('Otro', 'Otro')]
     tipo_anexo = models.CharField(max_length=10, choices=TIPO_ANEXO, null=True, blank=True)
-    
-    # ¡AQUÍ ESTÁ LA MAGIA APLICADA!
-    archivo_anexo = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True)
+    archivo_anexo = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True, validators=[validar_imagen])
     
     creado_en = models.DateTimeField(auto_now_add=True)
 

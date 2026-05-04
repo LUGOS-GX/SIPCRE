@@ -4,6 +4,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
+from core.validators import validar_imagen
 
 # GENERADOR DE NOMBRES ÚNICOS PARA ARCHIVOS
 def renombrar_archivo_seguro(instancia, nombre_archivo):
@@ -62,9 +63,9 @@ class Medico(models.Model):
     cm = models.CharField(max_length=10, null=True, blank=True, verbose_name="Colegio Médico")
     
     # ¡AQUÍ ESTÁ LA MAGIA APLICADA A LAS IMÁGENES DEL MÉDICO!
-    foto_perfil = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True)
-    firma = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True)
-    sello = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True)
+    foto_perfil = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True, validators=[validar_imagen])
+    firma = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True, validators=[validar_imagen])
+    sello = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True, validators=[validar_imagen])
 
     def __str__(self):
         return f"{self.nombre} ({self.especialidad})"

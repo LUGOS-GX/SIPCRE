@@ -3,7 +3,8 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from administracion.models import Paciente, Medico
-from farmacia.models import Medicamento # Importado para la conexión con el Inventario (Fase 3)
+from farmacia.models import Medicamento 
+from core.validators import validar_imagen_o_pdf
 
 # GENERADOR DE NOMBRES ÚNICOS PARA ARCHIVOS
 def renombrar_archivo_seguro(instancia, nombre_archivo):
@@ -83,7 +84,7 @@ class SolicitudExamen(models.Model):
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Pendiente')
     
-    resultados_archivo = models.FileField(upload_to=renombrar_archivo_seguro, blank=True, null=True, verbose_name="Documento de Resultados (Opcional)")
+    resultados_archivo = models.FileField(upload_to=renombrar_archivo_seguro, blank=True, null=True, verbose_name="Documento de Resultados (Opcional)", validators=[validar_imagen_o_pdf])
     fecha_resultado = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):

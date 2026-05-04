@@ -1,13 +1,28 @@
 from django.db import models
 from django.conf import settings
 from administracion.models import Paciente, Medico
+from core.validators import validar_imagen
+import os
+import uuid
+from django.utils import timezone
+
+def renombrar_archivo_seguro(instancia, nombre_archivo):
+    ext = nombre_archivo.split('.')[-1].lower()
+    nombre_unico = f"{uuid.uuid4().hex}.{ext}"
+    nombre_carpeta = instancia.__class__.__name__.lower()
+    ruta_final = os.path.join(
+        nombre_carpeta,
+        timezone.now().strftime('%Y/%m'),
+        nombre_unico
+    )
+    return ruta_final
 
 class Medicamento(models.Model):
     nombre = models.CharField(max_length=150, verbose_name="Nombre del Medicamento")
     concentracion = models.CharField(max_length=50, help_text="Ej. 500mg, 10ml")
     presentacion = models.CharField(max_length=50, help_text="Ej. Tabletas, Jarabe, Ampollas")
     descripcion = models.TextField(null=True, blank=True, verbose_name="Descripción / Laboratorio", help_text="Información extra del medicamento")
-    foto = models.ImageField(upload_to='medicamentos/', null=True, blank=True, verbose_name="Foto del Medicamento")
+    foto = models.ImageField(upload_to=renombrar_archivo_seguro, null=True, blank=True, verbose_name="Foto del Medicamento", validators=[validar_imagen])
     #Control de Inventario
     stock_actual = models.IntegerField(default=0, verbose_name="Stock Disponible")
     stock_minimo = models.IntegerField(default=10, verbose_name="Stock Mínimo de Alerta")
@@ -113,3 +128,29 @@ class MovimientoInventario(models.Model):
     def __str__(self):
         return f"{self.get_tipo_movimiento_display()} | {self.medicamento.nombre} | {self.cantidad} uds"
     
+class AuditoriaControlado(models.Model):
+    """
+    Registro inmutable de cada despacho de medicamento psicotrópico/controlado.
+    No debe poder editarse ni eliminarse — es una bitácora legal.
+    """
+    medicamento = models.ForeignKey(Medicamento, on_delete=models.PROTECT, related_name='auditorias')
+    usuario_despacho = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    orden = models.ForeignKey(OrdenFarmacia, on_delete=models.PROTECT, related_name='auditorias_controlados', null=True, blank=True)
+    
+    nombre_paciente = models.CharField(max_length=150)
+    cedula_paciente = models.CharField(max_length=20)
+    cantidad_despachada = models.PositiveIntegerField()
+    stock_antes = models.IntegerField()
+    stock_despues = models.IntegerField()
+    
+    timestamp = models.DateTimeField(auto_now_add=True)  # Inmutable, lo pone Django solo
+    ip_origen = models.GenericIPAddressField(null=True, blank=True)
+    observacion = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Auditoría de Controlado"
+        verbose_name_plural = "Auditorías de Controlados"
+
+    def __str__(self):
+        return f"{self.timestamp.strftime('%d/%m/%Y %H:%M')} | {self.medicamento.nombre} | {self.cantidad_despachada} uds | {self.cedula_paciente}"
