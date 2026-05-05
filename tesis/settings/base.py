@@ -111,7 +111,7 @@ AXES_RESET_ON_SUCCESS = True     # Si logra entrar, resetea el contador de fallo
 AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']  # Bloquea por usuario + IP
 
 # --- HEADERS DE SEGURIDAD ---
-# Ya lo tienes definido, solo verificá que siga siendo SAMEORIGIN (necesario para los PDFs en iframes)
+# necesario para los PDFs en iframes
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Evita que el navegador adivine el tipo de contenido de un archivo
