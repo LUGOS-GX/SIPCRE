@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
 from core.validators import validar_imagen
+import uuid
 
 # GENERADOR DE NOMBRES ÚNICOS PARA ARCHIVOS
 def renombrar_archivo_seguro(instancia, nombre_archivo):
@@ -46,6 +47,7 @@ class Paciente(models.Model):
     tiene_seguro = models.BooleanField(default=False)
     nombre_seguro = models.CharField(max_length=100, blank=True, null=True)
     creado_en = models.DateTimeField(auto_now_add=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     telefono = models.CharField(max_length=20, null=True, blank=True)
     direccion = models.TextField(null=True, blank=True)
     email = models.EmailField(max_length=150, blank=True, null=True)

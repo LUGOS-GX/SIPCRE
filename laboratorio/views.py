@@ -33,8 +33,8 @@ def dashboard_lab(request):
     fecha_filtro = request.GET.get('fecha', '').strip()
 
     # 1. Consultas Base
-    ordenes_activas = SolicitudExamen.objects.filter(estado__in=['Pendiente', 'Procesando']).order_by('-fecha_solicitud')
-    ordenes_historial = SolicitudExamen.objects.filter(estado='Realizado').order_by('-fecha_resultado')
+    ordenes_activas = SolicitudExamen.objects.filter(estado__in=['Pendiente', 'Procesando']).select_related('paciente', 'medico').order_by('-fecha_solicitud')
+    ordenes_historial = SolicitudExamen.objects.filter(estado='Realizado').select_related('paciente', 'medico').order_by('-fecha_resultado')
     
     pendientes_count = ordenes_activas.filter(estado='Pendiente').count()
 

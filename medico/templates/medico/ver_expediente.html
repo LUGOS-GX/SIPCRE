@@ -227,7 +227,7 @@
             </button>
         </div>
         
-        <form action="{% url 'generar_constancia' paciente.id %}" method="POST" target="_blank">
+        <form action="{% url 'generar_constancia' paciente.uuid %}" method="POST" target="_blank">
             {% csrf_token %}
             <div class="p-6">
                 <p class="text-sm text-gray-600 mb-4">Paciente: <strong class="text-gray-900">{{ paciente.nombres }} {{ paciente.apellidos }}</strong></p>

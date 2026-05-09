@@ -28,7 +28,7 @@ def dashboard_farmacia(request):
     query = request.GET.get('q', '')
     
     # 2. Base de datos: Órdenes pendientes
-    ordenes_pendientes_list = OrdenFarmacia.objects.filter(estado='Pendiente').order_by('-fecha_solicitud')
+    ordenes_pendientes_list = OrdenFarmacia.objects.filter(estado='Pendiente').select_related('paciente', 'medico').order_by('-fecha_solicitud')
     
     # --- 3. APLICAR BÚSQUEDA INTELIGENTE EN BACKEND ---
     if query:
@@ -46,7 +46,7 @@ def dashboard_farmacia(request):
     page_obj = paginator.get_page(page_number)
     
     # 5. Historial despachado (Limitamos a los últimos 15 para no saturar)
-    ordenes_despachadas = OrdenFarmacia.objects.filter(estado='Despachado').order_by('-fecha_despacho')[:15]
+    ordenes_despachadas = OrdenFarmacia.objects.filter(estado='Despachado').select_related('paciente', 'medico').order_by('-fecha_despacho')[:15]
     
     # 6. Alertas automáticas de inventario
     medicamentos_alerta = Medicamento.objects.filter(stock_actual__lte=F('stock_minimo')).order_by('stock_actual')

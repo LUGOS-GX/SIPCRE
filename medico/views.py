@@ -201,9 +201,9 @@ def atender_paciente(request, cita_id):
                 
                 # Protegemos la redirección por si el nombre de la URL cambia
                 try:
-                    url_expediente = reverse('ver_expediente', kwargs={'paciente_id': paciente.id})
+                    url_expediente = reverse('ver_expediente', kwargs={'paciente_uuid': paciente.uuid})
                 except:
-                    url_expediente = reverse('ver_expediente_unificado', kwargs={'paciente_id': paciente.id})
+                    url_expediente = reverse('ver_expediente_unificado', kwargs={'paciente_uuid': paciente.uuid})
                     
                 return redirect(f"{url_expediente}?constancia=true")
             # -------------------------------------------------
@@ -366,9 +366,9 @@ def crear_historia_manual(request):
                 # NOTA: Si en tu urls.py la ruta se llama 'ver_expediente_unificado', cambia el texto abajo.
                 # Normalmente se llama 'ver_expediente'
                 try:
-                    url_expediente = reverse('ver_expediente', kwargs={'paciente_id': paciente_obj.id})
+                    url_expediente = reverse('ver_expediente', kwargs={'paciente_uuid': paciente_obj.uuid})
                 except:
-                    url_expediente = reverse('ver_expediente_unificado', kwargs={'paciente_id': paciente_obj.id})
+                    url_expediente = reverse('ver_expediente_unificado', kwargs={'paciente_uuid': paciente_obj.uuid})
                     
                 return redirect(f"{url_expediente}?constancia=true")
             # -------------------------------------------------
@@ -826,9 +826,10 @@ def eliminar_historia(request, historia_id):
 
 @login_required
 @rol_requerido(['medico'])
-def ver_expediente_unificado(request, paciente_id):
-    paciente = get_object_or_404(Paciente, id=paciente_id)
-    logger.info(f"EXPEDIENTE ACCEDIDO | medico={request.user.email} | paciente_id={paciente_id} | paciente={paciente.nombres} | ip={request.META.get('REMOTE_ADDR')}")
+def ver_expediente_unificado(request, paciente_uuid):
+    paciente = get_object_or_404(Paciente, uuid=paciente_uuid)
+    logger.info(f"EXPEDIENTE ACCEDIDO | medico={request.user.email} | paciente_id={paciente.id} | paciente={paciente.nombres} | ip={request.META.get('REMOTE_ADDR')}")
+    
     # Obtenemos el expediente (o lo creamos por seguridad si no existe)
     expediente, creado = ExpedienteBase.objects.get_or_create(paciente=paciente)
     
@@ -929,8 +930,8 @@ def image_to_base64(image_field):
 
 @login_required
 @rol_requerido(['medico'])
-def generar_constancia(request, paciente_id):
-    paciente = get_object_or_404(Paciente, id=paciente_id)
+def generar_constancia(request, paciente_uuid):
+    paciente = get_object_or_404(Paciente, uuid=paciente_uuid)
     
     try:
         medico = request.user.medico
@@ -964,7 +965,7 @@ def generar_constancia(request, paciente_id):
         else:
             messages.error(request, "El texto de la constancia no puede estar vacío.")
 
-    return redirect('ver_expediente', paciente_id=paciente.id)
+    return redirect('ver_expediente_unificado', paciente_uuid=paciente.uuid)
 
 @login_required
 @rol_requerido(['medico'])

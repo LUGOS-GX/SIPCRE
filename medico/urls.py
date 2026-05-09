@@ -16,8 +16,8 @@ urlpatterns = [
     path('perfil/editar/', views.editar_perfil_medico, name='editar_perfil_medico'),
     path('perfil/firma-sello/', views.cargar_firma_sello, name='cargar_firma_sello'),
     path('orden_pdf/<int:orden_id>/', views.generar_pdf_orden, name='generar_pdf_orden'),
-    path('expediente/<int:paciente_id>/', views.ver_expediente_unificado, name='ver_expediente_unificado'),
+    path('expediente/<uuid:paciente_uuid>/', views.ver_expediente_unificado, name='ver_expediente_unificado'),
     path('api/estadisticas/', views.api_estadisticas_medico, name='api_estadisticas_medico'),
-    path('paciente/<int:paciente_id>/constancia/', views.generar_constancia, name='generar_constancia'),
+    path('paciente/<uuid:paciente_uuid>/constancia/', views.generar_constancia, name='generar_constancia'),
     path('exportar-morbilidad/', views.exportar_morbilidad_excel, name='exportar_morbilidad_excel'),
 ]

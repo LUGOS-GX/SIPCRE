@@ -42,17 +42,17 @@ def dashboard_admin(request):
     else:
         fecha_filtro = hoy
 
-    # 3. Consulta Base (Aún mostramos todas, en la Fase 2 sacaremos las "Atendidas" de aquí)
-    citas_list = Cita.objects.filter(fecha=fecha_filtro).order_by('hora')
+    citas_list = Cita.objects.filter(fecha=fecha_filtro).select_related('paciente', 'medico').order_by('hora')
     
-    # NUEVO: Paginación (10 citas por página para no saturar el DOM)
+    #Paginacion
     paginator = Paginator(citas_list, 5)
     page_number = request.GET.get('page')
     citas = paginator.get_page(page_number)
 
     context = {
         'citas': citas,
-        'fecha_actual_str': fecha_filtro.strftime('%Y-%m-%d'), # Para el input tipo date
+        'fecha_actual_str': fecha_filtro.strftime('%Y-%m-%d'), 
+        'fecha_display': fecha_filtro.strftime('%d/%m/%Y'),      
         'hoy': hoy
     }
     return render(request, 'administracion/dashboard.html', context)

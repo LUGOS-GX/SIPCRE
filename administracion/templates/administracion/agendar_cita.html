@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    input::placeholder, textarea::placeholder { color: #6b7280; }
+    .slot-hora { transition: all 0.15s ease; }
+    .slot-hora:not(.ocupada):hover { transform: translateY(-1px); }
+</style>
+
 <div class="max-w-6xl mx-auto py-8 px-4">
     
     <div class="flex justify-between items-end mb-6">
@@ -9,7 +15,7 @@
                 <span class="bg-cruzroja-500 w-3 h-8 mr-3 rounded-full"></span>
                 Agendar Cita Médica
             </h1>
-            <p class="text-gray-500 text-sm mt-1 ml-6">Complete los datos para registrar un nuevo paciente en la agenda.</p>
+            <p class="text-gray-600 text-sm mt-1 ml-6">Complete los datos para registrar un nuevo paciente en la agenda.</p>
         </div>
         <a href="{% url 'dashboard_admin' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold text-sm transition flex items-center shadow-sm">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -22,24 +28,32 @@
         
         <div class="lg:col-span-8 space-y-6">
             
+            <!-- DATOS DEL PACIENTE -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 border-b pb-2">Datos del Paciente</h2>
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-5 border-b pb-3">Datos del Paciente</h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
                     <div class="md:col-span-4 relative">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cédula <span class="text-cruzroja-500">*</span></label>
-                        <input type="text" name="cedula" id="cedula_px" placeholder="Ej. 12345678" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" autocomplete="off" required>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Cédula <span class="text-cruzroja-500">*</span></label>
+                        <input type="text" name="cedula" id="cedula_px"
+                            placeholder="Ej. 12345678"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 font-mono text-sm focus:ring-2 focus:ring-cruzroja-400 focus:border-cruzroja-400 focus:outline-none"
+                            autocomplete="off" required>
                         <ul id="resultados_px" class="hidden absolute z-50 w-full bg-white shadow-xl rounded-b-lg border border-t-0 max-h-40 overflow-y-auto mt-1"></ul>
                     </div>
 
                     <div class="md:col-span-8">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Completo <span class="text-cruzroja-500">*</span></label>
-                        <input type="text" name="nombre_nuevo" id="nombre_px" placeholder="Nombre del paciente..." class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-bold text-gray-700" required>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Nombre Completo <span class="text-cruzroja-500">*</span></label>
+                        <input type="text" name="nombre_nuevo" id="nombre_px"
+                            placeholder="Nombre y apellido del paciente"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 font-bold text-sm focus:ring-2 focus:ring-cruzroja-400 focus:border-cruzroja-400 focus:outline-none"
+                            required>
                     </div>
 
                     <div class="md:col-span-4">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Sangre</label>
-                        <select name="tipo_sangre" id="tipo_sangre_px" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Tipo de Sangre</label>
+                        <select name="tipo_sangre" id="tipo_sangre_px"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none bg-white">
                             <option value="">Desconocido</option>
                             <option value="A+">A+</option>
                             <option value="A-">A-</option>
@@ -53,96 +67,119 @@
                     </div>
 
                     <div class="md:col-span-4">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Teléfono</label>
-                        <input type="text" name="telefono" id="telefono_px" maxlength="11" oninput="this.value = this.value.replace(/[^0-9\-+ ]/g, '')" placeholder="Ej. 0414-1234567" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Teléfono</label>
+                        <input type="text" name="telefono" id="telefono_px"
+                            maxlength="11"
+                            oninput="this.value = this.value.replace(/[^0-9\-+ ]/g, '')"
+                            placeholder="Ej. 0414-1234567"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none">
                     </div>
 
                     <div class="md:col-span-4">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Nacimiento</label>
-                        <input type="date" name="fecha_nacimiento" id="fecha_nacimiento_px" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" id="fecha_nacimiento_px"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none">
                     </div>
 
                     <div class="md:col-span-12">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 flex justify-between">
-                            Correo Electrónico 
-                            <span class="text-[10px] text-blue-500 lowercase normal-case font-normal">(Requerido para recordatorios y exámenes)</span>
+                        <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between items-center">
+                            Correo Electrónico
+                            <span class="text-xs text-blue-600 font-normal lowercase normal-case">Requerido para recordatorios y exámenes</span>
                         </label>
-                        <input type="email" name="email" id="email_px" placeholder="paciente@ejemplo.com" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                        <input type="email" name="email" id="email_px"
+                            placeholder="paciente@ejemplo.com"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none">
                     </div>
                 </div>
             </div>
 
+            <!-- DATOS DE LA CONSULTA -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 border-b pb-2">Datos de la Consulta</h2>
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-5 border-b pb-3">Datos de la Consulta</h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Especialista <span class="text-cruzroja-500">*</span></label>
-                        <select name="medico_id" id="select_medico" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
-                            <option value="">Seleccione Médico...</option>
-                            {% for m in medicos %}
-                            <option value="{{ m.id }}">{{ m.nombre }} ({{ m.especialidad }})</option>
-                            {% endfor %}
-                        </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+
+                    <!-- BUSCADOR DE MÉDICO -->
+                    <div class="relative">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Especialista <span class="text-cruzroja-500">*</span></label>
+                        <input type="hidden" name="medico_id" id="medico_id_oculto" required>
+                        <input type="text" id="buscador_medico"
+                            placeholder="Buscar médico por nombre..."
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none"
+                            autocomplete="off"
+                            oninput="filtrarMedicos()"
+                            onfocus="mostrarMedicos()">
+                        <ul id="lista_medicos" class="hidden absolute z-50 w-full bg-white shadow-xl rounded-b-lg border border-t-0 max-h-52 overflow-y-auto mt-1"></ul>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha <span class="text-cruzroja-500">*</span></label>
-                        <input type="date" name="fecha" id="fecha_cita" value="{{ fecha_actual }}" min="{{ fecha_actual }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500" required onchange="actualizarHoras()">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Fecha <span class="text-cruzroja-500">*</span></label>
+                        <input type="date" name="fecha" id="fecha_cita"
+                            value="{{ fecha_actual }}"
+                            min="{{ fecha_actual }}"
+                            class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none"
+                            required
+                            onchange="actualizarHoras()">
                     </div>
                 </div>
 
+                <!-- HORARIOS REDISEÑADOS -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Horario Disponible <span class="text-cruzroja-500">*</span></label>
+                    <label class="block text-sm font-bold text-gray-700 mb-3">Horario Disponible <span class="text-cruzroja-500">*</span></label>
                     <input type="hidden" name="hora" id="hora_seleccionada" required>
-                    <div class="grid grid-cols-4 md:grid-cols-6 gap-2" id="grid_horas">
-                        <p class="col-span-full text-center text-sm text-gray-400 py-4 italic border-2 border-dashed border-gray-200 rounded-lg">
+
+                    <div id="grid_horas">
+                        <div class="text-center text-sm text-gray-500 py-6 italic border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
                             Seleccione un especialista para visualizar los horarios.
-                        </p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="mt-6">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Motivo de Consulta / Observaciones</label>
-                    <textarea name="motivo" rows="3" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 resize-none" placeholder="Ej. Control sucesivo, dolor abdominal, etc..."></textarea>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Motivo de Consulta / Observaciones</label>
+                    <textarea name="motivo" rows="3"
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none resize-none"
+                        placeholder="Ej. Control sucesivo, dolor abdominal..."></textarea>
                 </div>
             </div>
         </div>
 
+        <!-- PANEL LATERAL -->
         <div class="lg:col-span-4 space-y-6">
             
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 transition-all duration-300">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <div class="flex justify-between items-center">
                     <div>
-                        <p class="font-bold text-gray-700">Seguro Médico</p>
-                        <p class="text-xs text-gray-400">¿El paciente posee póliza?</p>
+                        <p class="font-bold text-gray-700 text-sm">Seguro Médico</p>
+                        <p class="text-xs text-gray-500 mt-0.5">¿El paciente posee póliza?</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="tiene_seguro" id="toggle_seguro" class="sr-only peer" onchange="togglePoliza()">
                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cruzroja-600"></div>
                     </label>
                 </div>
-                
                 <div id="contenedor_poliza" class="hidden mt-4 pt-4 border-t border-gray-100">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Seguro / Póliza</label>
-                    <input type="text" name="nombre_seguro" id="nombre_seguro_px" placeholder="Ej. Seguros Caracas, Mercantil..." class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 text-sm">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Nombre del Seguro / Póliza</label>
+                    <input type="text" name="nombre_seguro" id="nombre_seguro_px"
+                        placeholder="Ej. Seguros Caracas, Mercantil..."
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none">
                 </div>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col h-[350px]">
-                <h3 class="font-bold text-gray-700 mb-2">Servicios a Facturar</h3>
-                
+                <h3 class="font-bold text-gray-700 text-sm mb-3">Servicios a Facturar</h3>
                 <div class="relative mb-4">
-                    <input type="text" id="buscador_servicios" placeholder="Buscar servicio (ej. Consulta)..." class="w-full border-gray-300 rounded-lg text-sm focus:ring-cruzroja-500" autocomplete="off">
+                    <input type="text" id="buscador_servicios"
+                        placeholder="Buscar servicio (ej. Consulta)..."
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 text-sm focus:ring-2 focus:ring-cruzroja-400 focus:outline-none"
+                        autocomplete="off">
                     <ul id="resultados_servicios" class="hidden absolute z-50 w-full bg-white shadow-lg rounded-b-lg border border-gray-200 max-h-40 overflow-y-auto mt-1"></ul>
                 </div>
-
                 <div id="contenedor_carrito" class="flex-1 overflow-y-auto space-y-2 border-t pt-2">
-                    <div id="carrito_vacio" class="h-full flex items-center justify-center text-xs text-gray-400 italic text-center px-4">
+                    <div id="carrito_vacio" class="h-full flex items-center justify-center text-xs text-gray-500 italic text-center px-4">
                         Busque y seleccione los servicios para enviarlos a caja.
                     </div>
                 </div>
-                
                 <div id="inputs_servicios_ocultos"></div>
             </div>
 
@@ -162,26 +199,97 @@
 <script>
     const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
     const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
-    const HORAS_BASE = ["08:00 A.M.", "08:30 A.M.", "09:00 A.M.", "09:30 A.M.", "10:00 A.M.", "10:30 A.M.", "11:00 A.M.", "11:30 A.M.", "1:00 P.M.", "1:30 P.M.", "2:00 P.M.", "2:30 P.M.", "3:00 P.M.", "3:30 P.M.", "4:00 P.M.", "4:30 P.M."];
+    const medicosData = [
+        {% for m in medicos %}
+        {id: {{ m.id }}, nombre: "{{ m.nombre }}", especialidad: "{{ m.especialidad }}"},
+        {% endfor %}
+    ];
+
+    const HORAS_BASE = [
+        {label: "08:00 A.M.", value: "08:00"},
+        {label: "08:30 A.M.", value: "08:30"},
+        {label: "09:00 A.M.", value: "09:00"},
+        {label: "09:30 A.M.", value: "09:30"},
+        {label: "10:00 A.M.", value: "10:00"},
+        {label: "10:30 A.M.", value: "10:30"},
+        {label: "11:00 A.M.", value: "11:00"},
+        {label: "11:30 A.M.", value: "11:30"},
+        {label: "01:00 P.M.", value: "13:00"},
+        {label: "01:30 P.M.", value: "13:30"},
+        {label: "02:00 P.M.", value: "14:00"},
+        {label: "02:30 P.M.", value: "14:30"},
+        {label: "03:00 P.M.", value: "15:00"},
+        {label: "03:30 P.M.", value: "15:30"},
+        {label: "04:00 P.M.", value: "16:00"},
+        {label: "04:30 P.M.", value: "16:30"},
+    ];
+
     let serviciosSeleccionados = [];
 
-    // --- LÓGICA DEL PACIENTE ---
+    // --- BUSCADOR DE MÉDICO ---
+    function filtrarMedicos() {
+        const query = document.getElementById('buscador_medico').value.toLowerCase().trim();
+        const lista = document.getElementById('lista_medicos');
+        lista.innerHTML = '';
+
+        if(query.length < 1) { lista.classList.add('hidden'); return; }
+
+        const filtrados = medicosData.filter(m =>
+            m.nombre.toLowerCase().includes(query) ||
+            m.especialidad.toLowerCase().includes(query)
+        ).slice(0, 6);
+
+        if(filtrados.length > 0) {
+            lista.classList.remove('hidden');
+            filtrados.forEach(m => {
+                const li = document.createElement('li');
+                li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm text-gray-800 flex flex-col';
+                li.innerHTML = `<span class="font-bold">${m.nombre}</span><span class="text-xs text-gray-500">${m.especialidad}</span>`;
+                li.onclick = () => seleccionarMedico(m);
+                lista.appendChild(li);
+            });
+        } else {
+            lista.classList.add('hidden');
+        }
+    }
+
+    function mostrarMedicos() {
+        const query = document.getElementById('buscador_medico').value.toLowerCase().trim();
+        if(query.length < 1) {
+            const lista = document.getElementById('lista_medicos');
+            lista.innerHTML = '';
+            medicosData.slice(0, 6).forEach(m => {
+                const li = document.createElement('li');
+                li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm text-gray-800 flex flex-col';
+                li.innerHTML = `<span class="font-bold">${m.nombre}</span><span class="text-xs text-gray-500">${m.especialidad}</span>`;
+                li.onclick = () => seleccionarMedico(m);
+                lista.appendChild(li);
+            });
+            lista.classList.remove('hidden');
+        }
+    }
+
+    function seleccionarMedico(m) {
+        document.getElementById('buscador_medico').value = `${m.nombre} — ${m.especialidad}`;
+        document.getElementById('medico_id_oculto').value = m.id;
+        document.getElementById('lista_medicos').classList.add('hidden');
+        actualizarHoras();
+    }
+
+    // --- BUSCADOR DE PACIENTE ---
     const inputCedula = document.getElementById('cedula_px');
     const listResultadosPx = document.getElementById('resultados_px');
     
     inputCedula.addEventListener('input', function() {
         const query = this.value.toLowerCase().trim();
         listResultadosPx.innerHTML = '';
-        
         if(query.length < 2) { listResultadosPx.classList.add('hidden'); return; }
-
         const filtrados = pacientes.filter(p => p.cedula.includes(query)).slice(0, 5);
-        
         if(filtrados.length > 0) {
             listResultadosPx.classList.remove('hidden');
             filtrados.forEach(p => {
                 const li = document.createElement('li');
-                li.className = 'px-4 py-2 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
+                li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
                 li.innerText = `${p.nombres} (V-${p.cedula})`;
                 li.onclick = () => {
                     document.getElementById('cedula_px').value = p.cedula;
@@ -190,7 +298,6 @@
                     document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
                     document.getElementById('telefono_px').value = p.telefono || '';
                     document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
-                    
                     listResultadosPx.classList.add('hidden');
                 };
                 listResultadosPx.appendChild(li);
@@ -198,42 +305,34 @@
         }
     });
 
-    // --- LÓGICA DEL SEGURO MÉDICO (Mostrar/Ocultar Póliza) ---
+    // --- SEGURO MÉDICO ---
     function togglePoliza() {
         const checkbox = document.getElementById('toggle_seguro');
         const contenedor = document.getElementById('contenedor_poliza');
-        
         if (checkbox.checked) {
             contenedor.classList.remove('hidden');
         } else {
             contenedor.classList.add('hidden');
-            document.getElementById('nombre_seguro_px').value = ''; // Limpiamos si se desmarca
+            document.getElementById('nombre_seguro_px').value = '';
         }
     }
 
-    // --- LÓGICA DE SERVICIOS ---
+    // --- SERVICIOS ---
     const inputServicios = document.getElementById('buscador_servicios');
     const listResultadosServicios = document.getElementById('resultados_servicios');
 
     inputServicios.addEventListener('input', function() {
         const query = this.value.toLowerCase().trim();
         listResultadosServicios.innerHTML = '';
-        
         if(query.length < 2) { listResultadosServicios.classList.add('hidden'); return; }
-
         const filtrados = catalogo.filter(s => s.nombre.toLowerCase().includes(query)).slice(0, 6);
-        
         if(filtrados.length > 0) {
             listResultadosServicios.classList.remove('hidden');
             filtrados.forEach(s => {
                 const li = document.createElement('li');
                 li.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer border-b text-xs flex justify-between';
-                li.innerHTML = `<span class="font-bold text-gray-700 truncate mr-2">${s.nombre}</span> <span class="text-blue-600 font-bold">$${parseFloat(s.precio_usd).toFixed(2)}</span>`;
-                li.onclick = () => {
-                    agregarServicio(s);
-                    inputServicios.value = '';
-                    listResultadosServicios.classList.add('hidden');
-                };
+                li.innerHTML = `<span class="font-bold text-gray-700 truncate mr-2">${s.nombre}</span><span class="text-blue-600 font-bold">$${parseFloat(s.precio_usd).toFixed(2)}</span>`;
+                li.onclick = () => { agregarServicio(s); inputServicios.value = ''; listResultadosServicios.classList.add('hidden'); };
                 listResultadosServicios.appendChild(li);
             });
         }
@@ -254,27 +353,17 @@
     function renderizarCarrito() {
         const contenedor = document.getElementById('contenedor_carrito');
         const inputsOcultos = document.getElementById('inputs_servicios_ocultos');
-        
         contenedor.innerHTML = '';
         inputsOcultos.innerHTML = '';
-
         if(serviciosSeleccionados.length === 0) {
-            contenedor.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-gray-400 italic text-center px-4">Busque y seleccione los servicios para enviarlos a caja.</div>';
+            contenedor.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-gray-500 italic text-center px-4">Busque y seleccione los servicios para enviarlos a caja.</div>';
             return;
         }
-
         serviciosSeleccionados.forEach(s => {
             const item = document.createElement('div');
             item.className = 'flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 text-sm';
-            item.innerHTML = `
-                <div class="flex-1 truncate mr-2">
-                    <p class="font-bold text-gray-700 truncate text-xs">${s.nombre}</p>
-                    <p class="text-blue-600 font-bold text-[10px]">$${parseFloat(s.precio_usd).toFixed(2)}</p>
-                </div>
-                <button type="button" onclick="removerServicio(${s.id})" class="text-red-400 hover:text-red-600 font-bold p-1">✖</button>
-            `;
+            item.innerHTML = `<div class="flex-1 truncate mr-2"><p class="font-bold text-gray-700 truncate text-xs">${s.nombre}</p><p class="text-blue-600 font-bold text-[10px]">$${parseFloat(s.precio_usd).toFixed(2)}</p></div><button type="button" onclick="removerServicio(${s.id})" class="text-red-400 hover:text-red-600 font-bold p-1">✖</button>`;
             contenedor.appendChild(item);
-
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'servicios[]';
@@ -283,66 +372,108 @@
         });
     }
 
-    document.addEventListener('click', (e) => {
-        if(e.target !== inputCedula) listResultadosPx.classList.add('hidden');
-        if(e.target !== inputServicios) listResultadosServicios.classList.add('hidden');
-    });
+    // --- HORARIOS ---
+    function seleccionarHora(btn, value) {
+        document.querySelectorAll('#grid_horas button.slot-hora').forEach(b => {
+            if(!b.classList.contains('ocupada')) {
+                b.classList.remove('bg-cruzroja-500', 'text-white', 'border-cruzroja-500', 'shadow-md');
+                b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+            }
+        });
+        btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+        btn.classList.add('bg-cruzroja-500', 'text-white', 'border-cruzroja-500', 'shadow-md');
+        document.getElementById('hora_seleccionada').value = value;
+    }
 
-    // --- LÓGICA DE HORARIOS ---
     function actualizarHoras() {
-        const medicoId = document.getElementById('select_medico').value;
+        const medicoId = document.getElementById('medico_id_oculto').value;
         const fecha = document.getElementById('fecha_cita').value;
         const grid = document.getElementById('grid_horas');
-        
+
         if(!medicoId || !fecha) {
-            grid.innerHTML = '<p class="col-span-full text-center text-sm text-gray-400 py-4 italic border-2 border-dashed border-gray-200 rounded-lg">Seleccione un especialista para visualizar los horarios.</p>';
+            grid.innerHTML = '<div class="text-center text-sm text-gray-500 py-6 italic border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">Seleccione un especialista para visualizar los horarios.</div>';
             return;
         }
 
-        grid.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 italic py-4">Consultando disponibilidad en tiempo real...</p>';
+        grid.innerHTML = '<div class="text-center text-sm text-gray-500 py-6 italic bg-gray-50 rounded-xl">Consultando disponibilidad...</div>';
 
-        // CORRECCIÓN DE RUTA: Esto evita el redireccionamiento 301 y hace que cargue al instante
         const urlFetch = `{% url 'verificar_disponibilidad' %}?medico_id=${medicoId}&fecha=${fecha}`;
 
         fetch(urlFetch)
         .then(res => res.json())
         .then(data => {
-            grid.innerHTML = '';
-            HORAS_BASE.forEach(hora => {
-                const isOcupada = data.ocupadas.includes(hora);
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.innerText = hora;
-                btn.className = isOcupada 
-                    ? "py-2 text-xs font-bold rounded-lg border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "py-2 text-xs font-bold rounded-lg border border-cruzroja-100 bg-white text-gray-700 hover:bg-cruzroja-500 hover:text-white transition shadow-sm";
-                
-                if(!isOcupada) {
-                    btn.onclick = () => seleccionarHora(btn, hora);
-                } else {
-                    btn.title = "Horario ya reservado";
-                }
-                grid.appendChild(btn);
-            });
-        });
-    }
+            const manana = HORAS_BASE.slice(0, 8);
+            const tarde = HORAS_BASE.slice(8);
 
-    function seleccionarHora(btn, hora) {
-        document.querySelectorAll('#grid_horas button').forEach(b => {
-            if(!b.classList.contains('bg-gray-100')) {
-                b.classList.replace('bg-cruzroja-500', 'bg-white');
-                b.classList.replace('text-white', 'text-gray-700');
+            grid.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+                            <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">Mañana</span>
+                        </div>
+                        <div id="slots_manana" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                            <span class="text-xs font-bold text-gray-600 uppercase tracking-wider">Tarde</span>
+                        </div>
+                        <div id="slots_tarde" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100">
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span class="w-3 h-3 rounded bg-white border-2 border-cruzroja-200 inline-block"></span> Disponible
+                    </span>
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span class="w-3 h-3 rounded bg-cruzroja-500 inline-block"></span> Seleccionado
+                    </span>
+                    <span class="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span class="w-3 h-3 rounded bg-gray-200 inline-block"></span> Ocupado
+                    </span>
+                </div>
+            `;
+
+            function renderSlots(horas, containerId) {
+                const container = document.getElementById(containerId);
+                horas.forEach(hora => {
+                    const isOcupada = data.ocupadas.includes(hora.value);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.innerText = hora.label;
+                    btn.className = `slot-hora w-full py-2.5 px-2 text-xs font-bold rounded-lg border text-center ${
+                        isOcupada
+                            ? 'ocupada bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-cruzroja-400 hover:text-cruzroja-600 cursor-pointer'
+                    }`;
+                    if(!isOcupada) {
+                        btn.onclick = () => seleccionarHora(btn, hora.value);
+                    } else {
+                        btn.title = 'Horario ya reservado';
+                    }
+                    container.appendChild(btn);
+                });
             }
+
+            renderSlots(manana, 'slots_manana');
+            renderSlots(tarde, 'slots_tarde');
         });
-        btn.classList.replace('bg-white', 'bg-cruzroja-500');
-        btn.classList.replace('text-gray-700', 'text-white');
-        document.getElementById('hora_seleccionada').value = hora;
     }
 
+    // Cerrar dropdowns al hacer click fuera
+    document.addEventListener('click', (e) => {
+        if(e.target !== inputCedula) listResultadosPx.classList.add('hidden');
+        if(e.target !== inputServicios) listResultadosServicios.classList.add('hidden');
+        if(e.target !== document.getElementById('buscador_medico')) {
+            document.getElementById('lista_medicos').classList.add('hidden');
+        }
+    });
+
+    // Validación al enviar
     document.getElementById('form_cita').addEventListener('submit', function(e) {
         if(!document.getElementById('hora_seleccionada').value) {
             e.preventDefault();
-            // CORRECCIÓN: Alerta elegante con SweetAlert2
             Swal.fire({
                 title: '¡Faltan datos!',
                 text: 'Por favor, seleccione una hora disponible en la cuadrícula de horarios.',
