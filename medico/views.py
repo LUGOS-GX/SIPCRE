@@ -73,7 +73,7 @@ def dashboard_medico(request):
     }
     return render(request, 'medico/dashboard.html', context)
 
-#1.5 NUEVA FUNCION - NUEVA LOGICA DE HISTORIA CLINICA
+#1.5 CONSULTA
 @login_required
 @rol_requerido(['medico'])
 def crear_control_rapido(request):
@@ -526,6 +526,7 @@ def crear_recipe(request):
     
     return render(request, 'medico/crear_recipe.html', context)
 
+#7. PDF RECIPE
 @login_required
 @rol_requerido(['medico'])
 def generar_pdf_recipe(request, recipe_id):
@@ -547,6 +548,7 @@ def generar_pdf_recipe(request, recipe_id):
     
     return response
 
+#8. SOL EXM
 @login_required
 @rol_requerido(['medico'])
 def solicitar_examenes(request):
@@ -623,6 +625,7 @@ def solicitar_examenes(request):
         'pacientes': pacientes_del_medico # Pasamos la lista al template
     })
 
+#9. EDICION PERFIL
 @login_required
 @rol_requerido(['medico'])
 def editar_perfil_medico(request):
@@ -668,6 +671,7 @@ def editar_perfil_medico(request):
     }
     return render(request, 'medico/editar_perfil.html', context)
 
+#10. LOGICA FIRMA Y SELLO
 @login_required
 @rol_requerido(['medico'])
 def cargar_firma_sello(request):
@@ -740,6 +744,7 @@ def cargar_firma_sello(request):
     }
     return render(request, 'medico/cargar_firma_sello.html', context)
 
+#11. VISTA RESULTADOS
 @login_required
 @rol_requerido(['medico', 'laboratorio'])
 def resultados_examenes(request):
@@ -789,6 +794,7 @@ def resultados_examenes(request):
     }
     return render(request, 'medico/resultados_examenes.html', context)
 
+#12. SOLICITUD EN PDF
 @login_required
 @rol_requerido(['medico'])
 def generar_pdf_orden(request, orden_id):
@@ -810,6 +816,7 @@ def generar_pdf_orden(request, orden_id):
     
     return response
 
+#13. ELIMINACION HISTORIA CLINICA
 @login_required
 @rol_requerido(['medico'])
 def eliminar_historia(request, historia_id):
@@ -824,6 +831,7 @@ def eliminar_historia(request, historia_id):
     messages.success(request, f"El registro médico de {nombre_paciente} ha sido eliminado de su historial.")
     return redirect('historial_medico')
 
+#14. EXPEDIENTE COMPLETO PX
 @login_required
 @rol_requerido(['medico'])
 def ver_expediente_unificado(request, paciente_uuid):
@@ -876,6 +884,7 @@ def ver_expediente_unificado(request, paciente_uuid):
     
     return render(request, 'medico/ver_expediente.html', context)
 
+#15. MORBILIDAD
 @login_required
 @rol_requerido(['medico'])
 def api_estadisticas_medico(request):
@@ -928,6 +937,7 @@ def image_to_base64(image_field):
             return None
     return None
 
+#16. CONSTANCIA / JUSTIFICATIVO
 @login_required
 @rol_requerido(['medico'])
 def generar_constancia(request, paciente_uuid):
@@ -967,6 +977,7 @@ def generar_constancia(request, paciente_uuid):
 
     return redirect('ver_expediente_unificado', paciente_uuid=paciente.uuid)
 
+#17. EXCEL MORBILIDAD
 @login_required
 @rol_requerido(['medico'])
 def exportar_morbilidad_excel(request):
