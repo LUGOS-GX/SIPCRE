@@ -32,13 +32,10 @@
                             <label class="block text-sm font-bold text-gray-700 mb-1">
                                 {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
                             </label>
-                            
                             {{ field }}
-                            
                             {% if field.help_text %}
                                 <p class="text-xs text-gray-500 mt-1">{{ field.help_text|safe }}</p>
                             {% endif %}
-                            
                             {% for error in field.errors %}
                                 <p class="text-red-500 text-xs italic mt-1 font-semibold">{{ error }}</p>
                             {% endfor %}
@@ -46,25 +43,48 @@
                     {% endif %}
                 {% endfor %}
 
-                {% for field in form %}
-                    {% if 'password' in field.name %}
-                        <div class="md:col-span-2 border-t border-gray-100 pt-2 mt-2">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">
-                                {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
-                            </label>
-                            
-                            {{ field }}
-                            
-                            {% if field.help_text %}
-                                <p class="text-xs text-gray-500 mt-1">{{ field.help_text|safe }}</p>
-                            {% endif %}
-                            
-                            {% for error in field.errors %}
-                                <p class="text-red-500 text-xs italic mt-1 font-semibold">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                {% endfor %}
+                <!-- SECCIÓN CONTRASEÑA -->
+                <div class="md:col-span-2 pt-4 border-t border-gray-100">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span class="text-sm font-bold text-gray-700">Seguridad de la Cuenta</span>
+                    </div>
+
+                    {% for field in form %}
+                        {% if 'password' in field.name %}
+                            <div class="mb-4">
+                                <label class="block text-sm font-bold text-gray-700 mb-1">
+                                    {{ field.label }} {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                                </label>
+                                <div class="relative" id="wrapper_{{ field.name }}">
+                                    {{ field }}
+                                </div>
+                                {% if field.name == 'password1' %}
+                                    <div class="mt-2 space-y-1" id="indicador_fortaleza" style="display:none;">
+                                        <div class="flex gap-1">
+                                            <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="barra_1"></div>
+                                            <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="barra_2"></div>
+                                            <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="barra_3"></div>
+                                            <div class="h-1.5 flex-1 rounded-full bg-gray-200" id="barra_4"></div>
+                                        </div>
+                                        <p class="text-xs font-bold" id="texto_fortaleza"></p>
+                                        <ul class="text-xs text-gray-500 space-y-0.5" id="lista_requisitos">
+                                            <li id="req_largo">✗ Mínimo 8 caracteres</li>
+                                            <li id="req_numero">✗ Al menos un número</li>
+                                            <li id="req_simbolo">✗ Al menos un símbolo especial (!@#$...)</li>
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                {% if field.name == 'password2' %}
+                                    <p id="msg_coincidencia" class="text-xs mt-1 font-bold hidden"></p>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="text-red-500 text-xs italic mt-1 font-semibold">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
 
             </div>
 
@@ -85,4 +105,5 @@
     </div>
 </div>
 
+{% include 'usuarios/password_script.html' %}
 {% endblock %}
