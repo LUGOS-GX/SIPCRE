@@ -11,7 +11,6 @@ from django.db.models import Q, Count
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from xhtml2pdf import pisa
 from .models import ExpedienteBase, ConsultaEvolucion, Recipe, ConstanciaMedica
 from administracion.models import Cita, Paciente, Medico
 from farmacia.models import OrdenFarmacia
@@ -97,23 +96,19 @@ def crear_control_rapido(request):
 @rol_requerido(['medico'])
 def generar_pdf_historia(request, historia_id):
     historia = get_object_or_404(ConsultaEvolucion, id=historia_id)
-
+ 
     if hasattr(request.user, 'medico') and historia.medico != request.user.medico:
         raise PermissionDenied("Acceso denegado. Solo el médico tratante puede descargar esta historia clínica.")
-
-    template_path = 'medico/pdf_historia.html'
-    context = {'h': historia}
-    
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="historia_{historia.expediente.paciente.cedula}.pdf"'
-    
-    template = get_template(template_path)
-    html = template.render(context)
-    
-    pisa_status = pisa.CreatePDF(html, dest=response)
-    if pisa_status.err:
-        return HttpResponse('Error al generar PDF', status=500)
-    return response
+ 
+    firma_b64 = image_to_base64(historia.medico.firma) if historia.medico else None
+    sello_b64 = image_to_base64(historia.medico.sello) if historia.medico else None
+ 
+    context = {
+        'h': historia,
+        'firma_b64': firma_b64,
+        'sello_b64': sello_b64,
+    }
+    return render(request, 'medico/pdf_historia.html', context)
 
 #3 ATENDER PACIENTE 
 @login_required
@@ -531,22 +526,16 @@ def crear_recipe(request):
 @rol_requerido(['medico'])
 def generar_pdf_recipe(request, recipe_id):
     recipe = get_object_or_404(Recipe, id=recipe_id)
-    template_path = 'medico/recipe_pdf.html'
-    
-    context = { 'recipe': recipe }
-    
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="recipe_{recipe.id}.pdf'
-
-    template = get_template(template_path)
-    html = template.render(context)
-
-    pisa_status = pisa.CreatePDF(html, dest=response)
-
-    if pisa_status.err:
-        return HttpResponse(f'Tuvimos errores al generar el PDF del récipe: <pre>{html}</pre>')
-    
-    return response
+ 
+    firma_b64 = image_to_base64(recipe.medico.firma)
+    sello_b64 = image_to_base64(recipe.medico.sello)
+ 
+    context = {
+        'recipe': recipe,
+        'firma_b64': firma_b64,
+        'sello_b64': sello_b64,
+    }
+    return render(request, 'medico/recipe_pdf.html', context)
 
 #8. SOL EXM
 @login_required
@@ -799,22 +788,16 @@ def resultados_examenes(request):
 @rol_requerido(['medico'])
 def generar_pdf_orden(request, orden_id):
     orden = get_object_or_404(SolicitudExamen, id=orden_id)
-    template_path = 'medico/orden_pdf.html'
-    
-    context = { 'orden': orden }
-    
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="orden_examenes_{orden.cedula_paciente}.pdf"'
-
-    template = get_template(template_path)
-    html = template.render(context)
-
-    pisa_status = pisa.CreatePDF(html, dest=response)
-
-    if pisa_status.err:
-        return HttpResponse('Tuvimos errores al generar el PDF', status=500)
-    
-    return response
+ 
+    firma_b64 = image_to_base64(orden.medico.firma)
+    sello_b64 = image_to_base64(orden.medico.sello)
+ 
+    context = {
+        'orden': orden,
+        'firma_b64': firma_b64,
+        'sello_b64': sello_b64,
+    }
+    return render(request, 'medico/orden_pdf.html', context)
 
 #13. ELIMINACION HISTORIA CLINICA
 @login_required

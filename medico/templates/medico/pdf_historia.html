@@ -1,148 +1,292 @@
-<!DOCTYPE HTML>
-<html>
+<!DOCTYPE html>
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <title>Historia Médica / Evolución - {{ h.expediente.paciente.nombres }}</title>
     <style>
-        @page { size: letter; margin: 2cm; }
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; }
-        
-        /* HEADER */
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #cc0000; padding-bottom: 10px; }
-        .titulo { font-size: 18px; font-weight: bold; color: #cc0000; }
-        .subtitulo { font-size: 10px; color: #666; }
-        
-        /* SECCIONES */
-        .section { margin-bottom: 15px; }
-        .section-title { background-color: #f0f0f0; padding: 5px; font-weight: bold; border-left: 5px solid #cc0000; margin-bottom: 5px; }
-        
-        .label { font-weight: bold; color: #555; }
-        
-        /* TABLA SIGNOS VITALES */
-        .vitales { width: 100%; border: 1px solid #ddd; padding: 5px; margin-bottom: 10px; border-collapse: collapse; }
-        .vitales td, .vitales th { padding: 5px; text-align: center; border: 1px solid #ddd; }
-        .vitales th { background-color: #eee; font-size: 10px; }
-        
-        /* CLASE MÁGICA PARA EVITAR SALTOS DE PÁGINA */
-        .bloque-indivisible {
-            page-break-inside: avoid;
+        @page { size: letter portrait; margin: 1.5cm 2cm 1.8cm 2cm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 11.5px; color: #1a1a1a; background: #f3f4f6; }
+
+        /* ── WRAPPER PANTALLA ───────────────────── */
+        .page-wrap {
+            background: white;
+            width: 21.59cm;
+            min-height: 27.94cm;
+            margin: 0.8cm auto;
+            padding: 1.5cm 2cm 2cm;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            position: relative;
+        }
+
+        /* ── HEADER ─────────────────────────────── */
+        .header { display: table; width: 100%; margin-bottom: 6px; }
+        .h-logo  { display: table-cell; width: 72px; vertical-align: middle; text-align: center; }
+        .h-text  { display: table-cell; vertical-align: middle; text-align: center; padding: 0 8px; }
+        .h-bird  { display: table-cell; width: 68px; vertical-align: middle; text-align: center; }
+        .inst-name    { font-size: 13px; font-weight: bold; color: #CC0000; letter-spacing: 0.5px; line-height: 1.3; }
+        .inst-section { font-size: 11px; font-weight: bold; color: #333; margin-top: 2px; }
+        .inst-amb     { font-size: 10.5px; color: #444; margin-top: 1px; }
+
+        .divider-red  { border: none; border-top: 2.5px solid #CC0000; margin: 6px 0; }
+        .divider-thin { border: none; border-top: 1px solid #ccc; margin: 6px 0; }
+
+        /* ── TÍTULO ─────────────────────────────── */
+        .doc-title { text-align: center; font-size: 15px; font-weight: bold; color: #1a1a1a; letter-spacing: 1px; text-transform: uppercase; margin: 10px 0 4px; }
+        .doc-sub   { text-align: center; font-size: 10px; color: #666; margin-bottom: 8px; }
+
+        /* ── SECCIÓN ────────────────────────────── */
+        .seccion { margin-bottom: 12px; page-break-inside: avoid; }
+        .sec-title {
+            background: #CC0000;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 5px 12px;
+            margin-bottom: 6px;
+        }
+        .sec-body { padding: 0 4px; line-height: 1.7; }
+
+        /* ── PACIENTE ───────────────────────────── */
+        .px-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .px-table td { border: 1px solid #bbb; padding: 5px 9px; vertical-align: top; }
+        .px-table .lbl { font-weight: bold; color: #CC0000; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ── SIGNOS VITALES ─────────────────────── */
+        .vitales { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .vitales th { background: #f2f2f2; border: 1px solid #bbb; padding: 5px 6px; text-align: center; font-weight: bold; color: #333; font-size: 10px; }
+        .vitales td { border: 1px solid #bbb; padding: 6px; text-align: center; }
+
+        /* ── ALERTA ALERGIA ─────────────────────── */
+        .alergia-alert { background: #fff0f0; border: 1px solid #e0a0a0; border-left: 4px solid #CC0000; padding: 7px 12px; margin-top: 6px; border-radius: 3px; }
+        .alergia-lbl { color: #CC0000; font-weight: bold; font-size: 11px; }
+
+        /* ── FIRMA ──────────────────────────────── */
+        .firma-section { margin-top: 36px; text-align: center; page-break-inside: avoid; }
+        .firma-inner   { display: inline-block; position: relative; width: 300px; text-align: center; }
+        .firma-img {
+            display: block;
+            margin: 0 auto 4px;
+            max-height: 80px;
+            max-width: 200px;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
+        }
+        .sello-img {
+            position: absolute;
+            bottom: 6px;
+            right: -40px;
+            max-height: 100px;
+            max-width: 105px;
+            mix-blend-mode: multiply;
+            opacity: 0.75;
+        }
+        .firma-line { border-top: 1px solid #555; padding-top: 5px; font-size: 11.5px; font-weight: bold; }
+        .firma-esp  { font-size: 10px; color: #555; margin-top: 2px; }
+        .firma-cred { font-size: 9.5px; color: #888; margin-top: 1px; font-family: 'Courier New', monospace; }
+
+        /* ── FOOTER ─────────────────────────────── */
+        .footer { text-align: center; font-size: 8.5px; color: #bbb; margin-top: 24px; border-top: 1px solid #eee; padding-top: 6px; }
+
+        /* ── BOTONES (solo pantalla) ─────────────── */
+        .no-print { display: block; }
+        .btn-bar { max-width: 21.59cm; margin: 0 auto 10px; text-align: right; padding: 0 4px; }
+        .btn { border: none; padding: 8px 18px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; margin-left: 6px; }
+        .btn-print { background: #CC0000; color: white; }
+        .btn-close { background: #555; color: white; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .page-wrap {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                min-height: unset !important;
+            }
         }
     </style>
 </head>
 <body>
+
+<!-- BOTONES -->
+<div class="no-print btn-bar">
+    <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+</div>
+
+<div class="page-wrap">
+
+    <!-- ENCABEZADO INSTITUCIONAL -->
     <div class="header">
-        <div class="titulo">INFORME DE HISTORIA MÉDICA / EVOLUCIÓN</div>
-        <div class="subtitulo">Fecha de Consulta: {{ h.fecha|date:"d/m/Y" }} - Hora: {{ h.hora|time:"h:i A" }}</div>
+        <div class="h-logo">
+            <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="30" fill="white" stroke="#CC0000" stroke-width="2.5"/>
+                <rect x="26" y="13" width="12" height="38" rx="1.5" fill="#CC0000"/>
+                <rect x="13" y="26" width="38" height="12" rx="1.5" fill="#CC0000"/>
+                <circle cx="32" cy="32" r="22" fill="none" stroke="#CC0000" stroke-width="0.5" stroke-dasharray="2,3"/>
+            </svg>
+            <div style="font-size:7.5px; color:#CC0000; font-weight:bold; margin-top:2px; letter-spacing:0.3px;">FUNDADA EN 1895</div>
+        </div>
+
+        <div class="h-text">
+            <div class="inst-name">CRUZ ROJA VENEZOLANA</div>
+            <div class="inst-section">SECCIONAL ANZOÁTEGUI — BARCELONA</div>
+            <div class="inst-amb">AMBULATORIO DR. JJ MARCANO MAZA</div>
+            <div style="font-size:8.5px; color:#999; margin-top:3px;">Av. 1 con Calle 2 Boyacá II, Barcelona, Anzoátegui</div>
+        </div>
+
+        <div class="h-bird">
+            <svg width="56" height="64" viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg">
+                <rect x="18" y="57" width="20" height="4" rx="1" fill="#555"/>
+                <rect x="14" y="61" width="28" height="3" rx="1" fill="#333"/>
+                <rect x="26" y="36" width="4" height="22" fill="#555"/>
+                <path d="M28 36 Q18 26 22 12 Q28 22 28 12 Q34 22 38 12 Q42 26 28 36 Z" fill="#CC0000"/>
+                <path d="M28 34 Q22 26 25 16 Q28 24 28 16 Q31 24 31 16 Q34 26 28 34 Z" fill="#ff4444" opacity="0.7"/>
+                <path d="M27 38 Q14 34 6 22 Q16 30 26 34 Z" fill="#CC0000"/>
+                <path d="M27 40 Q10 40 4 52 Q14 44 26 42 Z" fill="#CC0000" opacity="0.7"/>
+                <path d="M29 38 Q42 34 50 22 Q40 30 30 34 Z" fill="#CC0000"/>
+                <path d="M29 40 Q46 40 52 52 Q42 44 30 42 Z" fill="#CC0000" opacity="0.7"/>
+            </svg>
+            <div style="font-size:7px; color:#888; text-align:center; margin-top:1px;">S.V.D.L.C.R.</div>
+        </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">1. DATOS DEL PACIENTE</div>
-        <table width="100%">
+    <hr class="divider-red">
+
+    <div class="doc-title">Historia Médica / Evolución de Consulta</div>
+    <div class="doc-sub">Fecha de Consulta: {{ h.fecha|date:"d/m/Y" }} &nbsp;&mdash;&nbsp; Hora: {{ h.hora|time:"h:i A" }} &nbsp;&mdash;&nbsp; Consulta N.° {{ h.id }}</div>
+
+    <hr class="divider-thin">
+
+    <!-- 1. DATOS DEL PACIENTE -->
+    <div class="seccion">
+        <div class="sec-title">1. Datos del Paciente</div>
+        <table class="px-table">
             <tr>
-                <td><span class="label">Nombre:</span> {{ h.expediente.paciente.nombres }}</td>
-                <td><span class="label">Cédula:</span> {{ h.expediente.paciente.nacionalidad }}-{{ h.expediente.paciente.cedula }}</td>
-            </tr>
-            <tr>
-                <td><span class="label">Sangre:</span> {{ h.expediente.tipo_sangre|default:"-" }}</td>
-                <td><span class="label">Consulta ID:</span> #{{ h.id }}</td>
+                <td style="width:50%;">
+                    <span class="lbl">Nombre:</span><br>
+                    {{ h.expediente.paciente.nombres }}
+                </td>
+                <td style="width:25%;">
+                    <span class="lbl">Cédula:</span><br>
+                    {{ h.expediente.paciente.nacionalidad }}-{{ h.expediente.paciente.cedula }}
+                </td>
+                <td style="width:25%;">
+                    <span class="lbl">Grupo Sanguíneo:</span><br>
+                    {{ h.expediente.tipo_sangre|default:"No registrado" }}
+                </td>
             </tr>
         </table>
         {% if h.expediente.alergias %}
-        <div style="margin-top: 5px; color: #cc0000;">
-            <span class="label" style="color: #cc0000;">ALERGIAS CONOCIDAS:</span> {{ h.expediente.alergias }}
+        <div class="alergia-alert">
+            <span class="alergia-lbl">⚠ ALERGIAS CONOCIDAS: </span>{{ h.expediente.alergias }}
         </div>
         {% endif %}
     </div>
 
-    <div class="section">
-        <div class="section-title">2. SIGNOS VITALES</div>
+    <!-- 2. SIGNOS VITALES -->
+    <div class="seccion">
+        <div class="sec-title">2. Signos Vitales</div>
         <table class="vitales">
             <tr>
                 <th>T. Arterial</th>
                 <th>F. Cardíaca</th>
                 <th>F. Respiratoria</th>
-                <th>Sat. O2</th>
-                <th>Temp</th>
+                <th>Sat. O₂</th>
+                <th>Temperatura</th>
+                <th>Glucemia</th>
                 <th>Peso</th>
                 <th>Talla</th>
             </tr>
             <tr>
-                <td>{{ h.tension_arterial|default:"-" }}</td>
-                <td>{{ h.frecuencia_cardiaca|default:"-" }}</td>
-                <td>{{ h.frecuencia_respiratoria|default:"-" }}</td>
-                <td>{{ h.saturacion_oxigeno|default:"-" }}</td>
-                <td>{{ h.temperatura|default:"-" }}</td>
-                <td>{{ h.peso|default:"-" }} kg</td>
-                <td>{{ h.talla|default:"-" }} m</td>
+                <td>{{ h.tension_arterial|default:"—" }}</td>
+                <td>{{ h.frecuencia_cardiaca|default:"—" }}</td>
+                <td>{{ h.frecuencia_respiratoria|default:"—" }}</td>
+                <td>{{ h.saturacion_oxigeno|default:"—" }}</td>
+                <td>{{ h.temperatura|default:"—" }}</td>
+                <td>{{ h.glicemia|default:"—" }}</td>
+                <td>{{ h.peso|default:"—" }} {% if h.peso %}kg{% endif %}</td>
+                <td>{{ h.talla|default:"—" }} {% if h.talla %}m{% endif %}</td>
             </tr>
         </table>
     </div>
 
-    <div class="section">
-        <div class="section-title">3. ANAMNESIS</div>
-        <p><span class="label">Motivo de Consulta:</span><br>{{ h.motivo_consulta }}</p>
-        <p><span class="label">Enfermedad Actual:</span><br>{{ h.enfermedad_actual|linebreaksbr }}</p>
-        <p><span class="label">Antecedentes:</span><br>
-           <span class="label">Per:</span> {{ h.expediente.antecedentes_personales|default:"Negativos" }}<br>
-           <span class="label">Fam:</span> {{ h.expediente.antecedentes_familiares|default:"Negativos" }}
-        </p>
+    <!-- 3. ANAMNESIS -->
+    <div class="seccion">
+        <div class="sec-title">3. Anamnesis</div>
+        <div class="sec-body">
+            <p style="margin-bottom:6px;"><strong>Motivo de Consulta:</strong><br>{{ h.motivo_consulta|default:"No registrado." }}</p>
+            <p style="margin-bottom:6px;"><strong>Enfermedad Actual:</strong><br>{{ h.enfermedad_actual|default:"No registrado."|linebreaksbr }}</p>
+            <p style="margin-bottom:6px;">
+                <strong>Antecedentes Personales:</strong> {{ h.expediente.antecedentes_personales|default:"Negativos" }}<br>
+                <strong>Antecedentes Familiares:</strong> {{ h.expediente.antecedentes_familiares|default:"Negativos" }}
+            </p>
+        </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">4. EXAMEN FÍSICO</div>
-        <p>{{ h.examen_fisico|default:"Sin hallazgos registrados."|linebreaksbr }}</p>
+    <!-- 4. EXAMEN FÍSICO -->
+    <div class="seccion">
+        <div class="sec-title">4. Examen Físico</div>
+        <div class="sec-body">
+            {{ h.examen_fisico|default:"Sin hallazgos registrados."|linebreaksbr }}
+        </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">5. RESOLUCIÓN</div>
-        
-        <p><span class="label">Diagnóstico:</span><br>{{ h.diagnostico }}</p>
-
-        <br>
-
-        <div class="bloque-indivisible">
-            
-            <p><span class="label">Plan / Tratamiento:</span><br>{{ h.plan_tratamiento|linebreaksbr }}</p>
+    <!-- 5. RESOLUCIÓN -->
+    <div class="seccion">
+        <div class="sec-title">5. Resolución</div>
+        <div class="sec-body">
+            <p style="margin-bottom:7px;"><strong>Diagnóstico:</strong><br>{{ h.diagnostico|default:"—" }}</p>
+            <p style="margin-bottom:7px;"><strong>Plan / Tratamiento:</strong><br>{{ h.plan_tratamiento|default:"—"|linebreaksbr }}</p>
 
             {% if h.archivo_anexo %}
-            <br>
-            <div style="border: 1px dashed #ccc; padding: 10px; background-color: #f9f9f9;">
-                <span class="label">ANEXO ADJUNTO ({{ h.get_tipo_anexo_display }})</span><br>
-                <span style="font-size: 10px; color: #666;">[Imagen/Archivo disponible en sistema digital]</span>
+            <div style="border:1px dashed #CC0000; padding:8px 12px; background:#fff9f9; margin-top:6px; border-radius:3px;">
+                <strong style="color:#CC0000;">ANEXO ADJUNTO</strong> ({{ h.get_tipo_anexo_display }})<br>
+                <span style="font-size:10px; color:#777;">[Imagen/Archivo disponible en el expediente digital del sistema]</span>
             </div>
             {% endif %}
-
-            <br><br><br>
-
-            <table width="100%" style="margin-top: 20px;">
-                <tr>
-                    <td width="50%" align="center" valign="bottom">
-                        
-                        {% if h.medico.firma %}
-                            <img src="{{ h.medico.firma.path }}" width="150" style="margin-bottom: -5px;">
-                        {% else %}
-                            <div style="height: 60px;"></div>
-                        {% endif %}
-
-                        <div style="border-top: 1px solid #333; width: 60%; margin: 0 auto; padding-top: 5px;">
-                            <strong>Dr/a. {{ h.medico.nombre }}</strong><br>
-                            <span style="font-size: 10px;">{{ h.medico.especialidad }}</span><br>
-                            
-                            <span style="font-size: 9px; color: #555;">
-                                MPPS: {{ h.medico.usuario.mpps|default:h.medico.usuario.mpps }} 
-                                {% if h.medico.usuario.cm %} | CM: {{ h.medico.usuario.cm }} {% endif %}
-                            </span>
-                        </div>
-                    </td>
-
-                    <td width="50%" align="center" valign="bottom">
-                        {% if h.medico.sello %}
-                            <img src="{{ h.medico.sello.path }}" width="90">
-                        {% endif %}
-                    </td>
-                </tr>
-            </table>
-
-        </div> 
+        </div>
     </div>
 
+    <hr class="divider-thin" style="margin-top:10px;">
+
+    <!-- FIRMA Y SELLO -->
+    <div class="firma-section">
+        <div class="firma-inner">
+            {% if firma_b64 %}
+                <img src="{{ firma_b64 }}" alt="Firma" class="firma-img">
+            {% else %}
+                <div style="height:75px;"></div>
+            {% endif %}
+
+            {% if sello_b64 %}
+                <img src="{{ sello_b64 }}" alt="Sello" class="sello-img">
+            {% endif %}
+
+            <div class="firma-line">Dr(a). {{ h.medico.nombre }}</div>
+            <div class="firma-esp">{{ h.medico.especialidad }}</div>
+            {% if h.medico.usuario %}
+            <div class="firma-cred">MPPS: {{ h.medico.usuario.mpps }}{% if h.medico.usuario.cm %} | CM: {{ h.medico.usuario.cm }}{% endif %}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        Cruz Roja Venezolana &mdash; Seccional Anzoátegui Barcelona &mdash;
+        Av. 1 con Calle 2 Boyacá II, Ambulatorio "Dr. JJ Marcano Maza", Barcelona &mdash; Anzoátegui, Venezuela
+    </div>
+
+</div>
+
+<script>
+    window.onload = function() {
+        setTimeout(function() { window.print(); }, 500);
+    };
+</script>
 </body>
 </html>

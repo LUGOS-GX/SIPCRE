@@ -2,140 +2,242 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Orden Médica</title>
+    <title>Solicitud de Laboratorio e Imagenología - {{ orden.nombre_paciente }}</title>
     <style>
-        @page {
-            size: letter portrait;
-            margin: 2cm;
-        }
-        body {
-            font-family: Helvetica, Arial, sans-serif;
-            color: #333;
-            font-size: 14px;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-        }
-        .dr-name {
-            font-size: 22px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin: 0;
-        }
-        .especialidad {
-            font-size: 14px;
-            color: #7f8c8d;
-            margin: 5px 0;
-        }
-        .credenciales {
-            font-size: 12px;
-            color: #95a5a6;
-        }
-        .patient-info {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 30px;
-        }
-        .section-title {
-            font-weight: bold;
-            color: #2c3e50;
-            text-transform: uppercase;
-            font-size: 14px;
-            border-bottom: 1px solid #bdc3c7;
-            padding-bottom: 5px;
-            margin-top: 20px;
-            margin-bottom: 15px;
-        }
-        .exam-list {
-            margin-left: 20px;
-            line-height: 1.8;
-        }
-        .signature-box {
-            text-align: center;
-            margin-top: 80px;
+        @page { size: letter portrait; margin: 1.5cm 2cm 1.8cm 2cm; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #1a1a1a; background: #f3f4f6; }
+
+        /* ── WRAPPER PANTALLA ───────────────────── */
+        .page-wrap {
+            background: white;
+            width: 21.59cm;
+            min-height: 27.94cm;
+            margin: 0.8cm auto;
+            padding: 1.5cm 2cm 2cm;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
             position: relative;
         }
-        .firma {
+
+        /* ── HEADER ─────────────────────────────── */
+        .header { display: table; width: 100%; margin-bottom: 6px; }
+        .h-logo  { display: table-cell; width: 72px; vertical-align: middle; text-align: center; }
+        .h-text  { display: table-cell; vertical-align: middle; text-align: center; padding: 0 8px; }
+        .h-bird  { display: table-cell; width: 68px; vertical-align: middle; text-align: center; }
+        .inst-name    { font-size: 13px; font-weight: bold; color: #CC0000; letter-spacing: 0.5px; line-height: 1.3; }
+        .inst-section { font-size: 11px; font-weight: bold; color: #333; margin-top: 2px; }
+        .inst-amb     { font-size: 10.5px; color: #444; margin-top: 1px; }
+
+        .divider-red  { border: none; border-top: 2.5px solid #CC0000; margin: 6px 0; }
+        .divider-thin { border: none; border-top: 1px solid #ccc; margin: 8px 0; }
+
+        /* ── TÍTULO DOCUMENTO ───────────────────── */
+        .doc-title { text-align: center; font-size: 16px; font-weight: bold; color: #1a1a1a; letter-spacing: 1px; text-transform: uppercase; margin: 12px 0 8px; }
+
+        /* ── MÉDICO ─────────────────────────────── */
+        .medico-wrap { text-align: center; padding: 4px 0 2px; }
+        .medico-nombre { font-size: 13px; font-weight: bold; }
+        .medico-esp    { font-size: 10.5px; color: #555; }
+        .medico-cred   { font-size: 10px; color: #777; font-family: 'Courier New', monospace; margin-top: 1px; }
+
+        /* ── PACIENTE ───────────────────────────── */
+        .px-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+        .px-table td, .px-table th { border: 1px solid #555; padding: 6px 10px; }
+        .px-table th { background: #f5f5f5; font-weight: bold; font-size: 11px; color: #333; width: 90px; }
+
+        /* ── SECCIÓN EXÁMENES ───────────────────── */
+        .seccion-titulo {
+            background: #CC0000;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 5px 12px;
+            margin: 12px 0 0;
+        }
+        .examen-tabla { width: 100%; border-collapse: collapse; }
+        .examen-tabla td { border: 1px solid #aaa; padding: 8px 12px; font-size: 12px; line-height: 1.7; vertical-align: top; }
+
+        .obs-box { border: 1px solid #e0a0a0; border-left: 4px solid #CC0000; background: #fff9f9; padding: 12px 16px; min-height: 50px; font-size: 12px; line-height: 1.8; border-radius: 3px; }
+
+        /* ── FIRMA ──────────────────────────────── */
+        .firma-section { margin-top: 50px; text-align: center; }
+        .firma-inner   { display: inline-block; position: relative; width: 300px; text-align: center; }
+        .firma-img {
+            display: block;
+            margin: 0 auto 4px;
+            max-height: 80px;
             max-width: 200px;
-            max-height: 100px;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
         }
-        .sello {
-            max-width: 120px;
-            max-height: 120px;
+        .sello-img {
             position: absolute;
-            right: 150px;
-            top: -20px;
-            opacity: 0.8;
+            bottom: 6px;
+            right: -40px;
+            max-height: 100px;
+            max-width: 105px;
+            mix-blend-mode: multiply;
+            opacity: 0.75;
         }
-        .linea-firma {
-            border-top: 1px solid #000;
-            width: 250px;
-            margin: 10px auto;
+        .firma-line { border-top: 1px solid #555; padding-top: 5px; font-size: 11.5px; font-weight: bold; }
+        .firma-esp  { font-size: 10px; color: #555; margin-top: 2px; }
+        .firma-cred { font-size: 9.5px; color: #888; margin-top: 1px; font-family: 'Courier New', monospace; }
+
+        /* ── FOOTER ─────────────────────────────── */
+        .footer { text-align: center; font-size: 8.5px; color: #bbb; margin-top: 30px; border-top: 1px solid #eee; padding-top: 6px; }
+
+        /* ── BOTONES (solo pantalla) ─────────────── */
+        .no-print { display: block; }
+        .btn-bar { max-width: 21.59cm; margin: 0 auto 10px; text-align: right; padding: 0 4px; }
+        .btn { border: none; padding: 8px 18px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; margin-left: 6px; }
+        .btn-print { background: #CC0000; color: white; }
+        .btn-close { background: #555; color: white; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            .page-wrap {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                min-height: unset !important;
+            }
         }
     </style>
 </head>
 <body>
 
+<!-- BOTONES -->
+<div class="no-print btn-bar">
+    <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
+    <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+</div>
+
+<div class="page-wrap">
+
+    <!-- ENCABEZADO INSTITUCIONAL -->
     <div class="header">
-        <p class="dr-name">Dr(a). {{ orden.medico.usuario.first_name }} {{ orden.medico.usuario.last_name }}</p>
-        <p class="especialidad">{{ orden.medico.especialidad }}</p>
-        <p class="credenciales">MPPS: {{ orden.medico.usuario.mpps }} | C.M: {{ orden.medico.usuario.cm }}</p>
+        <div class="h-logo">
+            <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="30" fill="white" stroke="#CC0000" stroke-width="2.5"/>
+                <rect x="26" y="13" width="12" height="38" rx="1.5" fill="#CC0000"/>
+                <rect x="13" y="26" width="38" height="12" rx="1.5" fill="#CC0000"/>
+                <circle cx="32" cy="32" r="22" fill="none" stroke="#CC0000" stroke-width="0.5" stroke-dasharray="2,3"/>
+            </svg>
+            <div style="font-size:7.5px; color:#CC0000; font-weight:bold; margin-top:2px; letter-spacing:0.3px;">FUNDADA EN 1895</div>
+        </div>
+
+        <div class="h-text">
+            <div class="inst-name">CRUZ ROJA VENEZOLANA</div>
+            <div class="inst-section">SECCIONAL ANZOÁTEGUI — BARCELONA</div>
+            <div class="inst-amb">AMBULATORIO DR. JJ MARCANO MAZA</div>
+            <div style="font-size:8.5px; color:#999; margin-top:3px;">Av. 1 con Calle 2 Boyacá II, Barcelona, Anzoátegui</div>
+        </div>
+
+        <div class="h-bird">
+            <svg width="56" height="64" viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg">
+                <rect x="18" y="57" width="20" height="4" rx="1" fill="#555"/>
+                <rect x="14" y="61" width="28" height="3" rx="1" fill="#333"/>
+                <rect x="26" y="36" width="4" height="22" fill="#555"/>
+                <path d="M28 36 Q18 26 22 12 Q28 22 28 12 Q34 22 38 12 Q42 26 28 36 Z" fill="#CC0000"/>
+                <path d="M28 34 Q22 26 25 16 Q28 24 28 16 Q31 24 31 16 Q34 26 28 34 Z" fill="#ff4444" opacity="0.7"/>
+                <path d="M27 38 Q14 34 6 22 Q16 30 26 34 Z" fill="#CC0000"/>
+                <path d="M27 40 Q10 40 4 52 Q14 44 26 42 Z" fill="#CC0000" opacity="0.7"/>
+                <path d="M29 38 Q42 34 50 22 Q40 30 30 34 Z" fill="#CC0000"/>
+                <path d="M29 40 Q46 40 52 52 Q42 44 30 42 Z" fill="#CC0000" opacity="0.7"/>
+            </svg>
+            <div style="font-size:7px; color:#888; text-align:center; margin-top:1px;">S.V.D.L.C.R.</div>
+        </div>
     </div>
 
-    <div class="patient-info">
-        <strong>Paciente:</strong> {{ orden.nombre_paciente }}<br>
-        <strong>C.I:</strong> {{ orden.cedula_paciente }}<br>
-        <strong>Fecha:</strong> {{ orden.fecha_solicitud|date:"d/m/Y" }}
+    <hr class="divider-red">
+
+    <div class="doc-title">Solicitud de Laboratorio e Imagenología</div>
+
+    <!-- DATOS DEL MÉDICO -->
+    <div class="medico-wrap">
+        <div class="medico-nombre">Dr(a). {{ orden.medico.nombre }}</div>
+        <div class="medico-esp">{{ orden.medico.especialidad }}</div>
+        {% if orden.medico.usuario %}
+        <div class="medico-cred">MPPS: {{ orden.medico.usuario.mpps }}{% if orden.medico.usuario.cm %} | C.M: {{ orden.medico.usuario.cm }}{% endif %}</div>
+        {% endif %}
     </div>
 
-    <h2 style="text-align: center; letter-spacing: 2px;">ÓRDENES MÉDICAS</h2>
+    <hr class="divider-thin">
 
-    <div class="section-title">Exámenes Solicitados</div>
-    <div class="exam-list">
-        {{ orden.examenes_solicitados }}
-    </div>
+    <!-- DATOS DEL PACIENTE -->
+    <table class="px-table">
+        <tr>
+            <th>Paciente:</th>
+            <td colspan="3">{{ orden.nombre_paciente }}</td>
+        </tr>
+        <tr>
+            <th>C.I:</th>
+            <td style="width:30%;">{{ orden.cedula_paciente }}</td>
+            <th style="width:14%;">Fecha:</th>
+            <td>{{ orden.fecha_solicitud|date:"d/m/Y" }}</td>
+        </tr>
+    </table>
 
-    {% if orden.otros %}
-    <div class="section-title">Otros Exámenes</div>
-    <div class="exam-list">
-        {{ orden.otros }}
-    </div>
-    {% endif %}
+    <!-- EXÁMENES SOLICITADOS -->
+    <div class="seccion-titulo">&#9632; Laboratorio Clínico</div>
+    <table class="examen-tabla">
+        <tr>
+            <td style="width:50%; border-right: 2px solid #CC0000;">
+                {{ orden.examenes_solicitados|linebreaksbr }}
+            </td>
+            <td style="width:50%;">
+                {% if orden.otros %}
+                    {{ orden.otros|linebreaksbr }}
+                {% else %}
+                    &nbsp;
+                {% endif %}
+            </td>
+        </tr>
+    </table>
 
+    <!-- OBSERVACIONES (si aplica) -->
     {% if orden.observacion %}
-    <div class="section-title">Observaciones / Diagnóstico Presuntivo</div>
-    <div class="exam-list">
-        {{ orden.observacion }}
-    </div>
+    <div class="seccion-titulo" style="margin-top:12px;">&#9632; Observaciones / Diagnóstico Presuntivo</div>
+    <div class="obs-box" style="margin-top:6px;">{{ orden.observacion|linebreaksbr }}</div>
     {% endif %}
 
-    <div style="margin-top: 60px;">
-        <table style="width: 100%; border: none;">
-            <tr>
-                <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                    {% if orden.medico.firma %}
-                        <img src="{{ orden.medico.firma.path }}" width="180"><br>
-                    {% else %}
-                        <br><br><br><br>
-                    {% endif %}
-                    
-                    <div style="border-top: 1px solid #000; width: 250px; margin: 5px auto 0 auto; padding-top: 5px; font-weight: bold;">
-                        Firma del Médico
-                    </div>
-                </td>
+    <!-- FIRMA Y SELLO -->
+    <div class="firma-section">
+        <div class="firma-inner">
+            {% if firma_b64 %}
+                <img src="{{ firma_b64 }}" alt="Firma" class="firma-img">
+            {% else %}
+                <div style="height:75px;"></div>
+            {% endif %}
 
-                <td style="width: 50%; text-align: center; vertical-align: bottom;">
-                    {% if orden.medico.sello %}
-                        <img src="{{ orden.medico.sello.path }}" width="120">
-                    {% endif %}
-                </td>
-            </tr>
-        </table>
+            {% if sello_b64 %}
+                <img src="{{ sello_b64 }}" alt="Sello" class="sello-img">
+            {% endif %}
+
+            <div class="firma-line">Dr(a). {{ orden.medico.nombre }}</div>
+            <div class="firma-esp">{{ orden.medico.especialidad }}</div>
+            {% if orden.medico.usuario %}
+            <div class="firma-cred">MPPS: {{ orden.medico.usuario.mpps }}{% if orden.medico.usuario.cm %} | C.M: {{ orden.medico.usuario.cm }}{% endif %}</div>
+            {% endif %}
+        </div>
     </div>
 
+    <!-- FOOTER -->
+    <div class="footer">
+        Cruz Roja Venezolana &mdash; Seccional Anzoátegui Barcelona &mdash;
+        Av. 1 con Calle 2 Boyacá II, Ambulatorio "Dr. JJ Marcano Maza", Barcelona &mdash; Anzoátegui, Venezuela
+    </div>
+
+</div>
+
+<script>
+    window.onload = function() {
+        setTimeout(function() { window.print(); }, 500);
+    };
+</script>
 </body>
 </html>
