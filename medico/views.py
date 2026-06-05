@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
 from django.urls import reverse
 from django.core.files.base import ContentFile
 from django.views.decorators.http import require_POST
@@ -16,6 +16,7 @@ from administracion.models import Cita, Paciente, Medico
 from farmacia.models import OrdenFarmacia
 from laboratorio.models import SolicitudExamen
 from usuarios.decorators import rol_requerido
+from core.correo_utils import enviar_documento_pdf_async
 import json
 import base64
 import io
@@ -436,7 +437,7 @@ def crear_recipe(request):
     except AttributeError:
         return redirect('landing_page')
 
-    # NUEVO: Detectar si esta vista se abrió como ventana emergente (popup)
+    #Detecta si esta vista se abrió como ventana emergente (popup)
     is_popup = request.GET.get('popup', request.POST.get('popup', '0'))
 
     if request.method == 'POST':
@@ -477,6 +478,16 @@ def crear_recipe(request):
             indicaciones=indicaciones
         )
 
+        if accion == 'enviar_correo':
+           correo_destino = request.POST.get('correo_paciente', '').strip()
+           if not correo_destino and paciente_seleccionado:
+               correo_destino = paciente_seleccionado.email
+           if not correo_destino:
+               messages.warning(request, "Para enviar el récipe por correo debe indicar un correo (o seleccionar un paciente registrado que tenga correo).")
+               if is_popup == '1':
+                   return redirect(f"{reverse('crear_recipe')}?popup=1")
+               return redirect('crear_recipe')
+
         if accion == 'exportar_pdf':
             messages.success(request, "Récipe guardado exitosamente. Generando PDF...")
             
@@ -500,12 +511,31 @@ def crear_recipe(request):
             else:
                 messages.warning(request, "Error: Debe seleccionar un paciente o ingresar sus datos manualmente.")
             
-            # NUEVO: Si es popup, inyectamos un script que simplemente cierra la ventana flotante 
-            # y deja al médico en su historia clínica original sin borrar lo que ha escrito.
             if is_popup == '1':
                 return HttpResponse("<script>window.close();</script>")
             
             return redirect('dashboard_medico')
+        
+        elif accion == 'enviar_correo':
+           firma_b64 = image_to_base64(medico_perfil.firma)
+           sello_b64 = image_to_base64(medico_perfil.sello)
+           cuerpo = render_to_string('medico/correo_documento.html', {
+               'titulo_documento': 'Récipe Médico',
+               'nombre_paciente': nombre_final,
+               'medico_nombre': medico_perfil.nombre,
+           })
+           enviar_documento_pdf_async(
+               template_pdf='medico/recipe_pdf.html',
+               context_pdf={'recipe': recipe_nuevo, 'firma_b64': firma_b64, 'sello_b64': sello_b64},
+               asunto=f"Récipe médico - {nombre_final}",
+               cuerpo_html=cuerpo,
+               destinatario=correo_destino,
+               nombre_archivo=f"Recipe_{cedula_final or recipe_nuevo.id}.pdf",
+           )
+           messages.success(request, f"Récipe enviándose al correo {correo_destino}.")
+           if is_popup == '1':
+               return HttpResponse("<script>window.close();</script>")
+           return redirect('dashboard_medico')
 
     # CORRECCIÓN: Salto a través de ExpedienteBase usando doble guion bajo
     pacientes_ids = ConsultaEvolucion.objects.filter(medico=medico_perfil).values_list('expediente__paciente_id', flat=True).distinct()
@@ -574,7 +604,7 @@ def solicitar_examenes(request):
             observacion = request.POST.get('observacion')
             accion = request.POST.get('accion')
             
-            # NUEVO: Capturamos el correo del paciente
+            #Capturamos el correo del paciente
             correo_paciente = request.POST.get('correo_paciente')
             
             # 4. Validar que al menos haya seleccionado un examen o escrito algo en otros
@@ -583,20 +613,51 @@ def solicitar_examenes(request):
                 return redirect('solicitar_examenes')
             
             # 5. Creamos la orden
+            # Si se emite en PDF, el paciente la procesa FUERA del ambulatorio: la orden
+            # no debe entrar a la cola del laboratorio ni contar en sus estadísticas.
+            es_externa = accion in ('generar_pdf', 'enviar_correo')
+
+            correo_destino = correo_paciente
+            if not correo_destino and paciente_seleccionado:
+                correo_destino = paciente_seleccionado.email
+            if accion == 'enviar_correo' and not correo_destino:
+                messages.warning(request, "Para enviar la solicitud por correo debe indicar un correo (o seleccionar un paciente registrado que tenga correo).")
+                return redirect('solicitar_examenes')
+
             orden = SolicitudExamen.objects.create(
-                paciente=paciente_seleccionado, # MEJORA: Guardamos el enlace al paciente para que la búsqueda de correo automático funcione
+                paciente=paciente_seleccionado, 
                 nombre_paciente=nombre,
                 cedula_paciente=cedula,
-                correo_paciente=correo_paciente, # NUEVO: Guardamos el correo en la BD
+                correo_paciente=correo_paciente, 
                 medico=medico_perfil,
                 examenes_solicitados=examenes_str,
                 otros=otros,
-                observacion=observacion
+                observacion=observacion,
+                procesar_en_lab=not es_externa,
+                estado='Externa' if es_externa else 'Pendiente',
             )
             
             if accion == 'generar_pdf':
                 messages.success(request, f"Orden registrada. Generando PDF de {nombre}...")
                 return redirect(f"/medico/?pdf_orden_id={orden.id}")
+            elif accion == 'enviar_correo':
+                firma_b64 = image_to_base64(medico_perfil.firma)
+                sello_b64 = image_to_base64(medico_perfil.sello)
+                cuerpo = render_to_string('medico/correo_documento.html', {
+                    'titulo_documento': 'Solicitud de Laboratorio e Imagenología',
+                    'nombre_paciente': nombre,
+                    'medico_nombre': medico_perfil.nombre,
+                })
+                enviar_documento_pdf_async(
+                    template_pdf='medico/orden_pdf.html',
+                    context_pdf={'orden': orden, 'firma_b64': firma_b64, 'sello_b64': sello_b64},
+                    asunto=f"Solicitud de exámenes - {nombre}",
+                    cuerpo_html=cuerpo,
+                    destinatario=correo_destino,
+                    nombre_archivo=f"Solicitud_{orden.cedula_paciente}.pdf",
+                )
+                messages.success(request, f"Solicitud enviándose al correo {correo_destino}.")
+                return redirect('dashboard_medico')
             else:
                 messages.success(request, f"Orden enviada al laboratorio a nombre de {nombre}")
                 return redirect('dashboard_medico')
@@ -604,7 +665,7 @@ def solicitar_examenes(request):
         except Exception as e:
             messages.error(request, f"Error al enviar la solicitud: {str(e)}")
 
-    # CORRECCIÓN: Salto a través de ExpedienteBase usando doble guion bajo
+    # Salto a través de ExpedienteBase usando doble guion bajo
     pacientes_ids = ConsultaEvolucion.objects.filter(medico=medico_perfil).values_list('expediente__paciente_id', flat=True).distinct()
     pacientes_del_medico = Paciente.objects.filter(id__in=pacientes_ids).order_by('nombres')
 
@@ -934,30 +995,54 @@ def generar_constancia(request, paciente_uuid):
 
     if request.method == 'POST':
         motivo_texto = request.POST.get('motivo_texto', '').strip()
-        
+        accion = request.POST.get('accion', 'ver')  # 'ver' (imprimir) o 'enviar_correo'
+ 
         if motivo_texto:
             constancia = ConstanciaMedica.objects.create(
                 paciente=paciente,
                 medico=medico,
                 motivo_texto=motivo_texto
             )
-            
-            # --- CORRECCIÓN: Usamos exactamente los nombres de tus campos ---
+ 
             firma_b64 = image_to_base64(medico.firma)
             sello_b64 = image_to_base64(medico.sello)
-            # ---------------------------------------------------------------
-            
+ 
             context = {
                 'constancia': constancia,
                 'paciente': paciente,
                 'medico': medico,
-                'firma_b64': firma_b64, 
+                'firma_b64': firma_b64,
                 'sello_b64': sello_b64,
             }
+ 
+            if accion == 'enviar_correo':
+                # Destino: el correo indicado en el formulario o el del paciente registrado.
+                correo_destino = request.POST.get('correo_paciente', '').strip() or paciente.email
+                if not correo_destino:
+                    messages.warning(request, "El paciente no tiene correo registrado. Indique un correo para enviar la constancia.")
+                    return redirect('ver_expediente_unificado', paciente_uuid=paciente.uuid)
+ 
+                cuerpo = render_to_string('medico/correo_documento.html', {
+                    'titulo_documento': 'Constancia Médica',
+                    'nombre_paciente': paciente.nombres,
+                    'medico_nombre': medico.nombre,
+                })
+                enviar_documento_pdf_async(
+                    template_pdf='medico/constancia_pdf.html',
+                    context_pdf=context,
+                    asunto=f"Constancia médica - {paciente.nombres}",
+                    cuerpo_html=cuerpo,
+                    destinatario=correo_destino,
+                    nombre_archivo=f"Constancia_{paciente.cedula}.pdf",
+                )
+                messages.success(request, f"Constancia enviándose al correo {correo_destino}.")
+                return redirect('ver_expediente_unificado', paciente_uuid=paciente.uuid)
+ 
+            # Acción por defecto: mostrar la constancia imprimible en el navegador.
             return render(request, 'medico/constancia_pdf.html', context)
         else:
             messages.error(request, "El texto de la constancia no puede estar vacío.")
-
+ 
     return redirect('ver_expediente_unificado', paciente_uuid=paciente.uuid)
 
 #17. EXCEL MORBILIDAD

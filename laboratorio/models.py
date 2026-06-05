@@ -66,7 +66,8 @@ class SolicitudExamen(models.Model):
         ('Pendiente', 'Pendiente'),
         ('Procesando', 'Procesando'),
         ('Realizado', 'Realizado'),
-        ('Cancelada', 'Cancelada')
+        ('Cancelada', 'Cancelada'),
+        ('Externa', 'Externa'),  # El paciente la procesa fuera del ambulatorio (solo PDF/correo)
     ]
 
     # px registrado opcional
@@ -83,6 +84,10 @@ class SolicitudExamen(models.Model):
     
     fecha_solicitud = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Pendiente')
+
+    # True  -> la procesa el laboratorio del ambulatorio (entra a la cola y cuenta en estadísticas)
+    # False -> el paciente la procesa fuera (solo se emitió en PDF o se envió por correo)
+    procesar_en_lab = models.BooleanField(default=True, verbose_name="Procesar en el laboratorio del ambulatorio")
     
     resultados_archivo = models.FileField(upload_to=renombrar_archivo_seguro, blank=True, null=True, verbose_name="Documento de Resultados (Opcional)", validators=[validar_imagen_o_pdf])
     fecha_resultado = models.DateTimeField(blank=True, null=True)

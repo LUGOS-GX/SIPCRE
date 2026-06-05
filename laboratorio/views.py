@@ -33,8 +33,10 @@ def dashboard_lab(request):
     fecha_filtro = request.GET.get('fecha', '').strip()
 
     # 1. Consultas Base
-    ordenes_activas = SolicitudExamen.objects.filter(estado__in=['Pendiente', 'Procesando']).select_related('paciente', 'medico').order_by('-fecha_solicitud')
-    ordenes_historial = SolicitudExamen.objects.filter(estado='Realizado').select_related('paciente', 'medico').order_by('-fecha_resultado')
+    # Solo órdenes que realmente procesa el laboratorio del ambulatorio (procesar_en_lab=True).
+    # Las órdenes externas (emitidas en PDF/correo para procesar fuera) quedan excluidas.
+    ordenes_activas = SolicitudExamen.objects.filter(procesar_en_lab=True, estado__in=['Pendiente', 'Procesando']).select_related('paciente', 'medico').order_by('-fecha_solicitud')
+    ordenes_historial = SolicitudExamen.objects.filter(procesar_en_lab=True, estado='Realizado').select_related('paciente', 'medico').order_by('-fecha_resultado')
     
     pendientes_count = ordenes_activas.filter(estado='Pendiente').count()
 
@@ -290,7 +292,8 @@ def api_estadisticas_laboratorio(request):
         fecha_inicio = hoy - timedelta(days=30)
 
     # Filtrar las órdenes creadas en ese período
-    ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=fecha_inicio)
+    # Excluimos las externas: no son carga real del laboratorio del ambulatorio.
+    ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=fecha_inicio, procesar_en_lab=True)
 
     # --- GRÁFICO 1: TOP EXÁMENES MÁS SOLICITADOS ---
     todos_examenes = []
@@ -341,7 +344,7 @@ def exportar_estadisticas_lab_excel(request):
         fecha_inicio = hoy - timedelta(days=30)
         nombre_periodo = "Últimos 30 días"
 
-    ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=fecha_inicio)
+    ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=fecha_inicio, procesar_en_lab=True)
 
     # 2. Cálculos (Top 10 y Tendencia)
     todos_examenes = []

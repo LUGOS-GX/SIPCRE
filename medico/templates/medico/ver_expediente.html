@@ -234,6 +234,10 @@
                 
                 <label class="block text-sm font-bold text-gray-700 mb-2">Cuerpo del Documento / Diagnóstico / Reposo:</label>
                 <textarea name="motivo_texto" rows="5" required class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800" placeholder="Ej. Por medio de la presente hago constar que el paciente acudió a consulta presentando un cuadro de... Ameritando reposo físico por 72 horas..."></textarea>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Correo (opcional, para enviar por correo)</label>
+                    <input type="email" name="correo_paciente" value="{{ paciente.email }}" placeholder="Correo del paciente" class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800">
+                </div>
                 <p class="text-xs text-gray-500 mt-2">La firma, el sello, el membrete y los datos del paciente se añadirán automáticamente al PDF.</p>
             </div>
             
@@ -241,7 +245,10 @@
                 <button type="button" onclick="cerrarModalConstancia()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-2 px-4 rounded transition">Cancelar</button>
                 <button type="submit" onclick="setTimeout(cerrarModalConstancia, 1000)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    Generar Documento
+                    Generar constancia pdf
+                </button>
+                <button type="submit" name="accion" value="enviar_correo" formtarget="_self" class="bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded shadow transition flex items-center">
+                    Enviar al correo
                 </button>
             </div>
         </form>

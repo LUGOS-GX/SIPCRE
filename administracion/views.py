@@ -631,7 +631,8 @@ def datos_estadisticas(request):
             })
 
         # 4. EXÁMENES (Lógica exacta del laboratorio)
-        ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=inicio)
+        # Excluimos las externas para que la estadística refleje solo la carga interna del ambulatorio.
+        ordenes = SolicitudExamen.objects.filter(fecha_solicitud__gte=inicio, procesar_en_lab=True)
         todos_examenes_lista = []
         for orden in ordenes:
             if orden.examenes_solicitados:

@@ -189,3 +189,5 @@ LOGGING = {
         },
     },
 }
+
+PDF_ENGINE = 'chromium'

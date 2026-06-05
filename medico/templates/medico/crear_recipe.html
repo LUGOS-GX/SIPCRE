@@ -107,6 +107,12 @@
                     <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="15" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
             </div>
+
+            <div class="mt-6 border-t border-gray-700/50 pt-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Correo del paciente (opcional, para enviar por correo)</label>
+                <input type="email" name="correo_paciente" placeholder="Si se deja vacío, se usa el correo del paciente registrado (si aplica)" class="w-full border border-gray-200 rounded p-3 text-gray-800 focus:outline-none focus:border-blue-500 transition bg-gray-50">
+            </div>
+
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2">
@@ -160,6 +166,10 @@
             <button type="submit" name="accion" value="exportar_pdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow hover:shadow-lg transition flex items-center">
                 <svg class="btn-generar-pdf w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Exportar PDF
+            </button>
+
+            <button type="submit" name="accion" value="enviar_correo" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow hover:shadow-lg transition flex items-center">
+                Enviar al correo
             </button>
 
         </div>
