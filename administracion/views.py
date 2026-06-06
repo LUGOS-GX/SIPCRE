@@ -62,7 +62,11 @@ def dashboard_admin(request):
 def agendar_cita(request):
     if request.method == 'POST':
         # 1. Recuperar datos del nuevo formulario
-        cedula = request.POST.get('cedula').strip()
+        cedula_raw = request.POST.get('cedula', '').strip()
+        cedula = ''.join(ch for ch in cedula_raw if ch.isdigit())  # solo dígitos (quita puntos/letras)
+        if not cedula or int(cedula) > 40000000:
+            messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
+            return redirect('agendar_cita')
         nombre = request.POST.get('nombre_nuevo').strip()
         email = request.POST.get('email', '').strip()
         tipo_sangre = request.POST.get('tipo_sangre', '').strip()
@@ -142,32 +146,71 @@ def agendar_cita(request):
 @login_required
 @rol_requerido(['admin'])
 def registrar_orden_externa(request):
-    # Listas de exámenes (Mismas que el módulo médico)
     examenes_lab = [
-        'Hematología', 'Glicemia', 'Urea', 'Creatinina', 'Ácido Úrico', 
-        'Colesterol', 'Triglicéridos', 'Perfil Lipídico', 'PT', 'PTT', 
-        'Fibrinógeno', 'HIV', 'VDRL', 'VSG', 'HCG cualitativa', 'PCR', 
-        'Proteína T y F', 'Calcio', 'Fósforo', 'Mágnesio', 'TGO - TGP', 
+        'Hematología', 'Glicemia', 'Urea', 'Creatinina', 'Ácido Úrico',
+        'Colesterol', 'Triglicéridos', 'Perfil Lipídico', 'PT', 'PTT',
+        'Fibrinógeno', 'HIV', 'VDRL', 'VSG', 'HCG cualitativa', 'PCR',
+        'Proteína T y F', 'Calcio', 'Fósforo', 'Mágnesio', 'TGO - TGP',
         'Bilirrubina', 'Fosfatasa alcalina', 'Drogas de abuso', 'Heces', 'Orina'
     ]
     examenes_img = ['Rayos X', 'Ecosonograma']
 
     if request.method == 'POST':
-        # 1. Capturamos Datos del Paciente (Walk-in)
-        nombre = request.POST.get('nombre')
-        cedula = f"{request.POST.get('nacionalidad')}-{request.POST.get('cedula')}"
-        
-        # 2. Capturamos los exámenes seleccionados
+        nombre = (request.POST.get('nombre') or '').strip()
+        nacionalidad = (request.POST.get('nacionalidad') or 'V').strip()
+        cedula_raw = (request.POST.get('cedula') or '').strip()
+        cedula = ''.join(ch for ch in cedula_raw if ch.isdigit())
+
         seleccionados = request.POST.getlist('examenes')
-        otros = request.POST.get('otros_detalle')
-        
-        print("--- ORDEN EXTERNA CREADA (ADMIN) ---")
-        print(f"Paciente: {nombre} | CI: {cedula}")
-        print(f"Solicitud: {seleccionados}")
-        if otros: print(f"Otros: {otros}")
-        
-        # Redirigimos al dashboard administrativo (o se podría imprimir factura)
-        return redirect('dashboard_admin')
+        otros = (request.POST.get('otros_detalle') or '').strip()
+        correo_paciente = (request.POST.get('correo_paciente') or '').strip()  # <-- CORREO
+
+        if not nombre or not cedula:
+            messages.error(request, "Debe indicar el nombre y la cédula del paciente.")
+            return redirect('registrar_orden_externa')
+        if int(cedula) > 40000000:
+            messages.error(request, "La cédula no es válida: no puede superar los 40.000.000.")
+            return redirect('registrar_orden_externa')
+        if not seleccionados:
+            messages.error(request, "Debe seleccionar al menos un examen o estudio de imagenología.")
+            return redirect('registrar_orden_externa')
+
+        paciente, _ = Paciente.objects.get_or_create(
+            cedula=cedula,
+            defaults={'nombres': nombre, 'nacionalidad': nacionalidad, 'email': correo_paciente}  # <-- CORREO
+        )
+        if correo_paciente and paciente.email != correo_paciente:  # <-- CORREO (bloque)
+            paciente.email = correo_paciente
+            paciente.save()
+
+        examenes_texto = ", ".join([e for e in seleccionados if e != 'Otros'])
+        SolicitudExamen.objects.create(
+            paciente=paciente,
+            nombre_paciente=nombre,
+            cedula_paciente=f"{nacionalidad}-{cedula}",
+            medico=None,
+            examenes_solicitados=examenes_texto,
+            otros=otros if 'Otros' in seleccionados else '',
+            correo_paciente=correo_paciente or None,  # <-- CORREO
+            procesar_en_lab=True,
+            estado='Pendiente',
+        )
+
+        servicios_ids = list(
+            CatalogoServicio.objects.filter(
+                activo=True,
+                categoria__in=['Laboratorio', 'Imagenologia'],
+                nombre__in=seleccionados,
+            ).values_list('id', flat=True)
+        )
+
+        request.session['carrito_express'] = {
+            'paciente_cedula': cedula,
+            'servicios_ids': servicios_ids,
+        }
+
+        messages.success(request, f"Orden enviada al laboratorio. Procese el cobro de {nombre} en caja.")
+        return redirect('caja_central')
 
     context = {
         'examenes_lab': examenes_lab,
@@ -183,7 +226,12 @@ def editar_cita(request, id_cita):
 
     if request.method == 'POST':
         # Actualizar Datos del Paciente (Incluyendo Cédula)
-        paciente.cedula = request.POST.get('cedula', paciente.cedula).strip()
+        cedula_raw = request.POST.get('cedula', '').strip()
+        cedula = ''.join(ch for ch in cedula_raw if ch.isdigit())  # solo dígitos (quita puntos/letras)
+        if not cedula or int(cedula) > 40000000:
+            messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
+            return redirect('editar_cita', id_cita=id_cita)
+        paciente.cedula = cedula
         paciente.nombres = request.POST.get('nombre_nuevo', paciente.nombres).strip()
         paciente.email = request.POST.get('email', '').strip()
         paciente.telefono = request.POST.get('telefono', '').strip()

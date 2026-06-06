@@ -722,13 +722,17 @@ def caja_farmacia(request):
     if request.method == 'POST':
         try:
             datos = json.loads(request.body)
-            paciente_nombre = datos.get('paciente_nombre', 'Paciente de Paso')
-            paciente_cedula = datos.get('paciente_cedula', 'S/N')
+            paciente_nombre = (datos.get('paciente_nombre') or '').strip()
+            paciente_cedula = (datos.get('paciente_cedula') or '').strip()
             validacion_psicotropicos = datos.get('validacion_psicotropicos', False)
             carrito = datos.get('carrito', [])
-
+ 
             if not carrito:
                 return JsonResponse({'success': False, 'error': 'El carrito está vacío.'})
+ 
+            # Requisito: no se concreta una venta sin identificar al comprador.
+            if not paciente_nombre or not paciente_cedula:
+                return JsonResponse({'success': False, 'error': 'Debe registrar el nombre y la cédula del comprador para concretar la venta.'})
 
             with transaction.atomic():
                 orden = OrdenFarmacia.objects.create(

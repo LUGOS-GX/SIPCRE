@@ -61,7 +61,7 @@
 
             <div class="p-6 flex-grow space-y-6">
                 <div>
-                    <h4 class="text-sm font-bold text-gray-700 uppercase border-b pb-2 mb-4">Datos del Cliente (De Paso)</h4>
+                    <h4 class="text-sm font-bold text-gray-700 uppercase border-b pb-2 mb-4">Datos del Comprador (obligatorio)</h4>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Cédula / Documento</label>
@@ -69,7 +69,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Nombre y Apellido</label>
-                            <input type="text" id="cli_nombre" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Opcional...">
+                            <input type="text" id="cli_nombre" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Nombre y Apellido">
                         </div>
                     </div>
                 </div>
@@ -292,7 +292,18 @@
         const nombre = document.getElementById('cli_nombre').value.trim();
         const cedula = document.getElementById('cli_cedula').value.trim();
         const btn = document.getElementById('btn_cobrar');
-        
+ 
+        // Requisito: nombre y cédula del comprador son obligatorios.
+        if (!nombre || !cedula) {
+            Swal.fire({
+                title: 'Faltan datos del comprador',
+                text: 'Debe ingresar el nombre y la cédula del comprador para concretar la venta.',
+                icon: 'warning',
+                confirmButtonColor: '#4F46E5'
+           });
+            return;
+        }
+ 
         btn.innerHTML = 'Procesando...';
         btn.disabled = true;
 
@@ -303,8 +314,8 @@
                 "X-CSRFToken": "{{ csrf_token }}"
             },
             body: JSON.stringify({
-                paciente_nombre: nombre || 'Paciente de Paso',
-                paciente_cedula: cedula || 'S/N',
+                paciente_nombre: nombre,
+                paciente_cedula: cedula,
                 validacion_psicotropicos: checkPsico,
                 carrito: carrito
             })

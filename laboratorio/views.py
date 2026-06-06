@@ -99,11 +99,18 @@ def enviar_correo_resultados_async(orden_id, pdf_content):
 
         nombre_paciente = orden.nombre_paciente if orden.nombre_paciente else orden.paciente.nombres
 
+        if orden.medico and orden.medico.usuario:
+            medico_nombre = orden.medico.usuario.last_name
+        elif orden.medico:
+            medico_nombre = orden.medico.nombre
+        else:
+            medico_nombre = 'Cruz Roja Venezolana'
+ 
         context = {
             'nombre_paciente': nombre_paciente,
             'orden_id': orden.id,
             'fecha_resultado': orden.fecha_resultado,
-            'medico_nombre': orden.medico.usuario.last_name,
+            'medico_nombre': medico_nombre,
         }
         
         subject = f'Resultados de Laboratorio Listos - Orden #{orden.id:05d}'

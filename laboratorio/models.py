@@ -30,10 +30,6 @@ def renombrar_archivo_seguro(instancia, nombre_archivo):
     
     return ruta_final
 
-# =======================================================
-# NUEVOS MODELOS: CATÁLOGO Y PARÁMETROS (FASES 1 Y 3)
-# =======================================================
-
 class ExamenCatalogo(models.Model):
     nombre = models.CharField(max_length=150, unique=True, verbose_name="Nombre del Examen (Ej: Hematología Completa)")
     descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción / Indicaciones")
@@ -76,7 +72,7 @@ class SolicitudExamen(models.Model):
     nombre_paciente = models.CharField(max_length=150, verbose_name="Nombre del Paciente")
     cedula_paciente = models.CharField(max_length=30, verbose_name="Cédula")
     correo_paciente = models.EmailField(blank=True, null=True, verbose_name="Correo para enviar resultados")
-    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, related_name='ordenes_lab')
+    medico = models.ForeignKey(Medico, on_delete=models.CASCADE, related_name='ordenes_lab', null=True, blank=True)
     
     examenes_solicitados = models.TextField(verbose_name="Exámenes") 
     otros = models.CharField(max_length=200, blank=True, null=True, verbose_name="Otros Exámenes")
@@ -93,12 +89,17 @@ class SolicitudExamen(models.Model):
     fecha_resultado = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return f"Orden #{self.id} - {self.nombre_paciente}"
-
-
-# =======================================================
-# NUEVO MODELO: RESULTADOS ESTRUCTURADOS (FASE 1)
-# =======================================================
+        @property
+        def solicitado_por(self):
+            """Médico tratante, o 'Administración' si la orden la generó recepción (sin médico)."""
+            if self.medico:
+                nombre = ''
+                if self.medico.usuario:
+                    nombre = (self.medico.usuario.get_full_name() or '').strip()
+                if not nombre:
+                    nombre = self.medico.nombre or ''
+                return f"Dr(a). {nombre}".strip()
+            return "Administración"
 
 class ResultadoDetalle(models.Model):
     orden = models.ForeignKey(SolicitudExamen, on_delete=models.CASCADE, related_name='resultados_estructurados')
