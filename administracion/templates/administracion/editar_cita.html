@@ -11,7 +11,7 @@
             </h1>
             <p class="text-gray-500 text-sm mt-1 ml-6">Editando registro de atención para <strong>{{ paciente.nombres }}</strong>.</p>
         </div>
-        <a href="{% url 'historial_citas' %}" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition flex items-center">
+        <a href="{% url 'dashboard_admin' %}?fecha={{ cita.fecha|date:'Y-m-d' }}" class="text-gray-500 hover:text-gray-800 font-bold text-sm transition flex items-center">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             Cancelar y Volver
         </a>
@@ -98,16 +98,6 @@
 
         <div class="lg:col-span-4 space-y-6">
             
-            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg border border-gray-700">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-3">Estado de la Cita</label>
-                <select name="estado" class="w-full bg-gray-700 border-gray-600 text-white rounded-lg focus:ring-cruzroja-500 font-bold py-3 px-4">
-                    <option value="Pendiente" {% if cita.estado == 'Pendiente' %}selected{% endif %}>🕒 Pendiente</option>
-                    <option value="En Sala" {% if cita.estado == 'En Sala' %}selected{% endif %}>🚪 En Sala</option>
-                    <option value="Atendido" {% if cita.estado == 'Atendido' %}selected{% endif %}>✅ Atendido</option>
-                    <option value="Cancelado" {% if cita.estado == 'Cancelado' %}selected{% endif %}>✖ Cancelado</option>
-                </select>
-            </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
                 <div class="flex justify-between items-center">
                     <div>

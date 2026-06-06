@@ -98,8 +98,8 @@ class Cita(models.Model):
         # Importamos aquí para evitar importación circular
         from .models import Factura
         return Factura.objects.filter(
-            cedula_cliente=self.paciente.cedula,
-            fecha_emision=self.fecha,
+            models.Q(paciente=self.paciente) | models.Q(cedula_cliente=self.paciente.cedula),
+            fecha_emision__date=self.fecha,
             estado='Pagada'
         ).exists()
     
@@ -116,7 +116,6 @@ class Factura(models.Model):
     # Permitimos que paciente sea nulo (para los pacientes de paso)
     paciente = models.ForeignKey('Paciente', on_delete=models.PROTECT, related_name='facturas', null=True, blank=True)
     
-    # Nuevos campos para pacientes que vienen solo con el récipe
     nombre_cliente = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nombre (Paciente de Paso)")
     cedula_cliente = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cédula (Paciente de Paso)")
     

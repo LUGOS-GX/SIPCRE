@@ -40,6 +40,10 @@
                     </div>
                     <input type="text" id="pos_cedula_px" class="w-1/3 px-3 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 font-mono text-center" placeholder="Cédula">
                 </div>
+                <button type="button" onclick="abrirCuentasAbiertas()" class="mt-2 w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 font-bold py-2 rounded-lg text-sm transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    Cuentas por Cobrar (Pacientes con Deudas)
+                </button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 bg-white">
@@ -148,6 +152,27 @@
         <div class="p-4 border-t border-gray-200 flex justify-end space-x-3 bg-white">
             <button onclick="cerrarModalPago()" class="px-6 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded transition">Cancelar</button>
             <button onclick="finalizarFacturacion()" id="btn_finalizar" class="px-8 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow-lg transition disabled:opacity-50" disabled>Facturar y Emitir Ticket</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CUENTAS POR COBRAR (Pacientes con deudas) -->
+<div id="modal_cuentas" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style="max-height: 80vh;">
+        <div class="bg-amber-500 px-6 py-4 flex justify-between items-center rounded-t-xl">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                Cuentas por Cobrar
+            </h3>
+            <button type="button" onclick="cerrarModalCuentas()" class="text-white hover:text-amber-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-4 overflow-y-auto" id="cuentas_lista">
+            <p class="text-center text-gray-400 py-8">Cargando cuentas...</p>
+        </div>
+        <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 text-right rounded-b-xl">
+            <button type="button" onclick="cerrarModalCuentas()" class="px-6 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded transition">Cerrar</button>
         </div>
     </div>
 </div>
@@ -451,6 +476,64 @@
                 btnFinalizar.disabled = false;
             }
         });
+    }
+
+    // ===== CUENTAS POR COBRAR (Pacientes con deudas) =====
+    function abrirCuentasAbiertas() {
+        document.getElementById('modal_cuentas').classList.remove('hidden');
+        cargarCuentasAbiertas();
+    }
+
+    function cerrarModalCuentas() {
+        document.getElementById('modal_cuentas').classList.add('hidden');
+    }
+
+    function cargarCuentasAbiertas() {
+        const cont = document.getElementById('cuentas_lista');
+        cont.innerHTML = '<p class="text-center text-gray-400 py-8">Cargando cuentas...</p>';
+
+        fetch("{% url 'cuentas_abiertas' %}")
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success' && data.cuentas.length > 0) {
+                cont.innerHTML = '';
+                data.cuentas.forEach(c => {
+                    const fila = document.createElement('div');
+                    fila.className = 'flex justify-between items-center p-4 border border-gray-200 rounded-lg mb-2 hover:bg-amber-50 hover:border-amber-300 cursor-pointer transition';
+                    fila.onclick = () => seleccionarDeudor(c.cedula, c.nombre);
+                    fila.innerHTML = `
+                        <div>
+                            <p class="font-bold text-gray-800">${c.nombre}</p>
+                            <p class="text-xs text-gray-500 font-mono">C.I: ${c.cedula} &bull; ${c.num_facturas} factura(s) pendiente(s)</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-red-600">$${c.total.toFixed(2)}</p>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">por cobrar</p>
+                        </div>`;
+                    cont.appendChild(fila);
+                });
+            } else {
+                cont.innerHTML = '<p class="text-center text-gray-400 py-8">No hay cuentas pendientes por cobrar. &#127881;</p>';
+            }
+        })
+        .catch(err => {
+            cont.innerHTML = '<p class="text-center text-red-500 py-8">Error al cargar las cuentas.</p>';
+            console.error("Error cargando cuentas abiertas:", err);
+        });
+    }
+
+    function seleccionarDeudor(cedula, nombre) {
+        // Reiniciamos el carrito para no mezclar pacientes
+        carrito = [];
+        facturasPendientesIds = [];
+        actualizarCarrito();
+
+        document.getElementById('pos_buscador_px').value = nombre;
+        document.getElementById('pos_cedula_px').value = cedula;
+
+        cerrarModalCuentas();
+        // Precarga datos + servicios pendientes y deja el carrito listo para cobrar
+        cargarDeudasPaciente(cedula);
     }
 </script>
 {% endblock %}

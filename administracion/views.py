@@ -42,7 +42,7 @@ def dashboard_admin(request):
     else:
         fecha_filtro = hoy
 
-    citas_list = Cita.objects.filter(fecha=fecha_filtro).select_related('paciente', 'medico').order_by('hora')
+    citas_list = Cita.objects.filter(fecha=fecha_filtro).exclude(estado='Atendido').select_related('paciente', 'medico').order_by('hora')
     
     #Paginacion
     paginator = Paginator(citas_list, 5)
@@ -536,6 +536,37 @@ def obtener_deudas_paciente(request, cedula):
             })
             
     return JsonResponse({'status': 'success', 'deudas': deudas, 'facturas_ids': facturas_ids})
+
+@login_required
+@rol_requerido(['admin'])
+def cuentas_abiertas(request):
+    """ Lista de pacientes con facturas pendientes (cuentas por cobrar) para la caja.
+        Se agrupa por cedula_cliente para ser consistente con obtener_deudas_paciente. """
+    pendientes = (Factura.objects
+                  .filter(estado='Pendiente')
+                  .exclude(cedula_cliente__isnull=True)
+                  .exclude(cedula_cliente='')
+                  .select_related('paciente'))
+
+    cuentas = {}
+    for fac in pendientes:
+        cedula = fac.cedula_cliente
+        if cedula not in cuentas:
+            cuentas[cedula] = {
+                'cedula': cedula,
+                'nombre': fac.nombre_cliente or (fac.paciente.nombres if fac.paciente else 'Sin nombre'),
+                'total': Decimal('0.00'),
+                'num_facturas': 0,
+            }
+        cuentas[cedula]['total'] += (fac.total or Decimal('0.00'))
+        cuentas[cedula]['num_facturas'] += 1
+
+    # Mayor deuda primero; Decimal -> float para serializar a JSON
+    lista = sorted(cuentas.values(), key=lambda c: c['total'], reverse=True)
+    for c in lista:
+        c['total'] = float(c['total'])
+
+    return JsonResponse({'status': 'success', 'cuentas': lista})
 
 @login_required
 @rol_requerido(['admin'])
