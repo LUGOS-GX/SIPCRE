@@ -850,7 +850,7 @@ def analizar_imagen_medicamento(request):
 
             # 4. Hacemos la petición con el nuevo cliente y forzamos salida JSON nativa
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=[prompt, imagen_data],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
