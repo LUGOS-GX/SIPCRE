@@ -312,6 +312,8 @@ def caja_central(request):
             carrito = data.get('carrito', [])
             pagos = data.get('pagos', [])
             facturas_pendientes_ids = data.get('facturas_pendientes', [])
+            cita_id = data.get('cita_id')
+            cita_obj = Cita.objects.filter(id=cita_id).first() if cita_id else None
             
             # 1. Crear o recuperar paciente de emergencia
             paciente, created = Paciente.objects.get_or_create(
@@ -321,12 +323,15 @@ def caja_central(request):
             
             # 2. Marcar las facturas viejas (Farmacia/Médico) como "Pagadas"
             if facturas_pendientes_ids:
-                Factura.objects.filter(id__in=facturas_pendientes_ids).update(
-                    estado='Pagada',
-                    paciente=paciente, 
-                    nombre_cliente=nombre,
-                    cedula_cliente=cedula
-                )
+                campos_update = {
+                    'estado': 'Pagada',
+                    'paciente': paciente,
+                    'nombre_cliente': nombre,
+                    'cedula_cliente': cedula,
+                }
+                if cita_obj:
+                    campos_update['cita'] = cita_obj
+                Factura.objects.filter(id__in=facturas_pendientes_ids).update(**campos_update)
             
             # 3. Filtrar si se agregaron servicios NUEVOS desde el catálogo de la Caja
             items_nuevos = [item for item in carrito if not str(item.get('id', '')).startswith('pendiente_')]
@@ -339,7 +344,8 @@ def caja_central(request):
                     nombre_cliente=nombre,
                     cedula_cliente=cedula,
                     total=total_nuevos,
-                    estado='Pagada'
+                    estado='Pagada',
+                    cita=cita_obj
                 )
                 for item in items_nuevos:
                     precio_u = Decimal(str(item['precio']))
@@ -373,11 +379,13 @@ def caja_central(request):
     carrito_express = request.session.pop('carrito_express', None)
     paciente_express = None
     servicios_express = []
+    cita_express_id = None
 
     if carrito_express:
         cedula_ex = carrito_express.get('paciente_cedula')
         paciente_express = Paciente.objects.filter(cedula=cedula_ex).first()
         servicios_ids = carrito_express.get('servicios_ids', [])
+        cita_express_id = carrito_express.get('cita_id')
         
         # Obtenemos los datos mínimos necesarios de los servicios para el JS
         servicios_express = list(CatalogoServicio.objects.filter(id__in=servicios_ids).values('id', 'nombre', 'precio_usd'))
@@ -392,7 +400,8 @@ def caja_central(request):
         'catalogo_json': json.dumps(catalogo, default=str),
         'pacientes_json': json.dumps(pacientes),
         'paciente_express': paciente_express,
-        'servicios_express': json.dumps(servicios_express, default=str)
+        'servicios_express': json.dumps(servicios_express, default=str),
+        'cita_express_id': cita_express_id if cita_express_id else 'null'
     }
     return render(request, 'administracion/caja_central.html', context)
 

@@ -75,7 +75,6 @@ class Medico(models.Model):
 class Cita(models.Model):
     ESTADOS = [
         ('Pendiente', 'Pendiente'),
-        ('En Sala', 'En Sala'),
         ('Atendido', 'Atendido'),
     ]
 
@@ -91,17 +90,9 @@ class Cita(models.Model):
 
     @property
     def esta_pagada(self):
-        """ 
-        Busca si existe una factura para este paciente en esta fecha 
-        que ya esté marcada como 'Pagada'.
-        """
-        # Importamos aquí para evitar importación circular
-        from .models import Factura
-        return Factura.objects.filter(
-            models.Q(paciente=self.paciente) | models.Q(cedula_cliente=self.paciente.cedula),
-            fecha_emision__date=self.fecha,
-            estado='Pagada'
-        ).exists()
+        """ La cita está paga si tiene al menos una factura enlazada en estado 'Pagada'.
+            Enlace directo (FK), sin depender de la fecha. """
+        return self.facturas.filter(estado='Pagada').exists()
     
     def __str__(self):
         return f"{self.fecha} - {self.paciente} con {self.medico}"
@@ -118,7 +109,7 @@ class Factura(models.Model):
     
     nombre_cliente = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nombre (Paciente de Paso)")
     cedula_cliente = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cédula (Paciente de Paso)")
-    
+    cita = models.ForeignKey('Cita', on_delete=models.SET_NULL, related_name='facturas', null=True, blank=True)
     numero_factura = models.CharField(max_length=20, unique=True, blank=True)
     fecha_emision = models.DateTimeField(auto_now_add=True)
     fecha_pago = models.DateTimeField(null=True, blank=True)

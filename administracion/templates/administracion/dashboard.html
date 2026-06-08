@@ -124,7 +124,7 @@
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </a>
                                     
-                                    <!-- CORRECCIÓN AQUÍ: Eliminado onsubmit, añadida clase form-eliminar y data-msg -->
+                                    
                                     <form action="{% url 'eliminar_cita' cita.id %}" method="POST" class="inline form-eliminar" data-msg="¿Está seguro que desea ELIMINAR permanentemente esta cita? Esta acción no se puede deshacer.">
                                         {% csrf_token %}
                                         <button type="submit" class="text-gray-400 hover:text-red-500 transition" title="Eliminar Cita">
@@ -368,7 +368,7 @@
 
                 // 3. Exámenes (Barras Horizontales Grises)
                 myCharts.examenes = new Chart(document.getElementById('chart_examenes'), {
-                type: 'pie', // <--- CAMBIO AQUÍ
+                type: 'pie', 
                 data: {
                         labels: data.examenes.map(i => i.descripcion),
                         datasets: [{

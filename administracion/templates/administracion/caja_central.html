@@ -184,6 +184,7 @@
     const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
     let carrito = [];
     let facturasPendientesIds = [];
+    let citaExpressId = parseInt("{{ cita_express_id }}") || null;
 
     // INICIALIZACIÓN
     document.addEventListener('DOMContentLoaded', () => {
@@ -440,7 +441,8 @@
             cedula: document.getElementById('pos_cedula_px').value,
             carrito: carrito,
             pagos: pagos,
-            facturas_pendientes: facturasPendientesIds
+            facturas_pendientes: facturasPendientesIds,
+            cita_id: citaExpressId
         };
 
         fetch("{% url 'caja_central' %}", {
@@ -526,6 +528,7 @@
         // Reiniciamos el carrito para no mezclar pacientes
         carrito = [];
         facturasPendientesIds = [];
+        citaExpressId = null;
         actualizarCarrito();
 
         document.getElementById('pos_buscador_px').value = nombre;
