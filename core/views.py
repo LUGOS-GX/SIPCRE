@@ -39,19 +39,20 @@ def serve_media_protegida(request, ruta):
     Cualquier intento de acceder a /media/... sin sesión activa
     redirige al login automáticamente.
     """
-    ruta_absoluta = os.path.join(settings.MEDIA_ROOT, ruta)
-
-    # Verificar que el archivo existe
-    if not os.path.exists(ruta_absoluta):
-        raise Http404
-
-    # Verificar que la ruta no intenta salir de MEDIA_ROOT (path traversal)
-    ruta_real = os.path.realpath(ruta_absoluta)
     media_real = os.path.realpath(settings.MEDIA_ROOT)
-    if not ruta_real.startswith(media_real):
+    ruta_real = os.path.realpath(os.path.join(settings.MEDIA_ROOT, ruta))
+
+    # 1. Anti path-traversal: la ruta resuelta debe quedar DENTRO de MEDIA_ROOT.
+    #    (Se valida ANTES de tocar el disco y con separador para evitar falsos
+    #     positivos tipo "/media" vs "/media-secreto".)
+    if ruta_real != media_real and not ruta_real.startswith(media_real + os.sep):
         raise Http404
 
-    return FileResponse(open(ruta_absoluta, 'rb'))
+    # 2. Debe existir y ser un archivo (no un directorio).
+    if not os.path.isfile(ruta_real):
+        raise Http404
+
+    return FileResponse(open(ruta_real, 'rb'))
 
 def lockout_view(request, credentials=None, *args, **kwargs):
     """

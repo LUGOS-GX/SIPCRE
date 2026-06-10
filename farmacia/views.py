@@ -9,6 +9,7 @@ from django.db import transaction
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario, AuditoriaControlado
 from administracion.models import Factura, DetalleFactura
 from .forms import MedicamentoForm, LoteMedicamentoForm
@@ -116,7 +117,7 @@ def despachar_orden(request, orden_id):
         accion = request.POST.get('accion')
         meds_ids = request.POST.getlist('medicamento_id[]')
         cantidades = request.POST.getlist('cantidad[]')
-        
+
         if not meds_ids:
             messages.error(request, "Debe agregar medicamentos al carrito.")
             return redirect('despachar_orden', orden_id=orden.id)
@@ -125,24 +126,44 @@ def despachar_orden(request, orden_id):
         cedula_cli = orden.cedula_paciente if orden.cedula_paciente else (orden.paciente.cedula if orden.paciente else '0000000')
 
         estado_factura = 'Pagada' if accion == 'pagar_farmacia' else 'Pendiente'
-        
-        factura = Factura.objects.create(
-            nombre_cliente=nombre_cli,
-            cedula_cliente=cedula_cli,
-            total=0, 
-            estado=estado_factura
-        )
-        
-        total_acumulado = 0
 
-        for med_id, cant in zip(meds_ids, cantidades):
-            cant = int(cant)
-            med = Medicamento.objects.get(id=med_id)
-            
-            if cant > 0 and cant <= med.stock_actual:
-                stock_antes = med.stock_actual  # ← guardar antes de restar
+        # Todo el despacho va dentro de una transacción: o se registra completo
+        # (factura + stock + kardex + auditoría) o no se registra nada.
+        with transaction.atomic():
+            factura = Factura.objects.create(
+                nombre_cliente=nombre_cli,
+                cedula_cliente=cedula_cli,
+                total=Decimal('0.00'),
+                estado=estado_factura
+            )
+
+            total_acumulado = Decimal('0.00')
+            items_despachados = 0
+            omitidos = []
+
+            for med_id, cant_raw in zip(meds_ids, cantidades):
+                # Validar la cantidad recibida (el POST puede venir manipulado)
+                try:
+                    cant = int(cant_raw)
+                except (TypeError, ValueError):
+                    continue
+                if cant <= 0 or not str(med_id).isdigit():
+                    continue
+
+                # select_for_update bloquea la fila del medicamento hasta cerrar
+                # la transacción, evitando que dos despachos simultáneos vendan
+                # el mismo stock (condición de carrera / sobreventa).
+                med = Medicamento.objects.select_for_update().filter(id=med_id).first()
+                if med is None:
+                    continue
+
+                if cant > med.stock_actual:
+                    omitidos.append(f"{med.nombre} (stock insuficiente)")
+                    continue
+
+                stock_antes = med.stock_actual
                 med.stock_actual -= cant
-                med.save()
+                med.save(update_fields=['stock_actual'])
 
                 # Auditoría para medicamentos controlados
                 if med.es_controlado:
@@ -158,7 +179,7 @@ def despachar_orden(request, orden_id):
                         ip_origen=request.META.get('REMOTE_ADDR'),
                     )
                     logger.warning(f"CONTROLADO DESPACHADO | medicamento={med.nombre} | cantidad={cant} | paciente={cedula_cli} | usuario={request.user.email} | orden={orden.id}")
-                
+
                 MovimientoInventario.objects.create(
                     medicamento=med,
                     tipo_movimiento='SALIDA',
@@ -168,11 +189,13 @@ def despachar_orden(request, orden_id):
                     orden_relacionada=orden,
                     usuario=request.user
                 )
-                
-                precio_unit = float(med.precio) if med.precio else 0.0
+
+                # Aritmética de dinero en Decimal (no float) para no acumular
+                # errores de redondeo en la facturación.
+                precio_unit = med.precio if med.precio else Decimal('0.00')
                 subtotal = precio_unit * cant
                 total_acumulado += subtotal
-                
+
                 DetalleFactura.objects.create(
                     factura=factura,
                     descripcion=f"{med.nombre} {med.concentracion}",
@@ -180,14 +203,24 @@ def despachar_orden(request, orden_id):
                     precio_unitario=precio_unit,
                     subtotal=subtotal
                 )
-        
-        factura.total = total_acumulado
-        factura.save()
-        
-        orden.estado = 'Despachado'
-        orden.save()
-        
+                items_despachados += 1
+
+            # Si no se pudo despachar nada, revertimos todo (sin factura vacía
+            # ni la orden marcada como despachada).
+            if items_despachados == 0:
+                transaction.set_rollback(True)
+                messages.error(request, "No se despachó ningún medicamento. Verifica el stock y las cantidades del carrito.")
+                return redirect('despachar_orden', orden_id=orden.id)
+
+            factura.total = total_acumulado
+            factura.save(update_fields=['total'])
+
+            orden.estado = 'Despachado'
+            orden.save(update_fields=['estado'])
+
         msg = f"Orden #{orden.id} finalizada. Factura #{factura.id} generada."
+        if omitidos:
+            msg += " No se incluyeron (stock insuficiente): " + ", ".join(omitidos) + "."
         messages.success(request, msg)
         return redirect('dashboard_farmacia')
 
@@ -306,26 +339,27 @@ def registrar_lote(request):
     if request.method == 'POST':
         form = LoteMedicamentoForm(request.POST)
         if form.is_valid():
-            # 1. Guardamos el lote
-            nuevo_lote = form.save(commit=False)
-            nuevo_lote.cantidad_actual = nuevo_lote.cantidad_ingresada
-            nuevo_lote.save()
-            
-            # 2. ACTUALIZAMOS EL STOCK DEL MEDICAMENTO PRINCIPAL
-            medicamento = nuevo_lote.medicamento
-            medicamento.stock_actual += nuevo_lote.cantidad_ingresada
-            medicamento.save()
-            
-            # 3. REGISTRAMOS EL MOVIMIENTO EN EL KARDEX
-            MovimientoInventario.objects.create(
-                medicamento=medicamento,
-                tipo_movimiento='ENTRADA',
-                cantidad=nuevo_lote.cantidad_ingresada,
-                stock_resultante=medicamento.stock_actual,
-                usuario=request.user,
-                referencia=f"Ingreso de Lote #{nuevo_lote.numero_lote}"
-            )
-            
+            # El lote, la suma al stock y el kardex se registran juntos o no se
+            # registran (transacción). El stock lo suma SOLO esta vista: el modelo
+            # LoteMedicamento ya no lo hace, por eso desaparece el doble conteo.
+            with transaction.atomic():
+                nuevo_lote = form.save(commit=False)
+                nuevo_lote.cantidad_actual = nuevo_lote.cantidad_ingresada
+                nuevo_lote.save()
+
+                medicamento = nuevo_lote.medicamento
+                medicamento.stock_actual += nuevo_lote.cantidad_ingresada
+                medicamento.save(update_fields=['stock_actual'])
+
+                MovimientoInventario.objects.create(
+                    medicamento=medicamento,
+                    tipo_movimiento='ENTRADA',
+                    cantidad=nuevo_lote.cantidad_ingresada,
+                    stock_resultante=medicamento.stock_actual,
+                    usuario=request.user,
+                    referencia=f"Ingreso de Lote #{nuevo_lote.numero_lote}"
+                )
+
             messages.success(request, f"Lote {nuevo_lote.numero_lote} de {medicamento.nombre} registrado correctamente. Se sumaron {nuevo_lote.cantidad_ingresada} unidades al inventario.")
             return redirect('inventario_farmacia')
         else:
@@ -866,7 +900,11 @@ def analizar_imagen_medicamento(request):
             return JsonResponse({'success': True, 'datos': datos_extraidos})
 
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-            
+            logger.error(f"Error al analizar imagen de medicamento: {e}")
+            return JsonResponse({
+                'success': False,
+                'error': 'No se pudo analizar la imagen. Verifica que sea una foto clara del medicamento e intentalo de nuevo.'
+            })
+
     return JsonResponse({'success': False, 'error': 'Método no permitido.'})
 

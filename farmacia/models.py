@@ -52,16 +52,6 @@ class LoteMedicamento(models.Model):
     fecha_vencimiento = models.DateField(verbose_name="Fecha de Vencimiento")
     fecha_ingreso = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        # Detectamos si es un lote nuevo que apenas se está registrando
-        es_nuevo = self.pk is None 
-        super().save(*args, **kwargs)
-        
-        # Si es nuevo, le sumamos esta cantidad al stock total del Medicamento
-        if es_nuevo:
-            self.medicamento.stock_actual += self.cantidad_ingresada
-            self.medicamento.save()
-
     def __str__(self):
         return f"Lote {self.numero_lote} ({self.cantidad_actual} un.) - Vence: {self.fecha_vencimiento.strftime('%d/%m/%Y')}"
 

@@ -1,31 +1,45 @@
-import imghdr
 from django.core.exceptions import ValidationError
-
+from PIL import Image
 
 # Tipos de archivo permitidos por categoría
 TIPOS_IMAGEN = ['png', 'jpeg', 'jpg', 'webp']
 TIPOS_DOCUMENTO = ['pdf', 'doc', 'docx', 'xls', 'xlsx']
 TIPOS_IMAGEN_Y_PDF = TIPOS_IMAGEN + TIPOS_DOCUMENTO
 
+# Formatos que Pillow reporta en img.format para las imágenes que aceptamos
+FORMATOS_PIL_PERMITIDOS = {'PNG', 'JPEG', 'WEBP'}
+
 # Tamaño máximo: 5 MB
 TAMANO_MAXIMO_MB = 5
 TAMANO_MAXIMO_BYTES = TAMANO_MAXIMO_MB * 1024 * 1024
 
 
+def _es_imagen_valida(archivo):
+    """
+    Verifica el contenido REAL del archivo (no la extensión) usando Pillow.
+    Reemplaza a imghdr, que quedó deprecado y fue removido en Python 3.13,
+    y que además nunca detectó correctamente el formato WEBP.
+    """
+    try:
+        archivo.seek(0)
+        with Image.open(archivo) as img:
+            formato = img.format          # se lee antes de verify()
+            img.verify()                  # valida la integridad de la imagen
+    except Exception:
+        return False
+    finally:
+        archivo.seek(0)                   # rebobinar para que Django siga leyendo
+    return formato in FORMATOS_PIL_PERMITIDOS
+
+
 def validar_imagen(archivo):
     """
     Valida que el archivo sea realmente una imagen (PNG, JPEG, WEBP).
-    Verifica el contenido real del archivo, no solo la extensión.
     """
-    # 1. Verificar tamaño
     if archivo.size > TAMANO_MAXIMO_BYTES:
         raise ValidationError(f'El archivo no puede superar {TAMANO_MAXIMO_MB} MB.')
 
-    # 2. Verificar tipo real leyendo los primeros bytes (magic bytes)
-    tipo_real = imghdr.what(archivo)
-    archivo.seek(0)  # Rebobinar para que Django pueda seguir leyendo
-
-    if tipo_real not in TIPOS_IMAGEN:
+    if not _es_imagen_valida(archivo):
         raise ValidationError(
             f'Tipo de archivo no permitido. Solo se aceptan: {", ".join(TIPOS_IMAGEN).upper()}.'
         )
@@ -33,25 +47,21 @@ def validar_imagen(archivo):
 
 def validar_imagen_o_pdf(archivo):
     """
-    Valida que el archivo sea una imagen o un PDF.
+    Valida que el archivo sea una imagen (PNG, JPEG, WEBP) o un PDF.
     Usado para resultados de laboratorio y documentos médicos.
     """
-    # 1. Verificar tamaño
     if archivo.size > TAMANO_MAXIMO_BYTES:
         raise ValidationError(f'El archivo no puede superar {TAMANO_MAXIMO_MB} MB.')
 
-    # 2. Leer los primeros bytes para detectar el tipo real
-    cabecera = archivo.read(8)
+    # Detectar PDF por su firma (%PDF)
     archivo.seek(0)
-
-    # Verificar si es PDF (empieza con %PDF)
+    cabecera = archivo.read(5)
+    archivo.seek(0)
     if cabecera[:4] == b'%PDF':
         return
 
-    # Verificar si es imagen válida
-    import io
-    tipo_real = imghdr.what(io.BytesIO(cabecera))
-    if tipo_real not in TIPOS_IMAGEN:
+    # Si no es PDF, verificar que sea una imagen válida
+    if not _es_imagen_valida(archivo):
         raise ValidationError(
-            f'Tipo de archivo no permitido. Solo se aceptan imágenes o PDF.'
+            'Tipo de archivo no permitido. Solo se aceptan imágenes (PNG, JPEG, WEBP) o PDF.'
         )

@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
 from django.db import transaction 
 from django.contrib import messages
 from .forms import RegistroAdminForm, RegistroMedicoForm, LoginUsuarioForm, RegistroLaboratorioForm, RegistroFarmaciaForm
@@ -62,7 +63,7 @@ def registro_medico(request):
             except Exception as e:
                 # Si algo falla, el @transaction.atomic deshace todo automáticamente.
                 messages.error(request, f"Error al crear el perfil médico: {str(e)}")
-                print(f"ERROR CRÍTICO EN REGISTRO: {e}") 
+                logger.error(f"Error crítico en registro de médico: {e}")
     else:
         form = RegistroMedicoForm()
     return render(request, 'usuarios/registro_medico.html', {'form': form})
@@ -126,7 +127,14 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             logger.info(f"LOGIN exitoso | usuario={user.email} | rol={user.rol} | ip={request.META.get('REMOTE_ADDR')}")
-            return redirigir_segun_rol(user)
+            destino = redirigir_segun_rol(user)
+            if destino:
+                return destino
+            # Sesión iniciada pero sin un rol válido: no dejamos la cuenta a medias.
+            logger.warning(f"LOGIN sin rol válido | usuario={user.email}")
+            logout(request)
+            messages.error(request, "Tu cuenta no tiene un rol válido asignado. Contacta al administrador.")
+            return redirect('login')
         else:
             logger.warning(f"LOGIN fallido | usuario={request.POST.get('username')} | ip={request.META.get('REMOTE_ADDR')}")
     else:
@@ -134,6 +142,7 @@ def login_view(request):
     return render(request, 'usuarios/login.html', {'form': form})
 
 #logout
+@login_required
 def logout_view(request):
     logger.info(f"LOGOUT | usuario={request.user.email} | ip={request.META.get('REMOTE_ADDR')}")
     logout(request)

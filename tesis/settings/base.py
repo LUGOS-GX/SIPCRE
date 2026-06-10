@@ -94,6 +94,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
 
+# A dónde mandar a los usuarios sin sesión (lo usa @login_required y rol_requerido).
+# Sin esto, Django apunta al /accounts/login/ por defecto, que no existe en el proyecto.
+LOGIN_URL = 'login'
+
 #CONFIGURACIÓN DE EMAIL
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -118,8 +122,6 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 # Previene ataques donde se sube un archivo disfrazado (ej: imagen que es un script)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Activa el filtro XSS del navegador (Cross-Site Scripting)
-SECURE_BROWSER_XSS_FILTER = True
 
 # Las cookies de sesión no se pueden leer desde JavaScript
 # Previene robo de sesión si hay XSS

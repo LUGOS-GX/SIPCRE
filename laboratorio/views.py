@@ -440,7 +440,7 @@ def exportar_estadisticas_lab_excel(request):
     
     return response
 
-login_required
+@login_required
 @rol_requerido(['laboratorio'])
 def editar_perfil_lab(request):
     usuario = request.user 

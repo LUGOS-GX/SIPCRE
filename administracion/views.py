@@ -18,7 +18,7 @@ from laboratorio.models import ResultadoDetalle, SolicitudExamen
 from usuarios.decorators import rol_requerido
 from usuarios.models import Usuario
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from .utils import obtener_tasa_bcv
 from collections import Counter
 import json
@@ -619,8 +619,13 @@ def imprimir_cierre(request, sesion_id):
     total_bs = sesion.total_bs_efectivo + sesion.total_pago_movil + sesion.total_punto_venta
     total_usd_puro = sesion.total_usd_efectivo + sesion.total_zelle
     
-    # Convertimos los bolívares a dólares usando la tasa del día en que se abrió la caja
-    gran_total_usd = float(total_usd_puro) + (float(total_bs) / float(sesion.tasa_bcv_dia))
+    # Convertimos los bolívares a dólares usando la tasa del día en que se abrió la caja.
+    # Todo en Decimal (no float) para que el arqueo no acumule errores de redondeo.
+    if sesion.tasa_bcv_dia:
+        gran_total_usd = total_usd_puro + (total_bs / sesion.tasa_bcv_dia)
+    else:
+        gran_total_usd = total_usd_puro
+    gran_total_usd = gran_total_usd.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     context = {
         'sesion': sesion,
