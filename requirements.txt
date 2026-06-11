@@ -1,0 +1,47 @@
+# ============================================================
+# SIPCRE - Dependencias del proyecto
+# Versiones pineadas al entorno de desarrollo verificado
+# (Python del entorno local; instalar con:
+#   pip install -r requirements.txt
+#   playwright install chromium   <- necesario para los PDF)
+# ============================================================
+
+# --- Núcleo ---
+Django==5.2.10
+psycopg2-binary==2.9.11          # Driver PostgreSQL
+python-dotenv==1.2.2             # Variables de entorno (.env)
+
+# --- Seguridad ---
+django-axes==8.3.1               # Bloqueo por intentos de login fallidos
+
+# --- Respaldos ---
+# NOTA: instalado en el entorno pero NO configurado en settings (no está en
+# INSTALLED_APPS). Se conserva por si se activa; si no se va a usar, puede
+# eliminarse esta línea y desinstalarse.
+django-dbbackup==5.3.0
+
+# --- Generación de PDF (motor del sistema: Chromium) ---
+playwright==1.60.0               # Tras instalar: playwright install chromium
+
+# --- Integración Gemini (análisis de etiquetas de medicamentos) ---
+google-genai==2.8.0
+
+# --- Imágenes ---
+Pillow==12.1.0                   # ImageField y validadores de imagen
+rembg==2.0.72                    # Remoción de fondo de firmas (perfil médico)
+onnxruntime==1.24.1              # Motor de inferencia requerido por rembg
+
+# --- Reportes y exportaciones ---
+openpyxl==3.1.5                  # Excel de estadísticas (administración)
+XlsxWriter==3.2.9                # Exportaciones de laboratorio/médico
+
+# --- HTTP ---
+requests==2.32.5                 # Consulta de tasa BCV (DolarApi)
+
+# ------------------------------------------------------------
+# NOTA: xhtml2pdf (y su séquito: reportlab, svglib, pyHanko,
+# pypdf, arabic-reshaper, etc.) YA NO se usa en el código tras
+# la migración total del PDF a Chromium. Puede desinstalarse:
+#   pip uninstall xhtml2pdf reportlab svglib pyHanko pypdf
+# Se omite de este archivo a propósito.
+# ------------------------------------------------------------

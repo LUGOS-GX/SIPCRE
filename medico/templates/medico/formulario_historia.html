@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 
 <style>
@@ -52,7 +53,7 @@
                             
                             <div class="space-y-2">
                                 <p class="text-gray-800 text-sm font-bold truncate">{{ paciente_control.nombres }}</p>
-                                <p class="text-gray-600 text-xs font-mono bg-white inline-block px-2 py-1 rounded border border-gray-200">C.I: {{ paciente_control.cedula }}</p>
+                                <p class="text-gray-600 text-xs font-mono bg-white inline-block px-2 py-1 rounded border border-gray-200">C.I: {{ paciente_control.cedula|cedula_puntos }}</p>
                                 
                                 {% if expediente_control.tipo_sangre %}
                                     <p class="text-gray-600 text-xs mt-1">Sangre: <span class="text-red-600 font-bold">{{ expediente_control.tipo_sangre }}</span></p>
@@ -93,7 +94,7 @@
                                     {% for cita in citas_pendientes %}
                                         <option value="{{ cita.paciente.id }}" 
                                             {% if cita.id == cita_preseleccionada_id %}selected{% endif %}>
-                                            {{ cita.hora|time:"H:i" }} - {{ cita.paciente.nombres }} ({{ cita.paciente.cedula }})
+                                            {{ cita.hora|time:"H:i" }} - {{ cita.paciente.nombres }} ({{ cita.paciente.cedula|cedula_puntos }})
                                         </option>
                                     {% empty %}
                                         <option disabled>No hay citas agendadas para hoy</option>

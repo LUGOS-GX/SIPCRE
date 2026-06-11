@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 <div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     
@@ -34,7 +35,7 @@
                     <dt class="text-sm font-medium text-gray-500">Paciente</dt>
                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 font-bold">
                         {% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% else %}{{ orden.paciente.nombres }}{% endif %}
-                        <span class="text-gray-500 font-normal ml-2">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% else %}{{ orden.paciente.cedula }}{% endif %}</span>
+                        <span class="text-gray-500 font-normal ml-2">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente|cedula_puntos }}{% else %}{{ orden.paciente.cedula|cedula_puntos }}{% endif %}</span>
                         
                         {% if orden.correo_paciente %}
                             <br><span class="inline-block mt-2 text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded shadow-sm">Se notificará a: {{ orden.correo_paciente }}</span>

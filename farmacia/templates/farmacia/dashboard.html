@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
     
@@ -125,9 +126,9 @@
                             </p>
                             <p class="text-xs text-gray-500">
                                 {% if orden.cedula_paciente %}
-                                    {{ orden.cedula_paciente }}
+                                    {{ orden.cedula_paciente|cedula_puntos }}
                                 {% else %}
-                                    {{ orden.paciente.nacionalidad }}-{{ orden.paciente.cedula }}
+                                    {{ orden.paciente.nacionalidad }}-{{ orden.paciente.cedula|cedula_puntos }}
                                 {% endif %}
                             </p>
                             <p class="text-xs text-blue-500 mt-1">Ref: Dr(a). {{ orden.medico.nombre }}</p>

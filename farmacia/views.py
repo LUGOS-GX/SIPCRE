@@ -15,6 +15,7 @@ from administracion.models import Factura, DetalleFactura
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
 from core.validators import normalizar_cedula, cedula_es_valida
+from .services import descontar_lotes_fefo, reintegrar_lotes
 import json
 import io
 import os
@@ -169,6 +170,8 @@ def despachar_orden(request, orden_id):
                 stock_antes = med.stock_actual
                 med.stock_actual -= cant
                 med.save(update_fields=['stock_actual'])
+                # Consumo de lotes por vencimiento más próximo (FEFO)
+                descontar_lotes_fefo(med, cant)
 
                 # Auditoría para medicamentos controlados
                 if med.es_controlado:
@@ -572,6 +575,7 @@ def kardex_farmacia(request):
 
 @login_required
 @rol_requerido(['farmacia'])
+@transaction.atomic
 def ajuste_inventario(request):
     if request.method == 'POST':
         tipo_accion = request.POST.get('tipo_accion')
@@ -583,13 +587,17 @@ def ajuste_inventario(request):
             messages.error(request, "Debe seleccionar un medicamento principal y una cantidad mayor a cero.")
             return redirect('ajuste_inventario')
 
-        medicamento = get_object_or_404(Medicamento, id=med_id)
+        # select_for_update: los ajustes compiten con despachos y ventas por el
+        # mismo stock; el lock evita descuadres si ocurren a la vez.
+        medicamento = get_object_or_404(Medicamento.objects.select_for_update(), id=med_id)
 
         try:
             if tipo_accion == 'devolucion':
                 stock_antes = medicamento.stock_actual
                 medicamento.stock_actual += cantidad
                 medicamento.save()
+                # Reposición de lotes (orden FEFO inverso: rellena lo drenado primero)
+                reintegrar_lotes(medicamento, cantidad)
                 MovimientoInventario.objects.create(
                     medicamento=medicamento, tipo_movimiento='DEVOLUCION',
                     cantidad=cantidad, stock_resultante=medicamento.stock_actual,
@@ -620,6 +628,8 @@ def ajuste_inventario(request):
                 stock_antes = medicamento.stock_actual
                 medicamento.stock_actual -= cantidad
                 medicamento.save()
+                # Consumo de lotes por vencimiento más próximo (FEFO)
+                descontar_lotes_fefo(medicamento, cantidad)
                 MovimientoInventario.objects.create(
                     medicamento=medicamento, tipo_movimiento='AJUSTE',
                     cantidad=-cantidad, stock_resultante=medicamento.stock_actual,
@@ -648,7 +658,7 @@ def ajuste_inventario(request):
                     messages.error(request, "Para un cambio, debe seleccionar el medicamento que va a entregar.")
                     return redirect('ajuste_inventario')
                     
-                medicamento_nuevo = get_object_or_404(Medicamento, id=med_nuevo_id)
+                medicamento_nuevo = get_object_or_404(Medicamento.objects.select_for_update(), id=med_nuevo_id)
                 
                 if cantidad > medicamento_nuevo.stock_actual:
                     messages.error(request, f"Stock insuficiente: Solo hay {medicamento_nuevo.stock_actual} uds de {medicamento_nuevo.nombre} para realizar el cambio.")
@@ -658,6 +668,7 @@ def ajuste_inventario(request):
                 stock_antes_devuelto = medicamento.stock_actual
                 medicamento.stock_actual += cantidad
                 medicamento.save()
+                reintegrar_lotes(medicamento, cantidad)
                 MovimientoInventario.objects.create(
                     medicamento=medicamento, tipo_movimiento='DEVOLUCION',
                     cantidad=cantidad, stock_resultante=medicamento.stock_actual,
@@ -682,6 +693,7 @@ def ajuste_inventario(request):
                 stock_antes_nuevo = medicamento_nuevo.stock_actual
                 medicamento_nuevo.stock_actual -= cantidad
                 medicamento_nuevo.save()
+                descontar_lotes_fefo(medicamento_nuevo, cantidad)
                 MovimientoInventario.objects.create(
                     medicamento=medicamento_nuevo, tipo_movimiento='SALIDA',
                     cantidad=-cantidad, stock_resultante=medicamento_nuevo.stock_actual,
@@ -795,6 +807,8 @@ def caja_farmacia(request):
                     stock_antes = med.stock_actual  # ← guardar antes de restar
                     med.stock_actual -= cant
                     med.save()
+                    # Consumo de lotes por vencimiento más próximo (FEFO)
+                    descontar_lotes_fefo(med, cant)
 
                     # Auditoría para controlados
                     if med.es_controlado:

@@ -1,3 +1,4 @@
+{% load formato_ve %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -176,7 +177,7 @@
         </tr>
         <tr>
             <th>C.I:</th>
-            <td style="width:30%;">{{ orden.cedula_paciente }}</td>
+            <td style="width:30%;">{{ orden.cedula_paciente|cedula_puntos }}</td>
             <th style="width:14%;">Fecha:</th>
             <td>{{ orden.fecha_solicitud|date:"d/m/Y" }}</td>
         </tr>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formato_ve %}
 {% load static %}
 
 {% block content %}
@@ -60,7 +61,7 @@
                         {% for p in pacientes %}
                             <li class="opcion-control text-gray-700 cursor-pointer select-none relative py-2 pl-4 pr-9 hover:bg-purple-500 hover:text-white transition-colors group" data-id="{{ p.id }}" data-texto="{{ p.nombres }} {{ p.cedula }}" onclick="seleccionarControlCustom('{{ p.id }}', '{{ p.nombres }} - C.I: {{ p.cedula }}')">
                                 <span class="font-bold block truncate group-hover:text-white">{{ p.nombres }}</span>
-                                <span class="text-xs text-gray-500 group-hover:text-purple-100 block truncate mt-0.5">C.I: {{ p.cedula }}</span>
+                                <span class="text-xs text-gray-500 group-hover:text-purple-100 block truncate mt-0.5">C.I: {{ p.cedula|cedula_puntos }}</span>
                             </li>
                         {% empty %}
                             <li class="text-gray-500 cursor-default select-none relative py-4 pl-4 pr-9 text-sm italic text-center">No hay pacientes en su historial.</li>

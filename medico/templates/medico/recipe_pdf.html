@@ -1,3 +1,4 @@
+{% load formato_ve %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -168,7 +169,7 @@
             </td>
             <td style="width:28%;">
                 <span class="px-label">Cédula</span>
-                <span class="px-value">{% if recipe.cedula_paciente %}{{ recipe.cedula_paciente }}{% else %}—{% endif %}</span>
+                <span class="px-value">{% if recipe.cedula_paciente %}{{ recipe.cedula_paciente|cedula_puntos }}{% else %}—{% endif %}</span>
             </td>
             <td style="width:22%;">
                 <span class="px-label">Fecha</span>

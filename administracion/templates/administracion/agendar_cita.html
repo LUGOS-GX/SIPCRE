@@ -197,8 +197,29 @@
 </div>
 
 <script>
-    const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
     const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
+
+    // --- BÚSQUEDA REMOTA DE PACIENTES ---
+    // Antes se volcaban TODOS los pacientes a esta página; ahora se consulta
+    // la API a medida que se escribe (debounce de 250 ms).
+    const URL_BUSCAR_PACIENTES = "{% url 'api_buscar_pacientes' %}";
+    let timerBusquedaPx = null;
+
+    function buscarPacientesRemoto(query, callback) {
+        clearTimeout(timerBusquedaPx);
+        timerBusquedaPx = setTimeout(() => {
+            fetch(`${URL_BUSCAR_PACIENTES}?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => callback(data.resultados || []))
+                .catch(() => callback([]));
+        }, 250);
+    }
+
+    function formatearCedula(c) {
+        const digitos = String(c || '').replace(/\D/g, '');
+        if (!digitos) return c || '';
+        return digitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
     const medicosData = [
         {% for m in medicos %}
         {id: {{ m.id }}, nombre: "{{ m.nombre }}", especialidad: "{{ m.especialidad }}"},
@@ -284,25 +305,29 @@
         const query = this.value.toLowerCase().trim();
         listResultadosPx.innerHTML = '';
         if(query.length < 2) { listResultadosPx.classList.add('hidden'); return; }
-        const filtrados = pacientes.filter(p => p.cedula.includes(query)).slice(0, 5);
-        if(filtrados.length > 0) {
-            listResultadosPx.classList.remove('hidden');
-            filtrados.forEach(p => {
-                const li = document.createElement('li');
-                li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
-                li.innerText = `${p.nombres} (V-${p.cedula})`;
-                li.onclick = () => {
-                    document.getElementById('cedula_px').value = p.cedula;
-                    document.getElementById('nombre_px').value = p.nombres;
-                    document.getElementById('email_px').value = p.email || '';
-                    document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
-                    document.getElementById('telefono_px').value = p.telefono || '';
-                    document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
-                    listResultadosPx.classList.add('hidden');
-                };
-                listResultadosPx.appendChild(li);
-            });
-        }
+        buscarPacientesRemoto(query, (filtrados) => {
+            listResultadosPx.innerHTML = '';
+            if(filtrados.length > 0) {
+                listResultadosPx.classList.remove('hidden');
+                filtrados.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
+                    li.innerText = `${p.nombres} (V-${formatearCedula(p.cedula)})`;
+                    li.onclick = () => {
+                        document.getElementById('cedula_px').value = p.cedula;
+                        document.getElementById('nombre_px').value = p.nombres;
+                        document.getElementById('email_px').value = p.email || '';
+                        document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
+                        document.getElementById('telefono_px').value = p.telefono || '';
+                        document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
+                        listResultadosPx.classList.add('hidden');
+                    };
+                    listResultadosPx.appendChild(li);
+                });
+            } else {
+                listResultadosPx.classList.add('hidden');
+            }
+        });
     });
 
     // --- SEGURO MÉDICO ---

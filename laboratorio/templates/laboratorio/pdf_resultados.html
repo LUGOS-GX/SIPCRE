@@ -1,3 +1,4 @@
+{% load formato_ve %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -69,7 +70,7 @@
                 <td class="label">Paciente:</td>
                 <td>{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% else %}{{ orden.paciente.nombres }}{% endif %}</td>
                 <td class="label">Cédula:</td>
-                <td>{% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% else %}{{ orden.paciente.cedula }}{% endif %}</td>
+                <td>{% if orden.cedula_paciente %}{{ orden.cedula_paciente|cedula_puntos }}{% else %}{{ orden.paciente.cedula|cedula_puntos }}{% endif %}</td>
             </tr>
             <tr>
                 <td class="label">N° de Orden:</td>

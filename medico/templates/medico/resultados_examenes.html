@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formato_ve %}
 {% load static %}
 
 {% block content %}
@@ -54,7 +55,7 @@
                             {% for p in mis_pacientes %}
                                 <li class="opcion-control text-gray-700 cursor-pointer select-none relative py-2 pl-4 pr-9 hover:bg-blue-600 hover:text-white transition-colors group" data-texto="{{ p.nombres }} {{ p.cedula }}" onclick="window.location.href='?q={{ p.cedula }}'">
                                     <span class="font-bold block truncate group-hover:text-white">{{ p.nombres }}</span>
-                                    <span class="text-xs text-gray-500 group-hover:text-blue-100 block truncate mt-0.5">C.I: {{ p.cedula }}</span>
+                                    <span class="text-xs text-gray-500 group-hover:text-blue-100 block truncate mt-0.5">C.I: {{ p.cedula|cedula_puntos }}</span>
                                 </li>
                             {% empty %}
                                 <li class="text-gray-500 cursor-default select-none relative py-4 pl-4 pr-9 text-sm italic text-center">No hay pacientes con resultados.</li>
@@ -89,7 +90,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-bold text-gray-900">{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% elif orden.paciente %}{{ orden.paciente.nombres }}{% else %}N/A{% endif %}</div>
-                            <div class="text-xs text-gray-500">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% elif orden.paciente %}{{ orden.paciente.cedula }}{% else %}N/A{% endif %}</div>
+                            <div class="text-xs text-gray-500">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente|cedula_puntos }}{% elif orden.paciente %}{{ orden.paciente.cedula|cedula_puntos }}{% else %}N/A{% endif %}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             {% if orden.resultados_archivo %}

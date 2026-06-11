@@ -148,13 +148,13 @@ def agendar_cita(request):
 
     # GET: Cargar datos para el frontend (Añadimos telefono y fecha_nacimiento a la consulta)
     catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'precio_usd'))
-    pacientes = list(Paciente.objects.all().values('id', 'cedula', 'nombres', 'email', 'tipo_sangre', 'telefono', 'fecha_nacimiento'))
-    
+    # Los pacientes ya NO se vuelcan completos al template: el buscador
+    # consulta la API api_buscar_pacientes a medida que se escribe.
+
     context = {
         'medicos': Medico.objects.all(),
         'fecha_actual': timezone.now().date().strftime('%Y-%m-%d'),
-        'catalogo_json': json.dumps(catalogo, default=str),
-        'pacientes_json': json.dumps(pacientes, default=str)
+        'catalogo_json': json.dumps(catalogo, default=str)
     }
     return render(request, 'administracion/agendar_cita.html', context)
 
@@ -461,6 +461,7 @@ def caja_central(request):
 
                     PagoFactura.objects.create(
                         factura=factura_destino,
+                        sesion=sesion,
                         metodo=metodo,
                         monto_moneda_original=monto_original,
                         monto_equivalente_usd=equivalente,
@@ -502,13 +503,12 @@ def caja_central(request):
 
     # 3. GET: ENVIAR DATOS AL FRONTEND
     catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'categoria', 'precio_usd'))
-    pacientes = list(Paciente.objects.all().values('cedula', 'nombres'))
-    
+    # Pacientes vía api_buscar_pacientes (búsqueda incremental), no por volcado.
+
     context = {
         'sesion': sesion,
         'tasa_bcv': float(sesion.tasa_bcv_dia),
         'catalogo_json': json.dumps(catalogo, default=str),
-        'pacientes_json': json.dumps(pacientes),
         'paciente_express': paciente_express,
         'servicios_express': json.dumps(servicios_express, default=str),
         'cita_express_id': cita_express_id if cita_express_id else 'null'
@@ -524,6 +524,7 @@ def sala_espera(request):
 
 @login_required
 @rol_requerido(['admin'])
+@require_POST
 def aprobar_usuario(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     usuario.is_active = True  # ¡Descongelado!
@@ -547,6 +548,7 @@ def aprobar_usuario(request, usuario_id):
 
 @login_required
 @rol_requerido(['admin'])
+@require_POST
 def rechazar_usuario(request, usuario_id):
     usuario = get_object_or_404(Usuario, id=usuario_id)
     nombre = f"{usuario.first_name} {usuario.last_name}".strip()
@@ -636,6 +638,36 @@ def lista_personal(request):
 
 @login_required
 @rol_requerido(['admin'])
+def api_buscar_pacientes(request):
+    """
+    Búsqueda incremental de pacientes para los buscadores de Agendar Cita y
+    Caja Central. Sustituye el volcado de TODOS los pacientes a JSON en cada
+    carga de página (que crecía con la base de datos y exponía el padrón
+    completo de pacientes en el código fuente de la página).
+    Devuelve como máximo 8 coincidencias por nombre o cédula.
+    """
+    q = (request.GET.get('q') or '').strip()
+    if len(q) < 2:
+        return JsonResponse({'resultados': []})
+
+    filtro = Q(nombres__icontains=q)
+    q_digitos = normalizar_cedula(q)
+    if q_digitos:
+        filtro |= Q(cedula__startswith=q_digitos)
+
+    pacientes = list(
+        Paciente.objects.filter(filtro)
+        .order_by('nombres')
+        .values('id', 'cedula', 'nombres', 'email', 'tipo_sangre', 'telefono', 'fecha_nacimiento')[:8]
+    )
+    for p in pacientes:
+        if p['fecha_nacimiento']:
+            p['fecha_nacimiento'] = p['fecha_nacimiento'].strftime('%Y-%m-%d')
+
+    return JsonResponse({'resultados': pacientes})
+
+@login_required
+@rol_requerido(['admin'])
 def obtener_deudas_paciente(request, cedula):
     """ Busca si el paciente tiene facturas pendientes en Farmacia, Lab o Médico """
     # La cédula puede llegar como 'V-12.345.678' desde el buscador: se lleva
@@ -693,6 +725,7 @@ def cuentas_abiertas(request):
 
 @login_required
 @rol_requerido(['admin'])
+@require_POST
 def cerrar_caja(request):
     """ Calcula los totales de la sesión actual, la cierra y redirige al reporte """
     sesion = SesionCaja.objects.filter(cajero=request.user, estado='Abierta').first()
@@ -701,8 +734,11 @@ def cerrar_caja(request):
         messages.error(request, "No tiene una caja abierta actualmente.")
         return redirect('dashboard_admin')
         
-    # Obtener todos los pagos registrados desde que se abrió esta caja
-    pagos = PagoFactura.objects.filter(fecha_pago__gte=sesion.fecha_apertura)
+    # Pagos de ESTA sesión únicamente. El filtro anterior
+    # (fecha_pago__gte=apertura) sumaba los pagos de TODOS los cajeros del
+    # período: si dos cajas estaban abiertas a la vez, ambos arqueos
+    # reportaban el dinero del otro.
+    pagos = PagoFactura.objects.filter(sesion=sesion)
     
     # Función auxiliar para sumar montos por método de pago
     def suma_metodo(metodo):

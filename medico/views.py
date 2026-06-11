@@ -894,6 +894,7 @@ def generar_pdf_orden(request, orden_id):
 #13. ELIMINACION HISTORIA CLINICA
 @login_required
 @rol_requerido(['medico'])
+@require_POST
 def eliminar_historia(request, historia_id):
     # 1. Buscamos la historia asegurándonos que pertenezca al médico actual
     historia = get_object_or_404(ConsultaEvolucion, id=historia_id, medico=request.user.medico)

@@ -233,25 +233,41 @@
             });
 
             // --- C. LÓGICA DEL DESTRUCTOR PARA ENLACES <a> ---
+            // Tras confirmar, la acción se envía como POST con token CSRF
+            // (formulario construido al vuelo). Las acciones que cambian o
+            // destruyen datos no deben viajar por GET: un GET es precargable
+            // por el navegador, queda en el historial y no lleva CSRF.
+            const CSRF_TOKEN = "{{ csrf_token }}";
             const linksEliminar = document.querySelectorAll('.link-eliminar');
             linksEliminar.forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault(); // Evita que el enlace te lleve de una vez
                     const url = this.getAttribute('href');
                     const mensaje = this.getAttribute('data-msg') || '¿Está seguro de realizar esta acción?';
+                    const icono = this.getAttribute('data-icon') || 'warning';
+                    const colorConfirmar = this.getAttribute('data-confirm-color') || '#d33';
 
                     Swal.fire({
                         title: '¿Estás seguro?',
                         text: mensaje,
-                        icon: 'warning',
+                        icon: icono,
                         showCancelButton: true,
-                        confirmButtonColor: '#d33',
+                        confirmButtonColor: colorConfirmar,
                         cancelButtonColor: '#4b5563',
                         confirmButtonText: 'Sí, continuar',
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.location.href = url; // Redirige si dice que sí
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = url;
+                            const csrf = document.createElement('input');
+                            csrf.type = 'hidden';
+                            csrf.name = 'csrfmiddlewaretoken';
+                            csrf.value = CSRF_TOKEN;
+                            form.appendChild(csrf);
+                            document.body.appendChild(form);
+                            form.submit();
                         }
                     });
                 });

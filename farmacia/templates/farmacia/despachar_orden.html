@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 <div class="max-w-screen-2xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 
@@ -27,7 +28,7 @@
                     <div class="mb-6 border-b border-blue-200 pb-4">
                         <p class="text-xs text-blue-500 font-bold uppercase tracking-wider mb-1">Paciente</p>
                         <p class="text-lg font-bold text-gray-800">{% if orden.nombre_paciente %}{{ orden.nombre_paciente }}{% else %}{{ orden.paciente.nombres }}{% endif %}</p>
-                        <p class="text-sm text-gray-600">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente }}{% else %}{{ orden.paciente.cedula }}{% endif %}</p>
+                        <p class="text-sm text-gray-600">C.I: {% if orden.cedula_paciente %}{{ orden.cedula_paciente|cedula_puntos }}{% else %}{{ orden.paciente.cedula|cedula_puntos }}{% endif %}</p>
                     </div>
 
                     <div class="mb-6 border-b border-blue-200 pb-4">

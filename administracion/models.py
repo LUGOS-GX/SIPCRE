@@ -201,6 +201,12 @@ class PagoFactura(models.Model):
         ('Punto de Venta', 'Punto de Venta')
     ]
     factura = models.ForeignKey(Factura, related_name='pagos', on_delete=models.CASCADE)
+    # Sesión de caja en la que se registró el pago. Permite que el cierre/arqueo
+    # sume SOLO los pagos de este cajero y este turno (antes sumaba por rango de
+    # fechas y mezclaba los pagos de todos los cajeros del período).
+    # null=True: los pagos históricos no tienen sesión; sus arqueos ya quedaron
+    # congelados en los totales de cada SesionCaja cerrada.
+    sesion = models.ForeignKey(SesionCaja, related_name='pagos', on_delete=models.SET_NULL, null=True, blank=True)
     metodo = models.CharField(max_length=50, choices=METODOS)
     monto_moneda_original = models.DecimalField(max_digits=15, decimal_places=2, help_text="Lo que entregó el px (Bs o USD)")
     monto_equivalente_usd = models.DecimalField(max_digits=15, decimal_places=2, help_text="El valor que representa en la factura")

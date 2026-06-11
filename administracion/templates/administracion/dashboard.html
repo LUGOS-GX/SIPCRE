@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
     
@@ -92,7 +93,7 @@
                             
                             <td class="px-6 py-4">
                                 <p class="font-bold text-gray-900 text-base">{{ cita.paciente.nombres }}</p>
-                                <p class="text-xs text-gray-500">{{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula }}</p>
+                                <p class="text-xs text-gray-500">{{ cita.paciente.nacionalidad }}-{{ cita.paciente.cedula|cedula_puntos }}</p>
                                 <p class="text-xs text-gray-400 italic mt-1">{{ cita.motivo|truncatechars:30 }}</p>
                             </td>
                             

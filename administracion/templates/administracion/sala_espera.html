@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 
+{% load formato_ve %}
 {% block content %}
 <div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
     <div class="mb-6 flex justify-between items-center">
@@ -29,7 +30,7 @@
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm font-bold text-gray-900">{{ u.first_name }} {{ u.last_name }}</div>
-                        <div class="text-xs text-gray-500">C.I: {{ u.cedula }} | {{ u.date_joined|date:"d/m/Y" }}</div>
+                        <div class="text-xs text-gray-500">C.I: {{ u.cedula|cedula_puntos }} | {{ u.date_joined|date:"d/m/Y" }}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {{ u.email }}
@@ -40,7 +41,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="{% url 'aprobar_usuario' u.id %}" class="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-2 rounded text-xs font-bold border border-green-200 mr-2 transition">
+                        <a href="{% url 'aprobar_usuario' u.id %}" class="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-2 rounded text-xs font-bold border border-green-200 mr-2 transition link-eliminar" data-msg="¿Aprobar el acceso de este usuario al sistema?" data-icon="question" data-confirm-color="#10B981">
                             Aprobar
                         </a>
                         <!-- CORRECCIÓN AQUÍ: Cambiado a link-eliminar con data-msg -->

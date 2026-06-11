@@ -1,3 +1,4 @@
+{% load formato_ve %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -237,7 +238,7 @@
 
         <div class="paciente-ci">
             Titular de la Cédula de Identidad Nro.
-            <strong>{{ paciente.cedula }}</strong>
+            <strong>{{ paciente.cedula|cedula_puntos }}</strong>
         </div>
 
         <div class="motivo-box">

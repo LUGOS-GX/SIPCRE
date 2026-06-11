@@ -14,6 +14,7 @@ urlpatterns = [
     path('cita/<int:cita_id>/eliminar/', views.eliminar_cita, name='eliminar_cita'),
     path('personal/', views.lista_personal, name='lista_personal'),
     path('caja/deudas/<str:cedula>/', views.obtener_deudas_paciente, name='obtener_deudas_paciente'),
+    path('api/pacientes/buscar/', views.api_buscar_pacientes, name='api_buscar_pacientes'),
     path('caja/cuentas-abiertas/', views.cuentas_abiertas, name='cuentas_abiertas'),
     path('caja/cerrar/', views.cerrar_caja, name='cerrar_caja'),
     path('caja/reporte/<int:sesion_id>/', views.imprimir_cierre, name='imprimir_cierre'),

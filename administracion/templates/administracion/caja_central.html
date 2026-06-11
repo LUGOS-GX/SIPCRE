@@ -181,10 +181,29 @@
     // Variables Globales
     const TASA_BCV = parseFloat("{{ tasa_bcv }}".replace(',', '.'));
     const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
-    const pacientes = JSON.parse('{{ pacientes_json|escapejs }}');
     let carrito = [];
     let facturasPendientesIds = [];
     let citaExpressId = parseInt("{{ cita_express_id }}") || null;
+
+    // --- BÚSQUEDA REMOTA DE PACIENTES (sustituye el volcado completo) ---
+    const URL_BUSCAR_PACIENTES = "{% url 'api_buscar_pacientes' %}";
+    let timerBusquedaPx = null;
+
+    function buscarPacientesRemoto(query, callback) {
+        clearTimeout(timerBusquedaPx);
+        timerBusquedaPx = setTimeout(() => {
+            fetch(`${URL_BUSCAR_PACIENTES}?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(data => callback(data.resultados || []))
+                .catch(() => callback([]));
+        }, 250);
+    }
+
+    function formatearCedula(c) {
+        const digitos = String(c || '').replace(/\D/g, '');
+        if (!digitos) return c || '';
+        return digitos.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
 
     // INICIALIZACIÓN
     document.addEventListener('DOMContentLoaded', () => {
@@ -229,25 +248,28 @@
             
             if(query.length < 2) { listResultados.classList.add('hidden'); return; }
 
-            const filtrados = pacientes.filter(p => p.nombres.toLowerCase().includes(query) || p.cedula.includes(query)).slice(0, 5);
-            
-            if(filtrados.length > 0) {
-                listResultados.classList.remove('hidden');
-                filtrados.forEach(p => {
-                    const li = document.createElement('li');
-                    li.className = 'px-4 py-2 hover:bg-blue-50 cursor-pointer border-b text-sm font-bold text-gray-700';
-                    li.innerText = `${p.nombres} (V-${p.cedula})`;
-                    li.onclick = () => {
-                        inputNombre.value = p.nombres;
-                        inputCedula.value = p.cedula;
-                        listResultados.classList.add('hidden');
-                        
-                        // Cargar deudas automáticamente al seleccionar
-                        cargarDeudasPaciente(p.cedula);
-                    };
-                    listResultados.appendChild(li);
-                });
-            }
+            buscarPacientesRemoto(query, (filtrados) => {
+                listResultados.innerHTML = '';
+                if(filtrados.length > 0) {
+                    listResultados.classList.remove('hidden');
+                    filtrados.forEach(p => {
+                        const li = document.createElement('li');
+                        li.className = 'px-4 py-2 hover:bg-blue-50 cursor-pointer border-b text-sm font-bold text-gray-700';
+                        li.innerText = `${p.nombres} (V-${formatearCedula(p.cedula)})`;
+                        li.onclick = () => {
+                            inputNombre.value = p.nombres;
+                            inputCedula.value = p.cedula;
+                            listResultados.classList.add('hidden');
+                            
+                            // Cargar deudas automáticamente al seleccionar
+                            cargarDeudasPaciente(p.cedula);
+                        };
+                        listResultados.appendChild(li);
+                    });
+                } else {
+                    listResultados.classList.add('hidden');
+                }
+            });
         });
     }
 

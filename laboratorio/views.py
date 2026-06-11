@@ -17,6 +17,7 @@ from django.db.models import Q, Count
 from django.db.models.functions import TruncDate
 from .models import SolicitudExamen, ExamenCatalogo, ResultadoDetalle
 from farmacia.models import Medicamento, MovimientoInventario
+from farmacia.services import descontar_lotes_fefo
 from usuarios.forms import RegistroLaboratorioForm
 from usuarios.decorators import rol_requerido
 from core.pdf_utils import render_pdf_desde_template
@@ -222,6 +223,8 @@ def detalle_orden(request, orden_id):
                         if reactivo.stock_actual >= cantidad_a_descontar:
                             reactivo.stock_actual -= cantidad_a_descontar
                             reactivo.save(update_fields=['stock_actual'])
+                            # Consumo de lotes por vencimiento más próximo (FEFO)
+                            descontar_lotes_fefo(reactivo, cantidad_a_descontar)
 
                             MovimientoInventario.objects.create(
                                 medicamento=reactivo,
