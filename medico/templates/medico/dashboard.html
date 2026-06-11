@@ -111,9 +111,16 @@
                             </div>
 
                             <div class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="{% url 'crear_historia_manual' %}?cita_id={{ cita.id }}" class="bg-indigo-600 hover:bg-indigo-900 text-white font-bold py-2 px-4 rounded shadow transition">
-                                    Atender
-                                </a>
+                                {% if cita.es_control %}
+                                    <a href="{% url 'crear_historia_manual' %}?cita_id={{ cita.id }}&control_paciente_id={{ cita.paciente.id }}" class="bg-emerald-600 hover:bg-emerald-800 text-white font-bold py-2 px-4 rounded shadow transition inline-flex items-center">
+                                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Control
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'crear_historia_manual' %}?cita_id={{ cita.id }}" class="bg-indigo-600 hover:bg-indigo-900 text-white font-bold py-2 px-4 rounded shadow transition">
+                                        Atender
+                                    </a>
+                                {% endif %}
                             </div>
                         </div>
                     </li>

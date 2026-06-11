@@ -352,7 +352,12 @@ def crear_historia_manual(request):
             )
 
             # CERRAR CITA SI APLICA
-            if tipo_registro == 'existente':
+            # CERRAR CITA SI APLICA
+            # Tanto el paciente agendado ('existente') como el control de un
+            # paciente registrado ('control') deben cerrar su cita pendiente del
+            # día al guardar, para que no quede colgada en el dashboard. La
+            # consulta queda registrada en el expediente igual en ambos casos.
+            if tipo_registro in ('existente', 'control'):
                 cita_pendiente = Cita.objects.filter(
                     medico=medico_perfil, paciente=paciente_obj, fecha=hoy, estado='Pendiente'
                 ).first()

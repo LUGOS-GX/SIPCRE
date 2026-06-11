@@ -79,6 +79,10 @@ def agendar_cita(request):
         tiene_seguro = request.POST.get('tiene_seguro') == 'on'
         nombre_seguro = (request.POST.get('nombre_seguro') or '').strip()
 
+        # ¿Esta cita se agendó como CONTROL de un paciente ya registrado?
+        # (lo marca el botón "Control / Px registrado" del formulario)
+        es_control = request.POST.get('es_control') == '1'
+
         medico_id = request.POST.get('medico_id')
         fecha = request.POST.get('fecha')
         hora = request.POST.get('hora')
@@ -93,28 +97,28 @@ def agendar_cita(request):
             messages.error(request, "Debe seleccionar médico, fecha y hora para la cita.")
             return redirect('agendar_cita')
 
+        # La cédula es un documento único e irrepetible. En modo NORMAL (cita
+        # nueva), si ya existe un paciente con esa cédula NO se crea un
+        # duplicado ni se actualiza a ciegas: se bloquea y se indica usar el
+        # botón de control. En modo CONTROL sí se espera un paciente existente.
+        paciente_existente = Paciente.objects.filter(cedula=cedula).first()
+        if paciente_existente and not es_control:
+            messages.error(request, "Esta cédula ya está registrada. Use el botón \"Control / Px registrado\" para agendarle una cita de control.")
+            return redirect('agendar_cita')
+        if es_control and not paciente_existente:
+            messages.error(request, "No se encontró un paciente registrado con esa cédula. Verifique o agéndelo como cita nueva.")
+            return redirect('agendar_cita')
+
         # Manejar fecha vacía para evitar errores en la base de datos (Date no acepta strings vacíos)
         fecha_nac = fecha_nacimiento if fecha_nacimiento else None
 
         # Paciente y cita se crean juntos o no se crea nada (transacción).
         with transaction.atomic():
-            # 2. Búsqueda Inteligente: Si el paciente no existe, lo crea automáticamente
-            paciente, created = Paciente.objects.get_or_create(
-                cedula=cedula,
-                defaults={
-                    'nombres': nombre,
-                    'email': email,
-                    'tipo_sangre': tipo_sangre,
-                    'telefono': telefono,
-                    'fecha_nacimiento': fecha_nac,
-                    'tiene_seguro': tiene_seguro,
-                    'nombre_seguro': nombre_seguro if tiene_seguro else '',
-                    'nacionalidad': 'V'
-                }
-            )
-
-            # 3. Si ya existía, actualizamos sus datos si la recepcionista los llenó o modificó
-            if not created:
+            if es_control:
+                # Paciente ya registrado: actualizamos los datos que la
+                # recepcionista haya editado (todos son editables en el modal).
+                paciente = paciente_existente
+                if nombre: paciente.nombres = nombre
                 if email: paciente.email = email
                 if tipo_sangre: paciente.tipo_sangre = tipo_sangre
                 if telefono: paciente.telefono = telefono
@@ -122,6 +126,19 @@ def agendar_cita(request):
                 paciente.tiene_seguro = tiene_seguro
                 paciente.nombre_seguro = nombre_seguro if tiene_seguro else ''
                 paciente.save()
+            else:
+                # Cita nueva: paciente nuevo garantizado (ya bloqueamos duplicados).
+                paciente = Paciente.objects.create(
+                    cedula=cedula,
+                    nombres=nombre,
+                    email=email,
+                    tipo_sangre=tipo_sangre,
+                    telefono=telefono,
+                    fecha_nacimiento=fecha_nac,
+                    tiene_seguro=tiene_seguro,
+                    nombre_seguro=nombre_seguro if tiene_seguro else '',
+                    nacionalidad='V'
+                )
 
             # 4. Crear la Cita
             cita = Cita.objects.create(
@@ -130,7 +147,8 @@ def agendar_cita(request):
                 fecha=fecha,
                 hora=hora,
                 motivo=request.POST.get('motivo'),
-                estado='Pendiente'
+                estado='Pendiente',
+                es_control=es_control
             )
 
         # 5. Redirección a caja con los servicios (Carrito Express)

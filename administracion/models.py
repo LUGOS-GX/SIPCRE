@@ -87,6 +87,12 @@ class Cita(models.Model):
     
     motivo = models.TextField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='Pendiente')
+    # Marca si la cita es un CONTROL de un paciente ya registrado (agendado
+    # desde administración). Es informativo/visual: en el dashboard médico la
+    # tarjeta muestra "Control" en vez de "Atender" y abre el formulario con
+    # los antecedentes del expediente precargados. Los datos clínicos se
+    # registran igual que cualquier consulta (quedan en el expediente del px).
+    es_control = models.BooleanField(default=False, verbose_name="¿Es cita de control?")
 
     @property
     def esta_pagada(self):

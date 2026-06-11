@@ -30,7 +30,26 @@
             
             <!-- DATOS DEL PACIENTE -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest mb-5 border-b pb-3">Datos del Paciente</h2>
+                <div class="flex justify-between items-center mb-5 border-b pb-3">
+                    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-widest">Datos del Paciente</h2>
+                    <button type="button" id="btn_control_px" onclick="abrirModalControl()"
+                        class="bg-cruzroja-50 hover:bg-cruzroja-100 text-cruzroja-700 border border-cruzroja-200 px-3 py-1.5 rounded-lg font-bold text-xs transition flex items-center shadow-sm">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        Control / Px registrado
+                    </button>
+                </div>
+
+                <!-- Marca interna: la pone el modal de control y la quita el botón "cita nueva" -->
+                <input type="hidden" name="es_control" id="es_control_input" value="0">
+
+                <!-- Banner visible solo en modo control -->
+                <div id="banner_control" class="hidden mb-5 bg-cruzroja-50 border border-cruzroja-200 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <div class="flex items-center text-cruzroja-700">
+                        <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="text-sm font-bold">Cita de <span class="uppercase">control</span> — paciente registrado. Puede editar los datos si es necesario.</p>
+                    </div>
+                    <button type="button" onclick="salirModoControl()" class="text-cruzroja-600 hover:text-cruzroja-800 text-xs font-bold underline ml-3 flex-shrink-0">Cambiar a cita nueva</button>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
                     <div class="md:col-span-4 relative">
@@ -297,14 +316,82 @@
         actualizarHoras();
     }
 
-    // --- BUSCADOR DE PACIENTE ---
+    // --- BUSCADOR DE PACIENTE (con validación de cédula única) ---
     const inputCedula = document.getElementById('cedula_px');
     const listResultadosPx = document.getElementById('resultados_px');
-    
+    const esControlInput = document.getElementById('es_control_input');
+    const bannerControl = document.getElementById('banner_control');
+
+    // Marca si la cédula escrita corresponde a un paciente YA registrado.
+    // En modo "cita nueva" eso bloquea el envío (la cédula es única).
+    let cedulaYaRegistrada = false;
+
+    function estaEnModoControl() {
+        return esControlInput.value === '1';
+    }
+
+    // Rellena el formulario con los datos de un paciente (todos editables).
+    function precargarPaciente(p) {
+        document.getElementById('cedula_px').value = p.cedula || '';
+        document.getElementById('nombre_px').value = p.nombres || '';
+        document.getElementById('email_px').value = p.email || '';
+        document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
+        document.getElementById('telefono_px').value = p.telefono || '';
+        document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
+    }
+
+    function entrarModoControl(p) {
+        esControlInput.value = '1';
+        cedulaYaRegistrada = false; // en control, que exista es lo correcto
+        precargarPaciente(p);
+        bannerControl.classList.remove('hidden');
+        listResultadosPx.classList.add('hidden');
+    }
+
+    function salirModoControl() {
+        esControlInput.value = '0';
+        bannerControl.classList.add('hidden');
+        // Limpiamos los datos del paciente para empezar una cita nueva de cero
+        ['cedula_px','nombre_px','email_px','telefono_px','fecha_nacimiento_px','nombre_seguro_px'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('tipo_sangre_px').value = '';
+        cedulaYaRegistrada = false;
+        inputCedula.focus();
+    }
+
+    // Validación en vivo: ¿la cédula escrita ya existe? (solo importa en cita nueva)
+    function verificarCedulaDuplicada(cedula) {
+        const digitos = cedula.replace(/\D/g, '');
+        if (digitos.length < 6) { cedulaYaRegistrada = false; return; }
+        fetch(`${URL_BUSCAR_PACIENTES}?q=${encodeURIComponent(digitos)}`)
+            .then(r => r.json())
+            .then(data => {
+                const match = (data.resultados || []).find(p => String(p.cedula) === digitos);
+                if (match && !estaEnModoControl()) {
+                    cedulaYaRegistrada = true;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Cédula ya registrada',
+                        html: `<b>${match.nombres}</b> ya está registrado con esta cédula.<br>Para agendarle una cita de <b>control</b>, use el botón <b>"Control / Px registrado"</b>.`,
+                        confirmButtonColor: '#dc2626',
+                        confirmButtonText: 'Entendido'
+                    });
+                } else {
+                    cedulaYaRegistrada = false;
+                }
+            })
+            .catch(() => { cedulaYaRegistrada = false; });
+    }
+
     inputCedula.addEventListener('input', function() {
         const query = this.value.toLowerCase().trim();
+        // Si el usuario edita la cédula manualmente, salimos de la precarga de control
         listResultadosPx.innerHTML = '';
-        if(query.length < 2) { listResultadosPx.classList.add('hidden'); return; }
+
+        if(query.length < 2) { listResultadosPx.classList.add('hidden'); cedulaYaRegistrada = false; return; }
+
+        // Sugerencias (autocompletado) — al elegir una, entra en modo control
         buscarPacientesRemoto(query, (filtrados) => {
             listResultadosPx.innerHTML = '';
             if(filtrados.length > 0) {
@@ -313,15 +400,7 @@
                     const li = document.createElement('li');
                     li.className = 'px-4 py-3 hover:bg-cruzroja-50 cursor-pointer border-b text-sm font-bold text-gray-700';
                     li.innerText = `${p.nombres} (V-${formatearCedula(p.cedula)})`;
-                    li.onclick = () => {
-                        document.getElementById('cedula_px').value = p.cedula;
-                        document.getElementById('nombre_px').value = p.nombres;
-                        document.getElementById('email_px').value = p.email || '';
-                        document.getElementById('tipo_sangre_px').value = p.tipo_sangre || '';
-                        document.getElementById('telefono_px').value = p.telefono || '';
-                        document.getElementById('fecha_nacimiento_px').value = p.fecha_nacimiento || '';
-                        listResultadosPx.classList.add('hidden');
-                    };
+                    li.onclick = () => entrarModoControl(p);
                     listResultadosPx.appendChild(li);
                 });
             } else {
@@ -329,6 +408,60 @@
             }
         });
     });
+
+    // Al terminar de escribir la cédula, verificamos duplicado (cita nueva)
+    inputCedula.addEventListener('blur', function() {
+        if (!estaEnModoControl()) {
+            verificarCedulaDuplicada(this.value.trim());
+        }
+    });
+
+    // --- MODAL "CONTROL / PX REGISTRADO" ---
+    function abrirModalControl() {
+        Swal.fire({
+            title: 'Buscar paciente registrado',
+            html: `
+                <input id="swal_busca_control" class="swal2-input" placeholder="Cédula o nombre del paciente" autocomplete="off" style="margin-bottom:8px;">
+                <ul id="swal_resultados_control" style="list-style:none;padding:0;margin:0;max-height:200px;overflow-y:auto;text-align:left;"></ul>
+            `,
+            showConfirmButton: false,
+            showCancelButton: true,
+            cancelButtonText: 'Cerrar',
+            didOpen: () => {
+                const input = document.getElementById('swal_busca_control');
+                const cont = document.getElementById('swal_resultados_control');
+                input.focus();
+                let t = null;
+                input.addEventListener('input', () => {
+                    const q = input.value.trim();
+                    clearTimeout(t);
+                    if (q.length < 2) { cont.innerHTML = ''; return; }
+                    t = setTimeout(() => {
+                        fetch(`${URL_BUSCAR_PACIENTES}?q=${encodeURIComponent(q)}`)
+                            .then(r => r.json())
+                            .then(data => {
+                                cont.innerHTML = '';
+                                const res = data.resultados || [];
+                                if (res.length === 0) {
+                                    cont.innerHTML = '<li style="padding:10px;color:#6b7280;font-style:italic;">Sin coincidencias…</li>';
+                                    return;
+                                }
+                                res.forEach(p => {
+                                    const li = document.createElement('li');
+                                    li.style.cssText = 'padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;font-size:14px;';
+                                    li.innerHTML = `<b>${p.nombres}</b><br><span style="font-family:monospace;color:#6b7280;font-size:12px;">C.I: V-${formatearCedula(p.cedula)}</span>`;
+                                    li.onmouseover = () => li.style.background = '#fef2f2';
+                                    li.onmouseout = () => li.style.background = '';
+                                    li.onclick = () => { entrarModoControl(p); Swal.close(); };
+                                    cont.appendChild(li);
+                                });
+                            })
+                            .catch(() => { cont.innerHTML = '<li style="padding:10px;color:#dc2626;">Error al buscar.</li>'; });
+                    }, 250);
+                });
+            }
+        });
+    }
 
     // --- SEGURO MÉDICO ---
     function togglePoliza() {
@@ -497,6 +630,18 @@
 
     // Validación al enviar
     document.getElementById('form_cita').addEventListener('submit', function(e) {
+        // Bloqueo de cédula duplicada (la cédula es única): si el paciente ya
+        // existe y NO se está agendando como control, no se permite continuar.
+        if (cedulaYaRegistrada && !estaEnModoControl()) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Cédula ya registrada',
+                html: 'Ya existe un paciente con esta cédula. Use el botón <b>"Control / Px registrado"</b> para agendarle una cita de control.',
+                icon: 'error',
+                confirmButtonColor: '#dc2626'
+            });
+            return;
+        }
         if(!document.getElementById('hora_seleccionada').value) {
             e.preventDefault();
             Swal.fire({
