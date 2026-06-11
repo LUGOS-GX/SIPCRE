@@ -14,6 +14,7 @@ from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento
 from administracion.models import Factura, DetalleFactura
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
+from core.validators import normalizar_cedula, cedula_es_valida
 import json
 import io
 import os
@@ -123,7 +124,11 @@ def despachar_orden(request, orden_id):
             return redirect('despachar_orden', orden_id=orden.id)
 
         nombre_cli = orden.nombre_paciente if orden.nombre_paciente else (orden.paciente.nombres if orden.paciente else 'Paciente Desconocido')
-        cedula_cli = orden.cedula_paciente if orden.cedula_paciente else (orden.paciente.cedula if orden.paciente else '0000000')
+        # Formato canónico (solo dígitos): si la factura queda 'Pendiente',
+        # la Caja Central la busca por esta cédula y el formato DEBE coincidir.
+        cedula_cli = normalizar_cedula(
+            orden.cedula_paciente if orden.cedula_paciente else (orden.paciente.cedula if orden.paciente else '')
+        ) or '0000000'
 
         estado_factura = 'Pagada' if accion == 'pagar_farmacia' else 'Pendiente'
 
@@ -757,7 +762,7 @@ def caja_farmacia(request):
         try:
             datos = json.loads(request.body)
             paciente_nombre = (datos.get('paciente_nombre') or '').strip()
-            paciente_cedula = (datos.get('paciente_cedula') or '').strip()
+            paciente_cedula = normalizar_cedula(datos.get('paciente_cedula'))
             validacion_psicotropicos = datos.get('validacion_psicotropicos', False)
             carrito = datos.get('carrito', [])
  
@@ -767,6 +772,8 @@ def caja_farmacia(request):
             # Requisito: no se concreta una venta sin identificar al comprador.
             if not paciente_nombre or not paciente_cedula:
                 return JsonResponse({'success': False, 'error': 'Debe registrar el nombre y la cédula del comprador para concretar la venta.'})
+            if not cedula_es_valida(paciente_cedula):
+                return JsonResponse({'success': False, 'error': 'La cédula del comprador no es válida (numérica, máx. 40.000.000).'})
 
             with transaction.atomic():
                 orden = OrdenFarmacia.objects.create(
@@ -830,9 +837,11 @@ def caja_farmacia(request):
     medicamentos_raw = Medicamento.objects.filter(stock_actual__gt=0).values(
         'id', 'nombre', 'concentracion', 'precio', 'stock_actual', 'codigo_barras', 'es_controlado'
     )
-    medicamentos_json = json.dumps(list(medicamentos_raw), default=str)
-
-    return render(request, 'farmacia/caja.html', {'medicamentos_json': medicamentos_json})
+    # Se pasa la LISTA cruda (no un string ya serializado): el filtro
+    # json_script del template se encarga de serializar y escapar de forma
+    # segura, eliminando el |safe que permitía romper el <script> con un
+    # nombre de medicamento malicioso.
+    return render(request, 'farmacia/caja.html', {'medicamentos': list(medicamentos_raw)})
 
 @login_required
 @rol_requerido(['farmacia'])

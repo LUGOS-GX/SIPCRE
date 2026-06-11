@@ -11,6 +11,8 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tesis.settings.dev')
+# Igual que wsgi.py: el servidor de aplicación carga este archivo en
+# producción, así que el default debe ser 'prod'. Desarrollo usa manage.py.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tesis.settings.prod')
 
 application = get_asgi_application()

@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.core.files.base import ContentFile
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Count
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from .models import ExpedienteBase, ConsultaEvolucion, Recipe, ConstanciaMedica
@@ -17,6 +17,7 @@ from farmacia.models import OrdenFarmacia
 from laboratorio.models import SolicitudExamen
 from usuarios.decorators import rol_requerido
 from core.correo_utils import enviar_documento_pdf_async
+from core.validators import normalizar_cedula, cedula_es_valida, validar_imagen
 import json
 import base64
 import io
@@ -98,7 +99,11 @@ def crear_control_rapido(request):
 def generar_pdf_historia(request, historia_id):
     historia = get_object_or_404(ConsultaEvolucion, id=historia_id)
  
-    if hasattr(request.user, 'medico') and historia.medico != request.user.medico:
+    # Deny-by-default: si el usuario NO tiene perfil de médico vinculado,
+    # tampoco puede descargar. (El hasattr anterior dejaba pasar a cualquier
+    # cuenta sin perfil de médico, porque la condición completa daba False.)
+    medico_actual = getattr(request.user, 'medico', None)
+    if medico_actual is None or historia.medico != medico_actual:
         raise PermissionDenied("Acceso denegado. Solo el médico tratante puede descargar esta historia clínica.")
  
     firma_b64 = image_to_base64(historia.medico.firma) if historia.medico else None
@@ -257,10 +262,17 @@ def crear_historia_manual(request):
 
             # --- ESCENARIO A: PACIENTE NUEVO (EMERGENCIA) ---
             if tipo_registro == 'nuevo':
-                cedula_nueva = request.POST.get('nuevo_cedula')
+                cedula_nueva = normalizar_cedula(request.POST.get('nuevo_cedula'))
                 nacionalidad = request.POST.get('nuevo_nacionalidad')
-                
-                if Paciente.objects.filter(cedula=cedula_nueva, nacionalidad=nacionalidad).exists():
+
+                if not cedula_es_valida(cedula_nueva):
+                    messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
+                    return redirect('crear_historia_manual')
+
+                # La cédula es única a nivel global (sin importar nacionalidad):
+                # chequear por cédula+nacionalidad dejaba pasar el caso V/E con
+                # el mismo número y reventaba después contra el unique de la BD.
+                if Paciente.objects.filter(cedula=cedula_nueva).exists():
                     messages.error(request, "Error: Ya existe un paciente con esa cédula.")
                     return redirect('crear_historia_manual')
 
@@ -458,17 +470,19 @@ def crear_recipe(request):
             cedula_final = paciente_seleccionado.cedula
         else:
             nombre_final = nombre_manual
-            cedula_final = cedula_manual
-            
-            if cedula_final:
-                cedula_final = cedula_final.strip()
-                if not cedula_final.isdigit() or len(cedula_final) < 6 or len(cedula_final) > 9:
-                    messages.error(request, "Error de validación: La cédula debe contener entre 6 y 9 dígitos numéricos (sin puntos ni letras).")
-                    
-                    # Si hubo error y era popup, mantenemos el parámetro popup=1 al recargar
-                    if is_popup == '1':
-                        return redirect(f"{reverse('crear_recipe')}?popup=1")
-                    return redirect('crear_recipe')
+            # Regla canónica de todo el sistema: solo dígitos, máx. 40.000.000.
+            # (Sustituye la regla local de "6 a 9 dígitos", que contradecía al
+            # resto de los módulos y rechazaba cédulas válidas cortas.)
+            cedula_cruda = (cedula_manual or '').strip()
+            cedula_final = normalizar_cedula(cedula_cruda)
+
+            if cedula_cruda and not cedula_es_valida(cedula_final):
+                messages.error(request, "Error de validación: La cédula debe ser numérica y no superar los 40.000.000 (sin puntos ni letras).")
+
+                # Si hubo error y era popup, mantenemos el parámetro popup=1 al recargar
+                if is_popup == '1':
+                    return redirect(f"{reverse('crear_recipe')}?popup=1")
+                return redirect('crear_recipe')
 
         recipe_nuevo = Recipe.objects.create(
             medico=medico_perfil,
@@ -595,7 +609,11 @@ def solicitar_examenes(request):
                 cedula = paciente_seleccionado.cedula
             else:
                 nombre = request.POST.get('nombre_manual')
-                cedula = request.POST.get('cedula_manual')
+                cedula_cruda = (request.POST.get('cedula_manual') or '').strip()
+                cedula = normalizar_cedula(cedula_cruda)
+                if cedula_cruda and not cedula_es_valida(cedula):
+                    messages.error(request, "La cédula del paciente no es válida: debe ser numérica y no superar los 40.000.000 (sin puntos ni letras).")
+                    return redirect('solicitar_examenes')
             
             # 3. Datos de los exámenes
             seleccionados = request.POST.getlist('examenes')
@@ -704,7 +722,14 @@ def editar_perfil_medico(request):
             usuario.save()
 
             # --- PROCESAR IMAGEN (Va a la tabla Medico) ---
+            # Validación explícita: los validators del modelo no corren al
+            # asignar directo + save(); sin esto se guarda cualquier archivo.
             if medico and 'foto_perfil' in request.FILES:
+                try:
+                    validar_imagen(request.FILES['foto_perfil'])
+                except ValidationError as err:
+                    messages.error(request, f"Foto rechazada: {' '.join(err.messages)}")
+                    return redirect('editar_perfil_medico')
                 medico.foto_perfil = request.FILES['foto_perfil']
                 medico.save()
 
@@ -796,8 +821,11 @@ def cargar_firma_sello(request):
 
 #11. VISTA RESULTADOS
 @login_required
-@rol_requerido(['medico', 'laboratorio'])
+@rol_requerido(['medico'])
 def resultados_examenes(request):
+    # Vista exclusiva de médicos: filtra por request.user.medico, así que un
+    # usuario de laboratorio (sin perfil de médico) producía un error 500.
+    # El laboratorio ya tiene su propio historial en su dashboard.
     # Traemos solo las órdenes finalizadas ("Realizado") que pertenecen a este médico en particular
     resultados = SolicitudExamen.objects.filter(
         medico=request.user.medico, 
@@ -849,9 +877,12 @@ def resultados_examenes(request):
 @rol_requerido(['medico'])
 def generar_pdf_orden(request, orden_id):
     orden = get_object_or_404(SolicitudExamen, id=orden_id)
- 
-    firma_b64 = image_to_base64(orden.medico.firma)
-    sello_b64 = image_to_base64(orden.medico.sello)
+
+    # Las órdenes externas registradas por Administración no tienen médico
+    # asignado (medico es nullable desde laboratorio/0009): sin esta guarda,
+    # orden.medico.firma lanza un error 500.
+    firma_b64 = image_to_base64(orden.medico.firma) if orden.medico else None
+    sello_b64 = image_to_base64(orden.medico.sello) if orden.medico else None
  
     context = {
         'orden': orden,

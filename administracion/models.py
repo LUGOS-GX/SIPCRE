@@ -110,7 +110,7 @@ class Factura(models.Model):
     nombre_cliente = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nombre (Paciente de Paso)")
     cedula_cliente = models.CharField(max_length=20, blank=True, null=True, verbose_name="Cédula (Paciente de Paso)")
     cita = models.ForeignKey('Cita', on_delete=models.SET_NULL, related_name='facturas', null=True, blank=True)
-    numero_factura = models.CharField(max_length=20, unique=True, blank=True)
+    numero_factura = models.CharField(max_length=20, unique=True, null=True, blank=True)
     fecha_emision = models.DateTimeField(auto_now_add=True)
     fecha_pago = models.DateTimeField(null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADOS_FACTURA, default='Pendiente')
@@ -118,11 +118,19 @@ class Factura(models.Model):
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
 
     def save(self, *args, **kwargs):
-        if not self.numero_factura:
-            ultimo_id = Factura.objects.all().order_by('id').last()
-            nuevo_id = 1 if not ultimo_id else ultimo_id.id + 1
-            self.numero_factura = f"FAC-{nuevo_id:06d}"
+        """
+        El número de factura se deriva del pk REAL después del INSERT.
+        El esquema anterior (leer el último id y sumarle 1) tenía una condición
+        de carrera: dos facturas simultáneas podían calcular el mismo número y
+        chocar contra el unique=True. El pk lo asigna la secuencia de PostgreSQL,
+        que es atómica, así que nunca se repite. En la práctica produce los
+        mismos números FAC-000001, FAC-000002... que el esquema viejo.
+        """
+        es_nueva_sin_numero = self._state.adding and not self.numero_factura
         super().save(*args, **kwargs)
+        if es_nueva_sin_numero:
+            self.numero_factura = f"FAC-{self.pk:06d}"
+            super().save(update_fields=['numero_factura'])
 
     def __str__(self):
         nombre = self.paciente.nombres if self.paciente else self.nombre_cliente

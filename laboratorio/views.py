@@ -7,6 +7,8 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.views.decorators.http import require_POST
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from datetime import timedelta
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -17,13 +19,14 @@ from .models import SolicitudExamen, ExamenCatalogo, ResultadoDetalle
 from farmacia.models import Medicamento, MovimientoInventario
 from usuarios.forms import RegistroLaboratorioForm
 from usuarios.decorators import rol_requerido
-from io import BytesIO
-from xhtml2pdf import pisa
-from django.template.loader import get_template
+from core.pdf_utils import render_pdf_desde_template
+from core.validators import validar_imagen_o_pdf
 from django.core.files.base import ContentFile
 import io
 import xlsxwriter
 import threading
+import logging
+logger = logging.getLogger('sipcre')
 
 @login_required
 @rol_requerido(['laboratorio'])
@@ -139,7 +142,12 @@ def enviar_correo_resultados_async(orden_id, pdf_content):
             msg.send()
             
     except Exception as e:
-        print(f"Error crítico en envío de correo: {str(e)}")
+        logger.error("Fallo al enviar resultados de la Orden #%s por correo: %s", orden_id, e)
+    finally:
+        # El hilo abre su propia conexión a la BD: hay que cerrarla para no
+        # dejar conexiones colgadas en PostgreSQL (mismo patrón que core/correo_utils).
+        from django.db import connection
+        connection.close()
 
 @login_required
 @rol_requerido(['laboratorio'])
@@ -176,81 +184,91 @@ def detalle_orden(request, orden_id):
     if request.method == 'POST':
         # ESCENARIO A: Carga de Resultados Estructurados (Formulario Dinámico)
         if 'guardar_resultados' in request.POST:
-            for examen in examenes_catalogo:
-                for parametro in examen.parametros.all():
-                    valor_ingresado = request.POST.get(f'param_{parametro.id}', '').strip()
-                    
-                    if valor_ingresado:
-                        es_anormal = False
-                        try:
-                            v_float = float(valor_ingresado.replace(',', '.'))
-                            if parametro.rango_minimo and v_float < parametro.rango_minimo:
-                                es_anormal = True
-                            if parametro.rango_maximo and v_float > parametro.rango_maximo:
-                                es_anormal = True
-                        except ValueError:
-                            if parametro.valor_referencia_texto and valor_ingresado.lower() != parametro.valor_referencia_texto.lower():
-                                es_anormal = True
+            avisos_reactivos = []
 
-                        ResultadoDetalle.objects.update_or_create(
-                            orden=orden,
-                            parametro=parametro,
-                            defaults={'valor_obtenido': valor_ingresado, 'es_anormal': es_anormal}
-                        )
+            # Resultados, descuento de reactivos y cambio de estado se guardan
+            # juntos o no se guarda nada (transacción atómica).
+            with transaction.atomic():
+                for examen in examenes_catalogo:
+                    for parametro in examen.parametros.all():
+                        valor_ingresado = request.POST.get(f'param_{parametro.id}', '').strip()
 
-            # --- FASE 3: DESCUENTO AUTOMÁTICO DE REACTIVOS (INVENTARIO FARMACIA) ---
-            for examen in examenes_catalogo:
-                if examen.reactivo_necesario and examen.cantidad_reactivo > 0:
-                    reactivo = examen.reactivo_necesario
-                    cantidad_a_descontar = examen.cantidad_reactivo
-                    
-                    if reactivo.stock >= cantidad_a_descontar:
-                        reactivo.stock -= cantidad_a_descontar
-                        reactivo.save()
-                        
-                        MovimientoInventario.objects.create(
-                            medicamento=reactivo,
-                            tipo_movimiento='Salida',
-                            cantidad=cantidad_a_descontar,
-                            motivo=f'Consumo en Laboratorio (Orden #{orden.id} - {examen.nombre})',
-                            usuario=request.user
-                        )
-                    else:
-                        messages.warning(request, f"⚠️ Stock bajo de '{reactivo.nombre}'. El resultado médico se guardó, pero no se pudo descontar el reactivo del inventario de Farmacia.")
-            # -------------------------------------------------------------------------
-            
-            # --- NUEVA MAGIA: GENERACIÓN AUTOMÁTICA DEL PDF E HILO DE CORREO ---
+                        if valor_ingresado:
+                            es_anormal = False
+                            try:
+                                v_float = float(valor_ingresado.replace(',', '.'))
+                                if parametro.rango_minimo and v_float < parametro.rango_minimo:
+                                    es_anormal = True
+                                if parametro.rango_maximo and v_float > parametro.rango_maximo:
+                                    es_anormal = True
+                            except ValueError:
+                                if parametro.valor_referencia_texto and valor_ingresado.lower() != parametro.valor_referencia_texto.lower():
+                                    es_anormal = True
+
+                            ResultadoDetalle.objects.update_or_create(
+                                orden=orden,
+                                parametro=parametro,
+                                defaults={'valor_obtenido': valor_ingresado, 'es_anormal': es_anormal}
+                            )
+
+                # --- FASE 3: DESCUENTO AUTOMÁTICO DE REACTIVOS (INVENTARIO FARMACIA) ---
+                # select_for_update bloquea la fila del reactivo hasta cerrar la
+                # transacción (mismo patrón anti-carrera que usa farmacia al despachar).
+                for examen in examenes_catalogo:
+                    if examen.reactivo_necesario_id and examen.cantidad_reactivo > 0:
+                        reactivo = Medicamento.objects.select_for_update().get(pk=examen.reactivo_necesario_id)
+                        cantidad_a_descontar = examen.cantidad_reactivo
+
+                        if reactivo.stock_actual >= cantidad_a_descontar:
+                            reactivo.stock_actual -= cantidad_a_descontar
+                            reactivo.save(update_fields=['stock_actual'])
+
+                            MovimientoInventario.objects.create(
+                                medicamento=reactivo,
+                                tipo_movimiento='SALIDA',
+                                cantidad=-cantidad_a_descontar,
+                                stock_resultante=reactivo.stock_actual,
+                                usuario=request.user,
+                                referencia=f'Consumo en Laboratorio (Orden #{orden.id} - {examen.nombre})'
+                            )
+                        else:
+                            avisos_reactivos.append(reactivo.nombre)
+                # -------------------------------------------------------------------------
+
+                orden.estado = 'Realizado'
+                orden.fecha_resultado = timezone.now()
+                orden.save(update_fields=['estado', 'fecha_resultado'])
+
+            for nombre_reactivo in avisos_reactivos:
+                messages.warning(request, f"⚠️ Stock bajo de '{nombre_reactivo}'. El resultado médico se guardó, pero no se pudo descontar el reactivo del inventario de Farmacia.")
+
+            # --- GENERACIÓN DEL PDF (Chromium, igual que el resto del sistema) E HILO DE CORREO ---
+            # El PDF se genera FUERA de la transacción: render con navegador toma
+            # segundos y no debe mantener la BD bloqueada. Si el render falla, los
+            # resultados ya quedaron guardados y se avisa al usuario.
             resultados_guardados = orden.resultados_estructurados.all()
             if resultados_guardados.exists():
-                template = get_template('laboratorio/pdf_resultados.html')
                 context_pdf = {
                     'orden': orden,
                     'resultados': resultados_guardados,
                     'fecha_impresion': timezone.now(),
                 }
-                html = template.render(context_pdf)
-                result_file = BytesIO()
-                
-                # Convertimos HTML a PDF
-                pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result_file)
-                
-                if not pdf.err:
-                    # Lo guardamos físicamente en el campo de la base de datos
-                    nombre_archivo = f"Resultados_{orden.id}.pdf"
-                    pdf_bytes = result_file.getvalue()
-                    orden.resultados_archivo.save(nombre_archivo, ContentFile(pdf_bytes))
-                    
+                try:
+                    pdf_bytes = render_pdf_desde_template('laboratorio/pdf_resultados.html', context_pdf)
+                    orden.resultados_archivo.save(f"Resultados_{orden.id}.pdf", ContentFile(pdf_bytes))
+
                     # Lanzamos el hilo de correo en segundo plano
-                    hilo_correo = threading.Thread(
-                        target=enviar_correo_resultados_async, 
-                        args=(orden.id, pdf_bytes)
-                    )
-                    hilo_correo.start()
+                    threading.Thread(
+                        target=enviar_correo_resultados_async,
+                        args=(orden.id, pdf_bytes),
+                        daemon=True,
+                    ).start()
+                except Exception as e:
+                    logger.error("Fallo al generar el PDF de resultados de la Orden #%s: %s", orden.id, e)
+                    messages.warning(request, "Los resultados se guardaron, pero ocurrió un error al generar el PDF. Puede reintentarlo abriendo la orden de nuevo.")
+                    return redirect('dashboard_lab')
             # -------------------------------------------------------------------
-            
-            orden.estado = 'Realizado'
-            orden.fecha_resultado = timezone.now()
-            orden.save()
+
             messages.success(request, 'Resultados guardados y PDF generado exitosamente. Se ha enviado al paciente.')
             return redirect('dashboard_lab')
 
@@ -258,6 +276,16 @@ def detalle_orden(request, orden_id):
         elif 'subir_pdf' in request.POST:
             pdf = request.FILES.get('archivo_resultados')
             if pdf:
+                # Validación explícita: al asignar directo al FileField y llamar a
+                # save(), Django NO ejecuta los validators del modelo. Sin esto,
+                # cualquier tipo de archivo (ej. un .html) terminaría servido
+                # desde /media/ a usuarios autenticados.
+                try:
+                    validar_imagen_o_pdf(pdf)
+                except ValidationError as e:
+                    messages.error(request, f"Archivo rechazado: {' '.join(e.messages)}")
+                    return redirect('detalle_orden', orden_id=orden.id)
+
                 orden.resultados_archivo = pdf
                 orden.estado = 'Realizado'
                 orden.fecha_resultado = timezone.now()

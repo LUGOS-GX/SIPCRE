@@ -89,17 +89,19 @@ class SolicitudExamen(models.Model):
     fecha_resultado = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        @property
-        def solicitado_por(self):
-            """Médico tratante, o 'Administración' si la orden la generó recepción (sin médico)."""
-            if self.medico:
-                nombre = ''
-                if self.medico.usuario:
-                    nombre = (self.medico.usuario.get_full_name() or '').strip()
-                if not nombre:
-                    nombre = self.medico.nombre or ''
-                return f"Dr(a). {nombre}".strip()
-            return "Administración"
+        return f"Orden #{self.id} - {self.nombre_paciente} ({self.estado})"
+
+    @property
+    def solicitado_por(self):
+        """Médico tratante, o 'Administración' si la orden la generó recepción (sin médico)."""
+        if self.medico:
+            nombre = ''
+            if self.medico.usuario:
+                nombre = (self.medico.usuario.get_full_name() or '').strip()
+            if not nombre:
+                nombre = self.medico.nombre or ''
+            return f"Dr(a). {nombre}".strip()
+        return "Administración"
 
 class ResultadoDetalle(models.Model):
     orden = models.ForeignKey(SolicitudExamen, on_delete=models.CASCADE, related_name='resultados_estructurados')

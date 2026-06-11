@@ -65,3 +65,38 @@ def validar_imagen_o_pdf(archivo):
         raise ValidationError(
             'Tipo de archivo no permitido. Solo se aceptan imágenes (PNG, JPEG, WEBP) o PDF.'
         )
+
+
+# ============================================================
+# NORMALIZACIÓN DE CÉDULAS (formato canónico de TODO el sistema)
+# ============================================================
+# Regla única: las cédulas de pacientes se guardan y se buscan
+# SIEMPRE como solo dígitos (sin "V-", sin puntos, sin espacios).
+# La nacionalidad vive en su propio campo cuando aplica.
+# Cualquier vista que reciba una cédula del usuario o que la use
+# para cruzar Factura.cedula_cliente / Paciente.cedula DEBE pasar
+# por estas dos funciones.
+
+CEDULA_MAXIMO = 40_000_000  # tope acordado para cédulas venezolanas
+
+
+def normalizar_cedula(valor):
+    """
+    Convierte cualquier entrada ('V-12.345.678', ' 12345678 ', etc.)
+    al formato canónico: un string de solo dígitos.
+    Devuelve '' si no hay ningún dígito.
+    """
+    if not valor:
+        return ''
+    return ''.join(ch for ch in str(valor) if ch.isdigit())
+
+
+def cedula_es_valida(cedula_normalizada):
+    """
+    Valida una cédula YA normalizada (solo dígitos):
+    no vacía, numérica y dentro del rango 1..40.000.000.
+    Nunca lanza excepción: devuelve True/False.
+    """
+    if not cedula_normalizada or not cedula_normalizada.isdigit():
+        return False
+    return 0 < int(cedula_normalizada) <= CEDULA_MAXIMO

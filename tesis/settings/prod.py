@@ -1,8 +1,18 @@
 from .base import *
+from django.core.exceptions import ImproperlyConfigured
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+# split(',') sobre un string vacío produce [''] — una lista "con contenido"
+# para Django que en realidad no autoriza ningún host y deja el sitio caído
+# con un error confuso. Mejor: limpiar vacíos y fallar ruidosamente al
+# arrancar si la variable no está configurada.
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "Debe definir la variable de entorno ALLOWED_HOSTS en producción "
+        "(ej: ALLOWED_HOSTS=midominio.com,www.midominio.com)."
+    )
 
 # Seguridad HTTPS
 SECURE_SSL_REDIRECT = True

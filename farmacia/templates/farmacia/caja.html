@@ -99,9 +99,7 @@
     </div>
 </div>
 
-<script id="inv_data" type="application/json">
-    {{ medicamentos_json|safe }}
-</script>
+{{ medicamentos|json_script:"inv_data" }}
 
 <script>
     // 1. INICIALIZACIÓN
