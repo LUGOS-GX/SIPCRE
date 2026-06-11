@@ -46,7 +46,11 @@ class Medicamento(models.Model):
 
 class LoteMedicamento(models.Model):
     medicamento = models.ForeignKey(Medicamento, on_delete=models.CASCADE, related_name='lotes')
-    numero_lote = models.CharField(max_length=50, verbose_name="Número de Lote")
+    # El número de lote ahora lo asigna el sistema automáticamente y de forma
+    # secuencial POR medicamento (#001, #002...), para que el farmaceuta no
+    # escriba identificadores arbitrarios. blank=True porque ya no viene del
+    # formulario; lo rellena generar_numero_lote() dentro de la vista.
+    numero_lote = models.CharField(max_length=50, blank=True, verbose_name="Número de Lote")
     cantidad_ingresada = models.PositiveIntegerField(verbose_name="Cantidad Inicial")
     cantidad_actual = models.PositiveIntegerField(verbose_name="Stock Disponible en Lote")
     fecha_vencimiento = models.DateField(verbose_name="Fecha de Vencimiento")
@@ -54,6 +58,21 @@ class LoteMedicamento(models.Model):
 
     def __str__(self):
         return f"Lote {self.numero_lote} ({self.cantidad_actual} un.) - Vence: {self.fecha_vencimiento.strftime('%d/%m/%Y')}"
+
+    @staticmethod
+    def generar_numero_lote(medicamento):
+        """
+        Devuelve el siguiente número correlativo para ESTE medicamento, con el
+        formato '#001', '#002'... Cada medicamento lleva su propia secuencia
+        (el primer lote de cualquier medicamento es su #001).
+
+        Debe llamarse dentro de una transacción con el medicamento bloqueado
+        (select_for_update) para que dos registros simultáneos no calculen el
+        mismo número. Se basa en el conteo de lotes ya existentes, así que es
+        estable aunque algún número intermedio se hubiera borrado.
+        """
+        siguiente = medicamento.lotes.count() + 1
+        return f"#{siguiente:03d}"
 
 
 class OrdenFarmacia(models.Model):

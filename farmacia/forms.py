@@ -21,7 +21,9 @@ class MedicamentoForm(forms.ModelForm):
 class LoteMedicamentoForm(forms.ModelForm):
     class Meta:
         model = LoteMedicamento
-        fields = ['medicamento', 'numero_lote', 'cantidad_ingresada', 'fecha_vencimiento']
+        # numero_lote se autogenera en la vista (#001, #002 por medicamento);
+        # ya no lo escribe el usuario.
+        fields = ['medicamento', 'cantidad_ingresada', 'fecha_vencimiento']
         widgets = {
             'fecha_vencimiento': forms.DateInput(attrs={'type': 'date'}),
             # Usamos select2 o clases de tailwind si prefieres, por ahora lo dejamos estandar

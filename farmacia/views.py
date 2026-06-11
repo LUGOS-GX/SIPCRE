@@ -8,7 +8,7 @@ from django.db.models.functions import TruncDate
 from django.db import transaction
 from django.core.paginator import Paginator
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 from decimal import Decimal
 from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario, AuditoriaControlado
 from administracion.models import Factura, DetalleFactura
@@ -288,16 +288,31 @@ def agregar_medicamento(request):
     if request.method == 'POST':
         form = MedicamentoForm(request.POST, request.FILES) 
         if form.is_valid():
-            med = form.save()
-            if med.stock_actual > 0:
-                MovimientoInventario.objects.create(
-                    medicamento=med,
-                    tipo_movimiento='ENTRADA',
-                    cantidad=med.stock_actual,
-                    stock_resultante=med.stock_actual,
-                    usuario=request.user,
-                    referencia="Inventario Inicial (Registro de Nuevo Medicamento)"
-                )
+            with transaction.atomic():
+                med = form.save()
+                if med.stock_actual > 0:
+                    MovimientoInventario.objects.create(
+                        medicamento=med,
+                        tipo_movimiento='ENTRADA',
+                        cantidad=med.stock_actual,
+                        stock_resultante=med.stock_actual,
+                        usuario=request.user,
+                        referencia="Inventario Inicial (Registro de Nuevo Medicamento)"
+                    )
+                    # El stock inicial ahora nace dentro de un lote real (#001), no
+                    # huérfano: así FEFO puede consumirlo y la trazabilidad de
+                    # vencimientos es completa desde el primer día. Si el formulario
+                    # trajo fecha de vencimiento, el lote la hereda; si no, se usa
+                    # una fecha placeholder lejana (visible como "sin definir") que
+                    # se corrige luego en Gestión de Lotes.
+                    venc = med.fecha_vencimiento or date(2099, 12, 31)
+                    LoteMedicamento.objects.create(
+                        medicamento=med,
+                        numero_lote=LoteMedicamento.generar_numero_lote(med),
+                        cantidad_ingresada=med.stock_actual,
+                        cantidad_actual=med.stock_actual,
+                        fecha_vencimiento=venc,
+                    )
             messages.success(request, f"¡{med.nombre} agregado al inventario con éxito!")
             return redirect('inventario_farmacia')
         else:
@@ -352,10 +367,16 @@ def registrar_lote(request):
             # LoteMedicamento ya no lo hace, por eso desaparece el doble conteo.
             with transaction.atomic():
                 nuevo_lote = form.save(commit=False)
+
+                # Bloqueamos el medicamento: el número de lote es correlativo por
+                # medicamento y se calcula contando los existentes, así que dos
+                # registros simultáneos no deben pisarse.
+                medicamento = Medicamento.objects.select_for_update().get(pk=nuevo_lote.medicamento_id)
+
+                nuevo_lote.numero_lote = LoteMedicamento.generar_numero_lote(medicamento)
                 nuevo_lote.cantidad_actual = nuevo_lote.cantidad_ingresada
                 nuevo_lote.save()
 
-                medicamento = nuevo_lote.medicamento
                 medicamento.stock_actual += nuevo_lote.cantidad_ingresada
                 medicamento.save(update_fields=['stock_actual'])
 
@@ -365,7 +386,7 @@ def registrar_lote(request):
                     cantidad=nuevo_lote.cantidad_ingresada,
                     stock_resultante=medicamento.stock_actual,
                     usuario=request.user,
-                    referencia=f"Ingreso de Lote #{nuevo_lote.numero_lote}"
+                    referencia=f"Ingreso de Lote {nuevo_lote.numero_lote}"
                 )
 
             messages.success(request, f"Lote {nuevo_lote.numero_lote} de {medicamento.nombre} registrado correctamente. Se sumaron {nuevo_lote.cantidad_ingresada} unidades al inventario.")
@@ -751,6 +772,72 @@ def gestion_lotes(request):
         'alerta_fecha': alerta_fecha
     }
     return render(request, 'farmacia/gestion_lotes.html', context)
+
+@login_required
+@rol_requerido(['farmacia'])
+@require_POST
+def dar_baja_lote(request, lote_id):
+    """
+    Da de baja un lote por vencimiento: descuenta sus unidades del stock real
+    del medicamento y deja constancia en el kardex como merma (AJUSTE). El
+    producto vencido no se vende — se descarta de forma trazable.
+    """
+    with transaction.atomic():
+        lote = get_object_or_404(LoteMedicamento.objects.select_related('medicamento'), id=lote_id)
+        medicamento = Medicamento.objects.select_for_update().get(pk=lote.medicamento_id)
+
+        cantidad_baja = lote.cantidad_actual
+        if cantidad_baja <= 0:
+            messages.info(request, f"El lote {lote.numero_lote} de {medicamento.nombre} ya no tiene unidades.")
+            return redirect('gestion_lotes')
+
+        # Descontar del stock real y vaciar el lote
+        medicamento.stock_actual = max(0, medicamento.stock_actual - cantidad_baja)
+        medicamento.save(update_fields=['stock_actual'])
+
+        lote.cantidad_actual = 0
+        lote.save(update_fields=['cantidad_actual'])
+
+        MovimientoInventario.objects.create(
+            medicamento=medicamento,
+            tipo_movimiento='AJUSTE',
+            cantidad=-cantidad_baja,
+            stock_resultante=medicamento.stock_actual,
+            usuario=request.user,
+            referencia=f"Baja por vencimiento — Lote {lote.numero_lote} (venció {lote.fecha_vencimiento.strftime('%d/%m/%Y')})"
+        )
+
+    messages.success(request, f"Lote {lote.numero_lote} de {medicamento.nombre} dado de baja. Se retiraron {cantidad_baja} unidades vencidas del inventario.")
+    return redirect('gestion_lotes')
+
+@login_required
+@rol_requerido(['farmacia'])
+@require_POST
+def editar_fecha_lote(request, lote_id):
+    """
+    Corrige la fecha de vencimiento de un lote (por un error de carga). No
+    mueve stock; solo actualiza la fecha. Útil tanto para arreglar un tecleo
+    errado como para definir la fecha de los lotes iniciales creados con
+    placeholder.
+    """
+    lote = get_object_or_404(LoteMedicamento.objects.select_related('medicamento'), id=lote_id)
+    nueva_fecha = (request.POST.get('fecha_vencimiento') or '').strip()
+
+    if not nueva_fecha:
+        messages.error(request, "Debe indicar una fecha de vencimiento válida.")
+        return redirect('gestion_lotes')
+
+    try:
+        fecha_parseada = datetime.strptime(nueva_fecha, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, "El formato de la fecha no es válido.")
+        return redirect('gestion_lotes')
+
+    lote.fecha_vencimiento = fecha_parseada
+    lote.save(update_fields=['fecha_vencimiento'])
+
+    messages.success(request, f"Fecha de vencimiento del Lote {lote.numero_lote} ({lote.medicamento.nombre}) actualizada a {fecha_parseada.strftime('%d/%m/%Y')}.")
+    return redirect('gestion_lotes')
 
 @login_required
 @rol_requerido(['farmacia'])

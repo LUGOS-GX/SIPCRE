@@ -76,6 +76,23 @@
                             <p class="text-sm font-bold text-gray-800 mt-1">{{ lote.fecha_vencimiento|date:"m/Y" }}</p>
                         </div>
                     </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex gap-2">
+                        <button type="button"
+                            onclick="editarFechaLote('{{ lote.id }}', '{{ lote.numero_lote }}', '{{ lote.medicamento.nombre|escapejs }}', '{{ lote.fecha_vencimiento|date:"Y-m-d" }}')"
+                            class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded text-xs font-bold border border-gray-300 text-gray-600 hover:bg-gray-50 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            Corregir fecha
+                        </button>
+                        {% if lote.fecha_vencimiento < hoy %}
+                        <button type="button"
+                            onclick="darBajaLote('{{ lote.id }}', '{{ lote.numero_lote }}', '{{ lote.medicamento.nombre|escapejs }}', '{{ lote.cantidad_actual }}')"
+                            class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded text-xs font-bold border border-red-300 text-red-600 hover:bg-red-50 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Dar de baja
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% empty %}
@@ -130,5 +147,73 @@
             });
         }
     });
+
+    const CSRF_LOTES = "{{ csrf_token }}";
+
+    // Envía un POST programático con CSRF a la URL indicada (mismo patrón que
+    // las demás acciones que modifican datos del sistema).
+    function enviarPostLote(url, camposExtra) {
+        const f = document.createElement('form');
+        f.method = 'POST';
+        f.action = url;
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = CSRF_LOTES;
+        f.appendChild(csrf);
+        if (camposExtra) {
+            Object.keys(camposExtra).forEach(k => {
+                const i = document.createElement('input');
+                i.type = 'hidden';
+                i.name = k;
+                i.value = camposExtra[k];
+                f.appendChild(i);
+            });
+        }
+        document.body.appendChild(f);
+        f.submit();
+    }
+
+    function darBajaLote(loteId, numeroLote, medNombre, cantidad) {
+        Swal.fire({
+            title: '¿Dar de baja este lote?',
+            html: `Se retirarán <b>${cantidad} unidad(es)</b> vencidas del Lote ${numeroLote} de <b>${medNombre}</b> del inventario.<br><br>Quedará registrado en el historial como merma por vencimiento.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#4b5563',
+            confirmButtonText: 'Sí, dar de baja',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const url = "{% url 'dar_baja_lote' 0 %}".replace('/0/', `/${loteId}/`);
+                enviarPostLote(url, null);
+            }
+        });
+    }
+
+    function editarFechaLote(loteId, numeroLote, medNombre, fechaActual) {
+        Swal.fire({
+            title: 'Corregir fecha de vencimiento',
+            html: `Lote ${numeroLote} — <b>${medNombre}</b>`,
+            input: 'date',
+            inputValue: fechaActual,
+            showCancelButton: true,
+            confirmButtonColor: '#16a34a',
+            cancelButtonColor: '#4b5563',
+            confirmButtonText: 'Guardar fecha',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Debe seleccionar una fecha.';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const url = "{% url 'editar_fecha_lote' 0 %}".replace('/0/', `/${loteId}/`);
+                enviarPostLote(url, { fecha_vencimiento: result.value });
+            }
+        });
+    }
 </script>
 {% endblock %}
