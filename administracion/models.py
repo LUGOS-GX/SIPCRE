@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
 from core.validators import validar_imagen
-import uuid
 
 # GENERADOR DE NOMBRES ÚNICOS PARA ARCHIVOS
 def renombrar_archivo_seguro(instancia, nombre_archivo):
