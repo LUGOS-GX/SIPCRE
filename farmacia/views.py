@@ -11,7 +11,8 @@ from django.utils import timezone
 from datetime import timedelta, date, datetime
 from decimal import Decimal
 from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario, AuditoriaControlado
-from administracion.models import Factura, DetalleFactura
+from administracion.models import Factura, DetalleFactura, SesionCaja
+from administracion.utils import obtener_tasa_bcv
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
 from core.validators import normalizar_cedula, cedula_es_valida
@@ -864,6 +865,10 @@ def caja_farmacia(request):
             paciente_cedula = normalizar_cedula(datos.get('paciente_cedula'))
             validacion_psicotropicos = datos.get('validacion_psicotropicos', False)
             carrito = datos.get('carrito', [])
+            # Método de cobro simulado: solo dual ($ o Bs). Se normaliza a una
+            # de las dos etiquetas y queda reflejado en el kardex.
+            metodo_pago_raw = (datos.get('metodo_pago') or 'USD').upper()
+            metodo_pago = 'Bs' if metodo_pago_raw in ('BS', 'BOLIVARES', 'BOLÍVARES') else '$'
  
             if not carrito:
                 return JsonResponse({'success': False, 'error': 'El carrito está vacío.'})
@@ -920,13 +925,17 @@ def caja_farmacia(request):
                         precio_unitario=med.precio
                     )
 
+                    # Monto de este ítem (Decimal, no float) para reflejarlo en el kardex.
+                    precio_unit = med.precio if med.precio else Decimal('0.00')
+                    subtotal_item = precio_unit * cant
+
                     MovimientoInventario.objects.create(
                         medicamento=med,
                         tipo_movimiento='SALIDA',
                         cantidad=-cant,
                         stock_resultante=med.stock_actual,
                         usuario=request.user,
-                        referencia=f"Venta en Caja Directa. Orden #{orden.id}",
+                        referencia=f"Venta Directa | ${subtotal_item:.2f} | Pago: {metodo_pago} | Orden #{orden.id}",
                         orden_relacionada=orden
                     )
 
@@ -938,11 +947,22 @@ def caja_farmacia(request):
     medicamentos_raw = Medicamento.objects.filter(stock_actual__gt=0).values(
         'id', 'nombre', 'concentracion', 'precio', 'stock_actual', 'codigo_barras', 'es_controlado'
     )
+    # Tasa BCV para el cobro dual ($/Bs), misma fuente que la Caja Central.
+    # Si la API no responde, se usa la última tasa registrada en una sesión de
+    # caja (la más cercana a la realidad); si nunca hubo, un respaldo mínimo.
+    tasa_bcv = obtener_tasa_bcv()
+    if not tasa_bcv:
+        ultima_sesion = SesionCaja.objects.order_by('-fecha_apertura').first()
+        tasa_bcv = ultima_sesion.tasa_bcv_dia if ultima_sesion else Decimal('0.00')
+
     # Se pasa la LISTA cruda (no un string ya serializado): el filtro
     # json_script del template se encarga de serializar y escapar de forma
     # segura, eliminando el |safe que permitía romper el <script> con un
     # nombre de medicamento malicioso.
-    return render(request, 'farmacia/caja.html', {'medicamentos': list(medicamentos_raw)})
+    return render(request, 'farmacia/caja.html', {
+        'medicamentos': list(medicamentos_raw),
+        'tasa_bcv': float(tasa_bcv),
+    })
 
 @login_required
 @rol_requerido(['farmacia'])

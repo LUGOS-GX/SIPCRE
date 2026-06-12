@@ -160,12 +160,45 @@ def agendar_cita(request):
             }
             messages.success(request, "Cita agendada. Redirigiendo a caja...")
             return redirect('caja_central')
-        
+
+        # 5-bis. CUENTA ABIERTA: se genera la deuda AHORA (factura pendiente),
+        # igual que hace farmacia al despachar a crédito. Sin esto, los
+        # servicios seleccionados se perdían y la Caja Central no mostraba nada
+        # al buscar al paciente. La factura se enlaza a la cita y sus precios
+        # se toman del catálogo (no del navegador). Al buscar la cédula en
+        # caja, esta deuda aparece junto a cualquier otra pendiente del px
+        # (p. ej. una compra de farmacia), y todas se cobran/cierran juntas.
+        if servicios_ids:
+            servicios_cobrables = CatalogoServicio.objects.filter(id__in=servicios_ids, activo=True)
+            if servicios_cobrables.exists():
+                with transaction.atomic():
+                    factura = Factura.objects.create(
+                        paciente=paciente,
+                        nombre_cliente=paciente.nombres,
+                        cedula_cliente=paciente.cedula,
+                        cita=cita,
+                        total=Decimal('0.00'),
+                        estado='Pendiente'
+                    )
+                    total_cuenta = Decimal('0.00')
+                    for servicio in servicios_cobrables:
+                        total_cuenta += servicio.precio_usd
+                        DetalleFactura.objects.create(
+                            factura=factura,
+                            departamento=servicio.categoria,
+                            descripcion=servicio.nombre,
+                            cantidad=1,
+                            precio_unitario=servicio.precio_usd,
+                            subtotal=servicio.precio_usd
+                        )
+                    factura.total = total_cuenta
+                    factura.save(update_fields=['total'])
+
         messages.success(request, "Cita agendada exitosamente.")
         return redirect('dashboard_admin')
 
     # GET: Cargar datos para el frontend (Añadimos telefono y fecha_nacimiento a la consulta)
-    catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'precio_usd'))
+    catalogo = list(CatalogoServicio.objects.filter(activo=True).values('id', 'nombre', 'precio_usd', 'categoria'))
     # Los pacientes ya NO se vuelcan completos al template: el buscador
     # consulta la API api_buscar_pacientes a medida que se escribe.
 

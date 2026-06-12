@@ -57,6 +57,22 @@
             <div class="p-6 bg-gray-800 text-white rounded-t-xl">
                 <h3 class="text-lg font-bold mb-1">Total a Pagar</h3>
                 <p class="text-5xl font-black font-mono tracking-tighter" id="display_total">$0.00</p>
+                <p class="text-sm font-mono text-gray-300 mt-1" id="display_total_bs">Bs 0,00</p>
+                <p class="text-[11px] text-gray-400 mt-1">Tasa BCV: <span id="display_tasa" class="font-bold">{{ tasa_bcv }}</span> Bs/$</p>
+            </div>
+
+            <div class="px-6 pt-5">
+                <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">Moneda de pago</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="btn_pago_usd" onclick="seleccionarMoneda('USD')"
+                        class="py-3 rounded-lg border-2 font-bold text-sm transition border-indigo-600 bg-indigo-600 text-white">
+                        Dólares ($)
+                    </button>
+                    <button type="button" id="btn_pago_bs" onclick="seleccionarMoneda('Bs')"
+                        class="py-3 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600">
+                        Bolívares (Bs)
+                    </button>
+                </div>
             </div>
 
             <div class="p-6 flex-grow space-y-6">
@@ -105,6 +121,8 @@
     // 1. INICIALIZACIÓN
     const inventario = JSON.parse(document.getElementById('inv_data').textContent);
     let carrito = [];
+    const TASA_BCV = parseFloat("{{ tasa_bcv }}".replace(',', '.')) || 0;
+    let monedaPago = 'USD'; // 'USD' o 'Bs' (pago dual simulado)
     const inputBuscador = document.getElementById('input_buscador');
     const ulResultados = document.getElementById('ul_resultados');
     const listaResultados = document.getElementById('lista_resultados');
@@ -225,6 +243,7 @@
         if (carrito.length === 0) {
             tabla.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-gray-400 italic">El carrito está vacío. Escanee un producto.</td></tr>`;
             displayTotal.innerText = '$0.00';
+            document.getElementById('display_total_bs').innerText = 'Bs 0,00';
             btnCobrar.disabled = true;
             panelPsico.classList.add('hidden');
             return;
@@ -260,6 +279,9 @@
         });
 
         displayTotal.innerText = `$${total.toFixed(2)}`;
+        const totalBs = total * TASA_BCV;
+        document.getElementById('display_total_bs').innerText =
+            'Bs ' + totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         btnCobrar.disabled = false;
 
         // Control de alerta psicotrópica
@@ -272,6 +294,20 @@
     }
 
     // 4. ENVÍO AL SERVIDOR
+    // Alterna la moneda de pago (solo visual + se envía al backend para el kardex)
+    function seleccionarMoneda(moneda) {
+        monedaPago = moneda;
+        const btnUsd = document.getElementById('btn_pago_usd');
+        const btnBs = document.getElementById('btn_pago_bs');
+        if (moneda === 'USD') {
+            btnUsd.className = 'py-3 rounded-lg border-2 font-bold text-sm transition border-indigo-600 bg-indigo-600 text-white';
+            btnBs.className = 'py-3 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600';
+        } else {
+            btnBs.className = 'py-3 rounded-lg border-2 font-bold text-sm transition border-emerald-600 bg-emerald-600 text-white';
+            btnUsd.className = 'py-3 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600';
+        }
+    }
+
     function procesarPago() {
         const requierePsico = carrito.some(item => item.es_controlado);
         const checkPsico = document.getElementById('check_psico').checked;
@@ -315,6 +351,7 @@
                 paciente_nombre: nombre,
                 paciente_cedula: cedula,
                 validacion_psicotropicos: checkPsico,
+                metodo_pago: monedaPago,
                 carrito: carrito
             })
         })

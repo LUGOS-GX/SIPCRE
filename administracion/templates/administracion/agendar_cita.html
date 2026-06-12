@@ -652,5 +652,17 @@
             });
         }
     });
+
+    // --- PRESELECCIÓN DEL SERVICIO DE CONSULTA ---
+    // Al abrir Agendar Cita, se precarga automáticamente el primer servicio de
+    // categoría "Consulta" del catálogo (el caso más común). Es totalmente
+    // editable: el recepcionista puede quitarlo con la ✖ o agregar/cambiar por
+    // otros servicios como cualquier otro ítem.
+    (function preseleccionarConsulta() {
+        const consulta = catalogo.find(s => (s.categoria || '').toLowerCase() === 'consulta');
+        if (consulta) {
+            agregarServicio(consulta);
+        }
+    })();
 </script>
 {% endblock %}
