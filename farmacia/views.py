@@ -134,6 +134,13 @@ def despachar_orden(request, orden_id):
 
         estado_factura = 'Pagada' if accion == 'pagar_farmacia' else 'Pendiente'
 
+        # Método de cobro simulado (solo dual $/Bs). Solo aplica cuando el pago
+        # es inmediato; en cuenta abierta el cobro se hará luego en Caja Central.
+        metodo_pago = None
+        if estado_factura == 'Pagada':
+            metodo_raw = (request.POST.get('metodo_pago') or 'USD').upper()
+            metodo_pago = 'Bs' if metodo_raw in ('BS', 'BOLIVARES', 'BOLÍVARES') else '$'
+
         # Todo el despacho va dentro de una transacción: o se registra completo
         # (factura + stock + kardex + auditoría) o no se registra nada.
         with transaction.atomic():
@@ -189,21 +196,29 @@ def despachar_orden(request, orden_id):
                     )
                     logger.warning(f"CONTROLADO DESPACHADO | medicamento={med.nombre} | cantidad={cant} | paciente={cedula_cli} | usuario={request.user.email} | orden={orden.id}")
 
-                MovimientoInventario.objects.create(
-                    medicamento=med,
-                    tipo_movimiento='SALIDA',
-                    cantidad=-cant,
-                    stock_resultante=med.stock_actual,
-                    referencia=f'Despacho Orden #{orden.id}',
-                    orden_relacionada=orden,
-                    usuario=request.user
-                )
-
                 # Aritmética de dinero en Decimal (no float) para no acumular
                 # errores de redondeo en la facturación.
                 precio_unit = med.precio if med.precio else Decimal('0.00')
                 subtotal = precio_unit * cant
                 total_acumulado += subtotal
+
+                # Referencia del kardex: incluye monto, y el método de pago solo
+                # si el despacho se cobró de una vez (en cuenta abierta el pago
+                # ocurre después en Caja Central).
+                if metodo_pago:
+                    referencia_kardex = f"Despacho c/pago | ${subtotal:.2f} | Pago: {metodo_pago} | Orden #{orden.id}"
+                else:
+                    referencia_kardex = f"Despacho (cuenta abierta) | ${subtotal:.2f} | Orden #{orden.id}"
+
+                MovimientoInventario.objects.create(
+                    medicamento=med,
+                    tipo_movimiento='SALIDA',
+                    cantidad=-cant,
+                    stock_resultante=med.stock_actual,
+                    referencia=referencia_kardex,
+                    orden_relacionada=orden,
+                    usuario=request.user
+                )
 
                 DetalleFactura.objects.create(
                     factura=factura,
@@ -233,9 +248,17 @@ def despachar_orden(request, orden_id):
         messages.success(request, msg)
         return redirect('dashboard_farmacia')
 
+    # Tasa BCV para el cobro dual ($/Bs) simulado, igual que en la Caja de
+    # Farmacia. Respaldo a la última sesión de caja si la API no responde.
+    tasa_bcv = obtener_tasa_bcv()
+    if not tasa_bcv:
+        ultima_sesion = SesionCaja.objects.order_by('-fecha_apertura').first()
+        tasa_bcv = ultima_sesion.tasa_bcv_dia if ultima_sesion else Decimal('0.00')
+
     context = {
         'orden': orden,
-        'catalogo_json': json.dumps(catalogo)
+        'catalogo_json': json.dumps(catalogo),
+        'tasa_bcv': float(tasa_bcv),
     }
     return render(request, 'farmacia/despachar_orden.html', context)
 

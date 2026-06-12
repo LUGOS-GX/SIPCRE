@@ -87,9 +87,30 @@
                 </div>
 
                 <div class="bg-gray-50 border-t border-gray-200 p-6 mt-auto">
-                    <div class="flex justify-between items-end mb-6">
+                    <div class="flex justify-between items-end mb-2">
                         <span class="text-gray-600 font-bold uppercase tracking-wider text-sm">Total a cobrar:</span>
                         <span class="text-4xl font-bold text-gray-900">$<span id="total_orden_display">0.00</span></span>
+                    </div>
+                    <div class="flex justify-between items-center mb-5 text-sm">
+                        <span class="text-[11px] text-gray-400">Tasa BCV: <span class="font-bold">{{ tasa_bcv }}</span> Bs/$</span>
+                        <span class="font-mono text-gray-500">Bs <span id="total_orden_bs">0,00</span></span>
+                    </div>
+
+                    <!-- Moneda para el pago inmediato (simulación). Se envía al backend
+                         y queda en el kardex; en "Enviar a Caja" no aplica. -->
+                    <input type="hidden" name="metodo_pago" id="metodo_pago_input" value="USD">
+                    <div class="mb-4">
+                        <p class="text-[11px] font-bold text-gray-500 uppercase mb-2">Moneda (si cobra aquí)</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" id="btn_pago_usd" onclick="seleccionarMoneda('USD')"
+                                class="py-2.5 rounded-lg border-2 font-bold text-sm transition border-emerald-600 bg-emerald-600 text-white">
+                                Dólares ($)
+                            </button>
+                            <button type="button" id="btn_pago_bs" onclick="seleccionarMoneda('Bs')"
+                                class="py-2.5 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600">
+                                Bolívares (Bs)
+                            </button>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,6 +132,27 @@
 <script>
     const catalogo = JSON.parse('{{ catalogo_json|escapejs }}');
     let carrito = [];
+    const TASA_BCV = parseFloat("{{ tasa_bcv }}".replace(',', '.')) || 0;
+
+    // Selector de moneda para el pago inmediato (simulación; va al kardex)
+    function seleccionarMoneda(moneda) {
+        document.getElementById('metodo_pago_input').value = moneda;
+        const btnUsd = document.getElementById('btn_pago_usd');
+        const btnBs = document.getElementById('btn_pago_bs');
+        if (moneda === 'USD') {
+            btnUsd.className = 'py-2.5 rounded-lg border-2 font-bold text-sm transition border-emerald-600 bg-emerald-600 text-white';
+            btnBs.className = 'py-2.5 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600';
+        } else {
+            btnBs.className = 'py-2.5 rounded-lg border-2 font-bold text-sm transition border-indigo-600 bg-indigo-600 text-white';
+            btnUsd.className = 'py-2.5 rounded-lg border-2 font-bold text-sm transition border-gray-300 bg-white text-gray-600';
+        }
+    }
+
+    function actualizarTotalBs(total) {
+        const bs = total * TASA_BCV;
+        const el = document.getElementById('total_orden_bs');
+        if (el) el.innerText = bs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     const inputBuscador = document.getElementById('buscador_meds');
     const menuResultados = document.getElementById('menu_resultados');
@@ -257,6 +299,7 @@
             const filasAntiguas = document.querySelectorAll('.fila-item');
             filasAntiguas.forEach(f => f.remove());
             totalDisplay.innerText = '0.00';
+            actualizarTotalBs(0);
             return;
         }
 
@@ -299,6 +342,7 @@
         });
 
         totalDisplay.innerText = total.toFixed(2);
+        actualizarTotalBs(total);
     }
 
     // Prevenir que el formulario se envíe con Enter desde el buscador

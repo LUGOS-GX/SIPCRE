@@ -127,7 +127,28 @@
 </div>
 
 <script>
-    const HORAS_BASE = ["08:00 A.M.", "08:30 A.M.", "09:00 A.M.", "09:30 A.M.", "10:00 A.M.", "10:30 A.M.", "11:00 A.M.", "11:30 A.M.", "1:00 P.M.", "1:30 P.M.", "2:00 P.M.", "2:30 P.M.", "3:00 P.M.", "3:30 P.M.", "4:00 P.M.", "4:30 P.M."];
+    // label = lo que ve el usuario (12h); value = lo que se envía y compara (24h).
+    // Antes era un array de strings "1:30 P.M." que se enviaba tal cual: Django
+    // lo rechazaba (TimeField espera HH:MM) y además nunca casaba con las horas
+    // ocupadas que el backend devuelve en formato 24h.
+    const HORAS_BASE = [
+        {label: "08:00 A.M.", value: "08:00"},
+        {label: "08:30 A.M.", value: "08:30"},
+        {label: "09:00 A.M.", value: "09:00"},
+        {label: "09:30 A.M.", value: "09:30"},
+        {label: "10:00 A.M.", value: "10:00"},
+        {label: "10:30 A.M.", value: "10:30"},
+        {label: "11:00 A.M.", value: "11:00"},
+        {label: "11:30 A.M.", value: "11:30"},
+        {label: "01:00 P.M.", value: "13:00"},
+        {label: "01:30 P.M.", value: "13:30"},
+        {label: "02:00 P.M.", value: "14:00"},
+        {label: "02:30 P.M.", value: "14:30"},
+        {label: "03:00 P.M.", value: "15:00"},
+        {label: "03:30 P.M.", value: "15:30"},
+        {label: "04:00 P.M.", value: "16:00"},
+        {label: "04:30 P.M.", value: "16:30"}
+    ];
     const HORA_ACTUAL_CITA = "{{ cita.hora|time:'H:i' }}";
 
     function togglePoliza() {
@@ -152,12 +173,12 @@
             grid.innerHTML = '';
             HORAS_BASE.forEach(hora => {
                 // IMPORTANTE: Si la hora ocupada es la misma que ya tiene esta cita, la mostramos como disponible
-                const isOcupada = data.ocupadas.includes(hora) && hora !== HORA_ACTUAL_CITA;
-                const isSeleccionada = hora === horaSeleccionadaInput.value;
+                const isOcupada = data.ocupadas.includes(hora.value) && hora.value !== HORA_ACTUAL_CITA;
+                const isSeleccionada = hora.value === horaSeleccionadaInput.value;
 
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.innerText = hora;
+                btn.innerText = hora.label;
                 
                 let clases = "py-2 text-xs font-bold rounded-lg border transition shadow-sm ";
                 if (isOcupada) {
@@ -178,7 +199,7 @@
                             }
                         });
                         btn.className = "py-2 text-xs font-bold rounded-lg border bg-cruzroja-500 text-white border-cruzroja-600 transition shadow-sm";
-                        horaSeleccionadaInput.value = hora;
+                        horaSeleccionadaInput.value = hora.value;
                     };
                 }
                 grid.appendChild(btn);
