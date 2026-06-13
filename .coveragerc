@@ -1,0 +1,14 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests.py
+    */__init__.py
+    tesis/*
+    manage.py
+    */apps.py
+    venv/*
+
+[report]
+show_missing = True
+skip_covered = False

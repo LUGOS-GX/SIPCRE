@@ -45,3 +45,6 @@ requests==2.32.5                 # Consulta de tasa BCV (DolarApi)
 #   pip uninstall xhtml2pdf reportlab svglib pyHanko pypdf
 # Se omite de este archivo a propósito.
 # ------------------------------------------------------------
+
+# ---- Tests ----------
+coverage==7.14.1

@@ -52,6 +52,13 @@ celerybeat.pid
 htmlcov/
 .pytest_cache/
 
+#logger
 logs/*.log
 
+#DB PX backup
 backups/
+
+#tests
+.coverage
+.coverage.*
+htmlcov/
