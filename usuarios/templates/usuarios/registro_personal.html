@@ -34,7 +34,7 @@
                             </label>
                             {{ field }}
                             {% if field.help_text %}
-                                <p class="text-xs text-gray-500 mt-1">{{ field.help_text|safe }}</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
                             {% endif %}
                             {% for error in field.errors %}
                                 <p class="text-red-500 text-xs italic mt-1 font-semibold">{{ error }}</p>

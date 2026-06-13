@@ -25,6 +25,17 @@ import xlsxwriter
 import logging
 logger = logging.getLogger('sipcre')
 
+
+class ReglaNegocioError(Exception):
+    """
+    Error de regla de negocio cuyo mensaje SÍ es seguro mostrar al usuario
+    (stock insuficiente, falta de validación de un controlado, etc.).
+    Se diferencia de un error inesperado (bug, fallo de BD) para no filtrar
+    detalles internos del sistema al cliente.
+    """
+    pass
+
+
 @login_required
 @rol_requerido(['farmacia'])
 def dashboard_farmacia(request):
@@ -914,10 +925,10 @@ def caja_farmacia(request):
                     cant = int(item['cantidad'])
 
                     if cant > med.stock_actual:
-                        raise Exception(f"Stock insuficiente para {med.nombre}. Solo quedan {med.stock_actual}.")
+                        raise ReglaNegocioError(f"Stock insuficiente para {med.nombre}. Solo quedan {med.stock_actual}.")
                     
                     if med.es_controlado and not validacion_psicotropicos:
-                        raise Exception(f"Falta validación física del récipe para el psicotrópico: {med.nombre}")
+                        raise ReglaNegocioError(f"Falta validación física del récipe para el psicotrópico: {med.nombre}")
 
                     stock_antes = med.stock_actual  # ← guardar antes de restar
                     med.stock_actual -= cant
@@ -964,8 +975,15 @@ def caja_farmacia(request):
 
             return JsonResponse({'success': True, 'orden_id': orden.id})
 
-        except Exception as e:
+        except ReglaNegocioError as e:
+            # Mensaje de regla de negocio: es seguro y útil mostrarlo al usuario.
             return JsonResponse({'success': False, 'error': str(e)})
+        except Exception as e:
+            # Error inesperado (bug, fallo de BD, payload corrupto): se registra
+            # con traza completa en el log y al cliente solo se le da un mensaje
+            # genérico, para no filtrar detalles internos del sistema.
+            logger.error(f"Error inesperado en caja_farmacia: {e}", exc_info=True)
+            return JsonResponse({'success': False, 'error': 'Ocurrió un error al procesar la venta. Intenta de nuevo.'})
 
     medicamentos_raw = Medicamento.objects.filter(stock_actual__gt=0).values(
         'id', 'nombre', 'concentracion', 'precio', 'stock_actual', 'codigo_barras', 'es_controlado'
