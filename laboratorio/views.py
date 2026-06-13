@@ -243,7 +243,7 @@ def detalle_orden(request, orden_id):
                 orden.save(update_fields=['estado', 'fecha_resultado'])
 
             for nombre_reactivo in avisos_reactivos:
-                messages.warning(request, f"⚠️ Stock bajo de '{nombre_reactivo}'. El resultado médico se guardó, pero no se pudo descontar el reactivo del inventario de Farmacia.")
+                messages.warning(request, f"Stock bajo de '{nombre_reactivo}'. El resultado médico se guardó, pero no se pudo descontar el reactivo del inventario de Farmacia.")
 
             # --- GENERACIÓN DEL PDF (Chromium, igual que el resto del sistema) E HILO DE CORREO ---
             # El PDF se genera FUERA de la transacción: render con navegador toma

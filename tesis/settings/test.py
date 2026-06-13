@@ -1,6 +1,7 @@
 # Settings de PRUEBAS: hereda todo de base pero usa SQLite en memoria
 # para que los tests corran rápido y sin depender de PostgreSQL.
 from .base import *
+import tempfile
 
 DEBUG = False
 ALLOWED_HOSTS = ['*']
@@ -24,3 +25,7 @@ PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 # Email en memoria
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+# Los tests que suben archivos (firma, sello, foto) escriben en una carpeta
+# temporal en vez de en la carpeta media/ real del proyecto.
+MEDIA_ROOT = tempfile.mkdtemp()
