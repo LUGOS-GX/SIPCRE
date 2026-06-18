@@ -249,14 +249,14 @@ class CajaFarmaciaTests(BaseFarmaciaTest):
 
     def test_cedula_invalida_es_rechazada(self):
         resp = self._vender({
-            'paciente_nombre': 'X', 'paciente_cedula': '999999999',  # > 40MM
+            'paciente_nombre': 'Cliente Prueba', 'paciente_cedula': '999999999',  # > 40MM
             'carrito': [{'id': self.med.id, 'cantidad': 1}],
         })
         self.assertFalse(resp.json()['success'])
 
     def test_stock_insuficiente_revierte_todo(self):
         resp = self._vender({
-            'paciente_nombre': 'X', 'paciente_cedula': '12345',
+            'paciente_nombre': 'Cliente Prueba', 'paciente_cedula': '20111222',
             'carrito': [{'id': self.med.id, 'cantidad': 999}],
         })
         self.assertFalse(resp.json()['success'])
@@ -266,7 +266,7 @@ class CajaFarmaciaTests(BaseFarmaciaTest):
     def test_controlado_sin_validacion_se_rechaza(self):
         controlado = _crear_med('Morfina', stock=10, precio='9.00', controlado=True)
         resp = self._vender({
-            'paciente_nombre': 'X', 'paciente_cedula': '12345',
+            'paciente_nombre': 'Cliente Prueba', 'paciente_cedula': '20111222',
             'validacion_psicotropicos': False,
             'carrito': [{'id': controlado.id, 'cantidad': 1}],
         })
@@ -277,7 +277,7 @@ class CajaFarmaciaTests(BaseFarmaciaTest):
     def test_controlado_con_validacion_se_vende_y_audita(self):
         controlado = _crear_med('Morfina', stock=10, precio='9.00', controlado=True)
         resp = self._vender({
-            'paciente_nombre': 'X', 'paciente_cedula': '12345',
+            'paciente_nombre': 'Cliente Prueba', 'paciente_cedula': '20111222',
             'validacion_psicotropicos': True,
             'carrito': [{'id': controlado.id, 'cantidad': 1}],
         })

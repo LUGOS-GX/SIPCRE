@@ -307,7 +307,7 @@ class CajaCentralTests(BaseAdminTest):
     def test_precio_se_toma_del_catalogo_no_del_navegador(self):
         # Aunque el navegador mande otro precio, manda el del catálogo (25.00)
         self._cobrar({
-            'cedula': '19000666', 'nombre': 'X',
+            'cedula': '19000666', 'nombre': 'Cliente Prueba',
             'carrito': [{'id': self.servicio.id, 'cantidad': 1, 'precio': '0.01'}],
             'pagos': [{'metodo': 'Efectivo USD', 'monto_ingresado': '25', 'equivalente_usd': '25'}],
         })
@@ -328,7 +328,7 @@ class CajaCentralTests(BaseAdminTest):
 
     def test_cobro_sin_pagos_es_rechazado(self):
         resp = self._cobrar({
-            'cedula': '19000666', 'nombre': 'X',
+            'cedula': '19000666', 'nombre': 'Cliente Prueba',
             'carrito': [{'id': self.servicio.id, 'cantidad': 1}], 'pagos': [],
         })
         self.assertEqual(resp.status_code, 400)
@@ -336,7 +336,7 @@ class CajaCentralTests(BaseAdminTest):
 
     def test_cobro_cedula_invalida_es_rechazado(self):
         resp = self._cobrar({
-            'cedula': '999999999', 'nombre': 'X',
+            'cedula': '999999999', 'nombre': 'Cliente Prueba',
             'carrito': [{'id': self.servicio.id, 'cantidad': 1}],
             'pagos': [{'metodo': 'Efectivo USD', 'monto_ingresado': '25', 'equivalente_usd': '25'}],
         })
@@ -344,7 +344,7 @@ class CajaCentralTests(BaseAdminTest):
 
     def test_metodo_de_pago_invalido_es_rechazado(self):
         resp = self._cobrar({
-            'cedula': '19000666', 'nombre': 'X',
+            'cedula': '19000666', 'nombre': 'Cliente Prueba',
             'carrito': [{'id': self.servicio.id, 'cantidad': 1}],
             'pagos': [{'metodo': 'Bitcoin', 'monto_ingresado': '25', 'equivalente_usd': '25'}],
         })

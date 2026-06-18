@@ -22,7 +22,10 @@ from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from .utils import obtener_tasa_bcv
-from core.validators import normalizar_cedula, cedula_es_valida, validar_imagen
+from core.validators import (
+    normalizar_cedula, cedula_es_valida, validar_imagen,
+    normalizar_nombre, nombre_es_valido,
+)
 from collections import Counter
 import json
 import logging
@@ -71,7 +74,7 @@ def agendar_cita(request):
         if not cedula_es_valida(cedula):
             messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
             return redirect('agendar_cita')
-        nombre = (request.POST.get('nombre_nuevo') or '').strip()
+        nombre = normalizar_nombre(request.POST.get('nombre_nuevo'))
         email = (request.POST.get('email') or '').strip()
         tipo_sangre = (request.POST.get('tipo_sangre') or '').strip()
         telefono = (request.POST.get('telefono') or '').strip()
@@ -92,6 +95,9 @@ def agendar_cita(request):
         # revienta con un 500 en vez de un mensaje claro.
         if not nombre:
             messages.error(request, "Debe indicar el nombre del paciente.")
+            return redirect('agendar_cita')
+        if not nombre_es_valido(nombre):
+            messages.error(request, "El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.")
             return redirect('agendar_cita')
         if not (medico_id and fecha and hora):
             messages.error(request, "Debe seleccionar médico, fecha y hora para la cita.")
@@ -222,7 +228,7 @@ def registrar_orden_externa(request):
     examenes_img = ['Rayos X', 'Ecosonograma']
 
     if request.method == 'POST':
-        nombre = (request.POST.get('nombre') or '').strip()
+        nombre = normalizar_nombre(request.POST.get('nombre'))
         nacionalidad = (request.POST.get('nacionalidad') or 'V').strip()
         cedula = normalizar_cedula(request.POST.get('cedula'))
 
@@ -235,6 +241,9 @@ def registrar_orden_externa(request):
             return redirect('registrar_orden_externa')
         if not cedula_es_valida(cedula):
             messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
+            return redirect('registrar_orden_externa')
+        if not nombre_es_valido(nombre):
+            messages.error(request, "El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.")
             return redirect('registrar_orden_externa')
         if not seleccionados:
             messages.error(request, "Debe seleccionar al menos un examen o estudio de imagenología.")
@@ -296,7 +305,11 @@ def editar_cita(request, id_cita):
             messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
             return redirect('editar_cita', id_cita=id_cita)
         paciente.cedula = cedula
-        paciente.nombres = (request.POST.get('nombre_nuevo') or paciente.nombres).strip()
+        nombre_editado = normalizar_nombre(request.POST.get('nombre_nuevo')) or paciente.nombres
+        if not nombre_es_valido(nombre_editado):
+            messages.error(request, "El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.")
+            return redirect('editar_cita', id_cita=id_cita)
+        paciente.nombres = nombre_editado
         paciente.email = (request.POST.get('email') or '').strip()
         paciente.telefono = (request.POST.get('telefono') or '').strip()
         paciente.tipo_sangre = (request.POST.get('tipo_sangre') or '').strip()
@@ -389,7 +402,7 @@ def caja_central(request):
 
         try:
             cedula = normalizar_cedula(data.get('cedula'))
-            nombre = (data.get('nombre') or '').strip()
+            nombre = normalizar_nombre(data.get('nombre'))
             carrito = data.get('carrito') or []
             pagos = data.get('pagos') or []
             facturas_pendientes_ids = data.get('facturas_pendientes') or []
@@ -398,6 +411,8 @@ def caja_central(request):
             # --- VALIDACIONES PREVIAS (nada toca la BD todavía) ---
             if not nombre or not cedula_es_valida(cedula):
                 return JsonResponse({'status': 'error', 'message': 'Debe indicar un nombre y una cédula válida (numérica, máx. 40.000.000).'}, status=400)
+            if not nombre_es_valido(nombre):
+                return JsonResponse({'status': 'error', 'message': 'El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.'}, status=400)
 
             # Separar servicios nuevos (del catálogo) de los ítems "pendiente_"
             # que solo representan deudas viejas ya facturadas.

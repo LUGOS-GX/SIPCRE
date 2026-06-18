@@ -15,7 +15,10 @@ from administracion.models import Factura, DetalleFactura, SesionCaja
 from administracion.utils import obtener_tasa_bcv
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
-from core.validators import normalizar_cedula, cedula_es_valida
+from core.validators import (
+    normalizar_cedula, cedula_es_valida,
+    normalizar_nombre, nombre_es_valido,
+)
 from .services import descontar_lotes_fefo, reintegrar_lotes
 import json
 import io
@@ -895,7 +898,7 @@ def caja_farmacia(request):
     if request.method == 'POST':
         try:
             datos = json.loads(request.body)
-            paciente_nombre = (datos.get('paciente_nombre') or '').strip()
+            paciente_nombre = normalizar_nombre(datos.get('paciente_nombre'))
             paciente_cedula = normalizar_cedula(datos.get('paciente_cedula'))
             validacion_psicotropicos = datos.get('validacion_psicotropicos', False)
             carrito = datos.get('carrito', [])
@@ -910,8 +913,10 @@ def caja_farmacia(request):
             # Requisito: no se concreta una venta sin identificar al comprador.
             if not paciente_nombre or not paciente_cedula:
                 return JsonResponse({'success': False, 'error': 'Debe registrar el nombre y la cédula del comprador para concretar la venta.'})
+            if not nombre_es_valido(paciente_nombre):
+                return JsonResponse({'success': False, 'error': 'El nombre del comprador no es válido (2 a 60 caracteres, solo letras y espacios).'})
             if not cedula_es_valida(paciente_cedula):
-                return JsonResponse({'success': False, 'error': 'La cédula del comprador no es válida (numérica, máx. 40.000.000).'})
+                return JsonResponse({'success': False, 'error': 'La cédula del comprador no es válida (numérica, entre 100.000 y 40.000.000).'})
 
             with transaction.atomic():
                 orden = OrdenFarmacia.objects.create(

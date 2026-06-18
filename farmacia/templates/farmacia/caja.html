@@ -81,11 +81,11 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Cédula / Documento</label>
-                            <input type="text" id="cli_cedula" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="V-12345678">
+                            <input type="text" id="cli_cedula" maxlength="10" inputmode="numeric" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="V-12345678">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1">Nombre y Apellido</label>
-                            <input type="text" id="cli_nombre" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Nombre y Apellido">
+                            <input type="text" id="cli_nombre" maxlength="60" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Nombre y Apellido">
                         </div>
                     </div>
                 </div>
@@ -335,6 +335,35 @@
                 icon: 'warning',
                 confirmButtonColor: '#4F46E5'
            });
+            return;
+        }
+
+        // Validación del comprador (espejo de core/validators.py).
+        // La fuente de verdad es el backend; esto solo evita un viaje
+        // al servidor y le da feedback inmediato al usuario.
+        const cedulaDigitos = cedula.replace(/\D/g, '');
+        const cedulaNum = parseInt(cedulaDigitos, 10);
+        if (cedulaDigitos.length === 0 || cedulaDigitos.length > 8 ||
+            isNaN(cedulaNum) || cedulaNum < 100000 || cedulaNum > 40000000) {
+            Swal.fire({
+                title: 'Cédula inválida',
+                text: 'La cédula debe ser un número entre 100.000 y 40.000.000.',
+                icon: 'warning',
+                confirmButtonColor: '#4F46E5'
+            });
+            return;
+        }
+        const nombreNorm = nombre.replace(/\s+/g, ' ').trim();
+        const nombreRegex = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$/;
+        if (nombreNorm.length < 2 || nombreNorm.length > 60 ||
+            !nombreRegex.test(nombreNorm) ||
+            !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(nombreNorm)) {
+            Swal.fire({
+                title: 'Nombre inválido',
+                text: 'El nombre debe tener entre 2 y 60 caracteres y solo puede contener letras y espacios.',
+                icon: 'warning',
+                confirmButtonColor: '#4F46E5'
+            });
             return;
         }
  

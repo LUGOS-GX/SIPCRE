@@ -17,7 +17,10 @@ from farmacia.models import OrdenFarmacia
 from laboratorio.models import SolicitudExamen
 from usuarios.decorators import rol_requerido
 from core.correo_utils import enviar_documento_pdf_async
-from core.validators import normalizar_cedula, cedula_es_valida, validar_imagen
+from core.validators import (
+    normalizar_cedula, cedula_es_valida, validar_imagen,
+    normalizar_nombre, nombre_es_valido,
+)
 import json
 import base64
 import io
@@ -269,6 +272,11 @@ def crear_historia_manual(request):
                     messages.error(request, "La cédula no es válida: debe ser numérica y no superar los 40.000.000.")
                     return redirect('crear_historia_manual')
 
+                nombre_nuevo = normalizar_nombre(request.POST.get('nuevo_nombre'))
+                if not nombre_es_valido(nombre_nuevo):
+                    messages.error(request, "El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.")
+                    return redirect('crear_historia_manual')
+
                 # La cédula es única a nivel global (sin importar nacionalidad):
                 # chequear por cédula+nacionalidad dejaba pasar el caso V/E con
                 # el mismo número y reventaba después contra el unique de la BD.
@@ -277,7 +285,7 @@ def crear_historia_manual(request):
                     return redirect('crear_historia_manual')
 
                 paciente_obj = Paciente.objects.create(
-                    nombres=request.POST.get('nuevo_nombre'),
+                    nombres=nombre_nuevo,
                     nacionalidad=nacionalidad,
                     cedula=cedula_nueva,
                     tipo_sangre=request.POST.get('nuevo_sangre'),
@@ -474,7 +482,12 @@ def crear_recipe(request):
             nombre_final = f"{paciente_seleccionado.nombres}"
             cedula_final = paciente_seleccionado.cedula
         else:
-            nombre_final = nombre_manual
+            nombre_final = normalizar_nombre(nombre_manual)
+            if nombre_final and not nombre_es_valido(nombre_final):
+                messages.error(request, "El nombre no es válido: 2 a 60 caracteres, solo letras y espacios.")
+                if is_popup == '1':
+                    return redirect(f"{reverse('crear_recipe')}?popup=1")
+                return redirect('crear_recipe')
             # Regla canónica de todo el sistema: solo dígitos, máx. 40.000.000.
             # (Sustituye la regla local de "6 a 9 dígitos", que contradecía al
             # resto de los módulos y rechazaba cédulas válidas cortas.)
@@ -613,7 +626,10 @@ def solicitar_examenes(request):
                 nombre = paciente_seleccionado.nombres
                 cedula = paciente_seleccionado.cedula
             else:
-                nombre = request.POST.get('nombre_manual')
+                nombre = normalizar_nombre(request.POST.get('nombre_manual'))
+                if nombre and not nombre_es_valido(nombre):
+                    messages.error(request, "El nombre del paciente no es válido: 2 a 60 caracteres, solo letras y espacios.")
+                    return redirect('solicitar_examenes')
                 cedula_cruda = (request.POST.get('cedula_manual') or '').strip()
                 cedula = normalizar_cedula(cedula_cruda)
                 if cedula_cruda and not cedula_es_valida(cedula):

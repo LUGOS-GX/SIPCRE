@@ -1,3 +1,4 @@
+import re
 from django.core.exceptions import ValidationError
 from PIL import Image
 
@@ -77,7 +78,19 @@ def validar_imagen_o_pdf(archivo):
 # para cruzar Factura.cedula_cliente / Paciente.cedula DEBE pasar
 # por estas dos funciones.
 
-CEDULA_MAXIMO = 40_000_000  # tope acordado para cédulas venezolanas
+# --- Rango aceptado para una cédula venezolana ---
+# CEDULA_MINIMO: piso para descartar basura (0, 1, 11, 111...). 100.000 (6
+#   dígitos) cubre incluso a pacientes mayores con cédulas antiguas, sin dejar
+#   pasar valores absurdamente pequeños. Si necesitas admitir cédulas de 5
+#   dígitos o menos, baja este número; si quieres exigir 7 dígitos, súbelo a
+#   1_000_000. Es la ÚNICA perilla del piso.
+# CEDULA_MAXIMO: tope acordado para cédulas venezolanas.
+# CEDULA_MAX_DIGITOS: corta cadenas infladas con ceros a la izquierda
+#   ('000000000000', '00000040000000', etc.). 40.000.000 tiene 8 dígitos,
+#   así que nada legítimo supera esa longitud.
+CEDULA_MINIMO = 100_000
+CEDULA_MAXIMO = 40_000_000
+CEDULA_MAX_DIGITOS = len(str(CEDULA_MAXIMO))  # 8
 
 
 def normalizar_cedula(valor):
@@ -94,9 +107,54 @@ def normalizar_cedula(valor):
 def cedula_es_valida(cedula_normalizada):
     """
     Valida una cédula YA normalizada (solo dígitos):
-    no vacía, numérica y dentro del rango 1..40.000.000.
+    no vacía, numérica, sin exceso de dígitos (evita el inflado con ceros
+    a la izquierda) y dentro del rango CEDULA_MINIMO..CEDULA_MAXIMO.
     Nunca lanza excepción: devuelve True/False.
     """
     if not cedula_normalizada or not cedula_normalizada.isdigit():
         return False
-    return 0 < int(cedula_normalizada) <= CEDULA_MAXIMO
+    # '000000000000' / '00000040000000' -> demasiados dígitos: fuera.
+    if len(cedula_normalizada) > CEDULA_MAX_DIGITOS:
+        return False
+    valor = int(cedula_normalizada)
+    return CEDULA_MINIMO <= valor <= CEDULA_MAXIMO
+
+
+# ============================================================
+# NORMALIZACIÓN Y VALIDACIÓN DE NOMBRES (comprador / paciente libre)
+# ============================================================
+# Para los nombres escritos a mano (p. ej. el comprador en la caja de
+# farmacia o un paciente no registrado). Acota longitud y caracteres para
+# que no entren cadenas infinitas ni símbolos raros (<, >, @, $, emojis...).
+
+NOMBRE_MINIMO = 2
+NOMBRE_MAXIMO = 60
+# Letras latinas con acentos/ñ/ü, espacios y signos válidos en nombres
+# compuestos: punto (abreviaturas), apóstrofo y guion. Nada más.
+_NOMBRE_PERMITIDO = re.compile(r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$")
+
+
+def normalizar_nombre(valor):
+    """
+    Recorta extremos y colapsa espacios repetidos a uno solo.
+    Devuelve '' si no hay contenido.
+    """
+    if not valor:
+        return ''
+    return ' '.join(str(valor).split())
+
+
+def nombre_es_valido(nombre_normalizado):
+    """
+    Valida un nombre YA normalizado: longitud entre NOMBRE_MINIMO y
+    NOMBRE_MAXIMO, solo caracteres permitidos y al menos una letra real
+    (descarta entradas hechas solo de signos o espacios).
+    Nunca lanza excepción: devuelve True/False.
+    """
+    if not nombre_normalizado:
+        return False
+    if not (NOMBRE_MINIMO <= len(nombre_normalizado) <= NOMBRE_MAXIMO):
+        return False
+    if not _NOMBRE_PERMITIDO.match(nombre_normalizado):
+        return False
+    return any(ch.isalpha() for ch in nombre_normalizado)
