@@ -111,13 +111,13 @@
                                             <option value="V">V</option>
                                             <option value="E">E</option>
                                         </select>
-                                        <input type="number" id="nuevo_cedula" name="nuevo_cedula" placeholder="12345678" class="w-2/3 border border-blue-300 border-l-0 rounded-r px-2 py-1 text-xs focus:outline-none focus:border-blue-600" >
+                                        <input type="text" inputmode="numeric" id="nuevo_cedula" name="nuevo_cedula" maxlength="8" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="12345678" class="w-2/3 border border-blue-300 border-l-0 rounded-r px-2 py-1 text-xs focus:outline-none focus:border-blue-600" >
                                     </div>
                                     
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-blue-900 mb-1">Nombre Completo</label>
-                                    <input type="text" id="nuevo_nombre" name="nuevo_nombre" placeholder="Juan Pérez" class="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-600">
+                                    <input type="text" id="nuevo_nombre" name="nuevo_nombre" maxlength="60" placeholder="Juan Pérez" class="w-full border border-blue-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-blue-600">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-blue-900 mb-1">Tipo de Sangre</label>
@@ -550,5 +550,28 @@
         
         window.open(url, 'RecipePopup', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`);
     }
+
+    // --- Validación del paciente nuevo (solo en modo "nuevo"; espejo de core/validators.py) ---
+    (function() {
+        var cedField = document.getElementById('nuevo_cedula');
+        if (!cedField || !cedField.form) return;
+        cedField.form.addEventListener('submit', function(e) {
+            var radio = document.querySelector('input[name="tipo_registro"]:checked');
+            if (!radio || radio.value !== 'nuevo') return;   // solo aplica al paciente nuevo de emergencia
+            var _d = (document.getElementById('nuevo_cedula').value || '').replace(/\D/g, '');
+            var _n = parseInt(_d, 10);
+            if (_d.length === 0 || _d.length > 8 || isNaN(_n) || _n < 100000 || _n > 40000000) {
+                e.preventDefault();
+                Swal.fire({ title: 'Cédula inválida', text: 'La cédula debe ser un número entre 100.000 y 40.000.000.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+                return;
+            }
+            var _nom = (document.getElementById('nuevo_nombre').value || '').replace(/\s+/g, ' ').trim();
+            if (_nom.length < 2 || _nom.length > 60 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$/.test(_nom) || !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(_nom)) {
+                e.preventDefault();
+                Swal.fire({ title: 'Nombre inválido', text: 'El nombre debe tener entre 2 y 60 caracteres y solo letras y espacios.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+                return;
+            }
+        });
+    })();
 </script>
 {% endblock %}

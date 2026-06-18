@@ -28,12 +28,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-4">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cédula <span class="text-cruzroja-500">*</span></label>
-                        <input type="text" name="cedula" value="{{ paciente.cedula }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" required>
+                        <input type="text" name="cedula" id="cedula_edit" value="{{ paciente.cedula }}" maxlength="8" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" required>
                     </div>
 
                     <div class="md:col-span-8">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Completo</label>
-                        <input type="text" name="nombre_nuevo" value="{{ paciente.nombres }}" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-bold text-gray-700" required>
+                        <input type="text" name="nombre_nuevo" id="nombre_edit" value="{{ paciente.nombres }}" maxlength="60" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-bold text-gray-700" required>
                     </div>
 
                     <div class="md:col-span-4">
@@ -209,5 +209,22 @@
 
     // Inicializar al cargar
     document.addEventListener('DOMContentLoaded', actualizarHoras);
+
+    // --- Validación de cédula y nombre (espejo de core/validators.py) ---
+    document.getElementById('form_cita').addEventListener('submit', function(e) {
+        var _d = (document.getElementById('cedula_edit').value || '').replace(/\D/g, '');
+        var _n = parseInt(_d, 10);
+        if (_d.length === 0 || _d.length > 8 || isNaN(_n) || _n < 100000 || _n > 40000000) {
+            e.preventDefault();
+            Swal.fire({ title: 'Cédula inválida', text: 'La cédula debe ser un número entre 100.000 y 40.000.000.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+            return;
+        }
+        var _nom = (document.getElementById('nombre_edit').value || '').replace(/\s+/g, ' ').trim();
+        if (_nom.length < 2 || _nom.length > 60 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$/.test(_nom) || !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(_nom)) {
+            e.preventDefault();
+            Swal.fire({ title: 'Nombre inválido', text: 'El nombre debe tener entre 2 y 60 caracteres y solo letras y espacios.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+            return;
+        }
+    });
 </script>
 {% endblock %}

@@ -102,10 +102,10 @@
 
             <div id="div_manual" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <input type="text" name="nombre_manual" id="nombre_manual" placeholder="Nombre completo del paciente" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
+                    <input type="text" name="nombre_manual" id="nombre_manual" maxlength="60" placeholder="Nombre completo del paciente" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
                 </div>
                 <div>
-                    <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="15" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="8" inputmode="numeric" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
             </div>
 
@@ -241,5 +241,31 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 });
+
+    // --- Validación del paciente manual (espejo de core/validators.py) ---
+    (function() {
+        var nomField = document.getElementById('nombre_manual');
+        if (!nomField || !nomField.form) return;
+        nomField.form.addEventListener('submit', function(e) {
+            var tipo = document.querySelector('input[name="tipo_paciente"]:checked');
+            if (!tipo || tipo.value !== 'manual') return;   // solo en modo manual
+            var _ced = (document.getElementById('ci_manual').value || '').trim();
+            if (_ced) {
+                var _d = _ced.replace(/\D/g, '');
+                var _n = parseInt(_d, 10);
+                if (_d.length > 8 || isNaN(_n) || _n < 100000 || _n > 40000000) {
+                    e.preventDefault();
+                    Swal.fire({ title: 'Cédula inválida', text: 'La cédula debe ser un número entre 100.000 y 40.000.000.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+                    return;
+                }
+            }
+            var _nomRaw = (document.getElementById('nombre_manual').value || '').replace(/\s+/g, ' ').trim();
+            if (_nomRaw && (_nomRaw.length < 2 || _nomRaw.length > 60 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$/.test(_nomRaw) || !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(_nomRaw))) {
+                e.preventDefault();
+                Swal.fire({ title: 'Nombre inválido', text: 'El nombre debe tener entre 2 y 60 caracteres y solo letras y espacios.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+                return;
+            }
+        });
+    })();
 </script>
 {% endblock %}

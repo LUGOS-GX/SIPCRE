@@ -55,6 +55,8 @@
                     <div class="md:col-span-4 relative">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Cédula <span class="text-cruzroja-500">*</span></label>
                         <input type="text" name="cedula" id="cedula_px"
+                            maxlength="8" inputmode="numeric"
+                            oninput="this.value = this.value.replace(/\D/g, '')"
                             placeholder="Ej. 12345678"
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 font-mono text-sm focus:ring-2 focus:ring-cruzroja-400 focus:border-cruzroja-400 focus:outline-none"
                             autocomplete="off" required>
@@ -64,6 +66,7 @@
                     <div class="md:col-span-8">
                         <label class="block text-sm font-bold text-gray-700 mb-2">Nombre Completo <span class="text-cruzroja-500">*</span></label>
                         <input type="text" name="nombre_nuevo" id="nombre_px"
+                            maxlength="60"
                             placeholder="Nombre y apellido del paciente"
                             class="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 font-bold text-sm focus:ring-2 focus:ring-cruzroja-400 focus:border-cruzroja-400 focus:outline-none"
                             required>
@@ -630,6 +633,20 @@
 
     // Validación al enviar
     document.getElementById('form_cita').addEventListener('submit', function(e) {
+        // Validación de cédula y nombre (espejo de core/validators.py).
+        var _d = (document.getElementById('cedula_px').value || '').replace(/\D/g, '');
+        var _n = parseInt(_d, 10);
+        if (_d.length === 0 || _d.length > 8 || isNaN(_n) || _n < 100000 || _n > 40000000) {
+            e.preventDefault();
+            Swal.fire({ title: 'Cédula inválida', text: 'La cédula debe ser un número entre 100.000 y 40.000.000.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+            return;
+        }
+        var _nom = (document.getElementById('nombre_px').value || '').replace(/\s+/g, ' ').trim();
+        if (_nom.length < 2 || _nom.length > 60 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+$/.test(_nom) || !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(_nom)) {
+            e.preventDefault();
+            Swal.fire({ title: 'Nombre inválido', text: 'El nombre debe tener entre 2 y 60 caracteres y solo letras y espacios.', icon: 'warning', confirmButtonColor: '#4F46E5' });
+            return;
+        }
         // Bloqueo de cédula duplicada (la cédula es única): si el paciente ya
         // existe y NO se está agendando como control, no se permite continuar.
         if (cedulaYaRegistrada && !estaEnModoControl()) {
