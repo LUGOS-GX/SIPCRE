@@ -111,7 +111,7 @@
                                             <option value="V">V</option>
                                             <option value="E">E</option>
                                         </select>
-                                        <input type="text" inputmode="numeric" id="nuevo_cedula" name="nuevo_cedula" maxlength="8" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="12345678" class="w-2/3 border border-blue-300 border-l-0 rounded-r px-2 py-1 text-xs focus:outline-none focus:border-blue-600" >
+                                        <input type="text" inputmode="numeric" id="nuevo_cedula" name="nuevo_cedula" maxlength="10" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8)" placeholder="12345678" class="w-2/3 border border-blue-300 border-l-0 rounded-r px-2 py-1 text-xs focus:outline-none focus:border-blue-600" >
                                     </div>
                                     
                                 </div>

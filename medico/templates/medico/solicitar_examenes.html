@@ -77,7 +77,7 @@
                 </div>
                 <div>
                     <label class="block text-purple-100 text-sm font-bold mb-1">Cédula <span class="text-white">*</span></label>
-                    <input type="text" name="cedula_manual" id="cedula_manual" maxlength="8" inputmode="numeric" placeholder="Ej. 12345678" class="w-full rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <input type="text" name="cedula_manual" id="cedula_manual" maxlength="10" inputmode="numeric" placeholder="Ej. 12345678" class="w-full rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-300" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
                 </div>
             </div>
 

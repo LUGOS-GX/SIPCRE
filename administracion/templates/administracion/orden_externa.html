@@ -34,8 +34,8 @@
                             <option>E</option>
                         </select>
                         <input type="text" name="cedula" id="cedula_orden"
-                            maxlength="8" inputmode="numeric"
-                            oninput="this.value = this.value.replace(/\D/g, '')"
+                            maxlength="10" inputmode="numeric"
+                            oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8)"
                             placeholder="Ej. 12345678"
                             class="w-full border border-gray-300 rounded-r-lg px-4 py-3 text-gray-800 font-mono text-sm focus:ring-2 focus:ring-cruzroja-500 focus:border-cruzroja-500 focus:outline-none"
                             autocomplete="off" required>

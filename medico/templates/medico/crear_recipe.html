@@ -105,7 +105,7 @@
                     <input type="text" name="nombre_manual" id="nombre_manual" maxlength="60" placeholder="Nombre completo del paciente" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm py-2 px-3">
                 </div>
                 <div>
-                    <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="8" inputmode="numeric" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <input type="text" name="cedula_manual" id="ci_manual" placeholder="Ej. 12345678" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-blue-500" maxlength="10" inputmode="numeric" title="Ingrese una cédula válida" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)">
                 </div>
             </div>
 

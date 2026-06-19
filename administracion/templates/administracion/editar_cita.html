@@ -28,7 +28,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
                     <div class="md:col-span-4">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cédula <span class="text-cruzroja-500">*</span></label>
-                        <input type="text" name="cedula" id="cedula_edit" value="{{ paciente.cedula }}" maxlength="8" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '')" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" required>
+                        <input type="text" name="cedula" id="cedula_edit" value="{{ paciente.cedula }}" maxlength="10" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8)" class="w-full border-gray-300 rounded-lg focus:ring-cruzroja-500 focus:border-cruzroja-500 font-mono" required>
                     </div>
 
                     <div class="md:col-span-8">
