@@ -26,6 +26,7 @@ import os
 import base64
 import xlsxwriter
 import logging
+import time
 logger = logging.getLogger('sipcre')
 
 
@@ -1010,6 +1011,60 @@ def caja_farmacia(request):
         'tasa_bcv': float(tasa_bcv),
     })
 
+def _generar_con_reintentos(client, contenido, config, modelos, max_intentos=3):
+    """
+    Llama a Gemini reintentando ante saturación (503) o límite de cuota (429),
+    con espera creciente (1, 2, 4 s). Prueba los modelos de la lista EN ORDEN.
+
+    - Saturación (503/429): espera y reintenta el MISMO modelo; si se agota,
+      pasa al siguiente modelo de la lista.
+    - Modelo no disponible (nombre mal escrito, sin acceso, sin facturación):
+      lo salta y pasa al siguiente, SIN romper.
+    - Error real (imagen inválida, API key mala): no reintenta ni cambia de
+      modelo; lo deja salir para mostrar el mensaje correcto.
+
+    Si se agotan todos los modelos, relanza el último error.
+    """
+    ultimo_error = None
+    for modelo in modelos:
+        for intento in range(max_intentos):
+            try:
+                return client.models.generate_content(
+                    model=modelo, contents=contenido, config=config,
+                )
+            except Exception as e:
+                ultimo_error = e
+                msg = str(e).lower()
+                # ¿el modelo simplemente no está disponible para esta key?
+                no_disponible = any(t in msg for t in [
+                    '404', 'not found', 'not supported', 'permission',
+                    'does not exist', 'invalid model', 'no free tier', 'billing',
+                ])
+                # ¿es una saturación/limite TEMPORAL que vale la pena reintentar?
+                saturado = any(t in msg for t in [
+                    '503', '429', 'overload', 'unavailable',
+                    'resource_exhausted', 'rate limit',
+                ])
+                if no_disponible:
+                    logger.warning(
+                        f"Modelo '{modelo}' no disponible ({e}); "
+                        f"probando el siguiente respaldo..."
+                    )
+                    break  # salta al SIGUIENTE modelo
+                elif saturado:
+                    espera = min(2 ** intento, 8)  # 1, 2, 4 segundos
+                    logger.warning(
+                        f"Gemini saturado ({modelo}), reintento "
+                        f"{intento + 1}/{max_intentos} en {espera}s..."
+                    )
+                    time.sleep(espera)
+                    continue  # reintenta el MISMO modelo
+                else:
+                    raise  # error real: no reintentar
+        # si los reintentos se agotan por saturación, el for de modelos sigue
+    raise ultimo_error
+
+
 @login_required
 @rol_requerido(['farmacia'])
 def analizar_imagen_medicamento(request):
@@ -1058,13 +1113,25 @@ def analizar_imagen_medicamento(request):
             }
             """
 
-            # 4. Hacemos la petición con el nuevo cliente y forzamos salida JSON nativa
-            response = client.models.generate_content(
-                model='gemini-3.5-flash',
-                contents=[prompt, imagen_data],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                )
+            # 4. Hacemos la petición con reintentos y modelos de respaldo.
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json",
+            )
+            # Modelos a intentar EN ORDEN, de más barato a más caro. El cliente
+            # y la API key son los MISMOS para los tres; solo cambia el string.
+            #   1) gemini-3.5-flash       -> principal (rápido y económico).
+            #   2) gemini-3.1-flash-lite  -> respaldo más liviano (tiene capa gratuita).
+            #   3) gemini-3.1-pro-preview -> último recurso (Pro). OJO: el Pro NO
+            #      tiene capa gratuita en la API; solo responde si tu API key tiene
+            #      FACTURACIÓN habilitada. (La suscripción de Gemini Pro del app NO
+            #      cuenta para la API.) Si no tienes billing, el código lo salta solo.
+            modelos = [
+                'gemini-3.5-flash',
+                'gemini-3.1-flash-lite',
+                'gemini-3.1-pro-preview',
+            ]
+            response = _generar_con_reintentos(
+                client, [prompt, imagen_data], config, modelos,
             )
             
             # Limpiamos la respuesta por precaución (aunque el config de arriba ya lo garantiza)
@@ -1077,10 +1144,23 @@ def analizar_imagen_medicamento(request):
 
         except Exception as e:
             logger.error(f"Error al analizar imagen de medicamento: {e}")
-            return JsonResponse({
-                'success': False,
-                'error': 'No se pudo analizar la imagen. Verifica que sea una foto clara del medicamento e intentalo de nuevo.'
-            })
+            msg = str(e).lower()
+            es_saturacion = any(t in msg for t in [
+                '503', '429', 'overload', 'unavailable',
+                'resource_exhausted', 'rate limit',
+            ])
+            if es_saturacion:
+                error = (
+                    'El servicio de IA está con mucha demanda en este momento. '
+                    'Espera unos segundos e inténtalo de nuevo, o escribe los '
+                    'datos del medicamento a mano.'
+                )
+            else:
+                error = (
+                    'No se pudo analizar la imagen. Verifica que sea una foto '
+                    'clara del medicamento e inténtalo de nuevo.'
+                )
+            return JsonResponse({'success': False, 'error': error})
 
     return JsonResponse({'success': False, 'error': 'Método no permitido.'})
 
