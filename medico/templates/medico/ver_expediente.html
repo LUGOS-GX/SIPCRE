@@ -81,6 +81,24 @@
                     Anexos / Resultados
                 </button>
             </li>
+            <li class="mr-2">
+                <button onclick="changeTab('recipes')" id="btn-recipes" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    Récipes
+                </button>
+            </li>
+            <li class="mr-2">
+                <button onclick="changeTab('solicitudes')" id="btn-solicitudes" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.611L5 14.5"></path></svg>
+                    Solicitudes
+                </button>
+            </li>
+            <li class="mr-2">
+                <button onclick="changeTab('constancias')" id="btn-constancias" class="inline-flex p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 group transition">
+                    <svg class="w-5 h-5 mr-2 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Constancias
+                </button>
+            </li>
         </ul>
     </div>
 
@@ -213,6 +231,107 @@
                         <p class="col-span-full text-center text-gray-500 py-8">No hay anexos o exámenes subidos en este expediente.</p>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <div id="recipes" class="tab-pane hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                {% if recipes %}
+                <div class="space-y-4">
+                    {% for r in recipes %}
+                    <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition bg-gray-50">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 pb-2 border-b border-gray-200 gap-2">
+                            <h3 class="text-base font-bold text-gray-800 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                Récipe #{{ r.id }}
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{{ r.fecha|date:"d/m/Y h:i A" }}</span>
+                                <a href="{% url 'pdf_recipe' r.id %}" target="_blank" class="text-xs font-bold text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-full transition">Ver / Imprimir</a>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Medicamentos</p>
+                                <p class="text-sm text-gray-800 whitespace-pre-line bg-white p-3 rounded border border-gray-100">{{ r.medicamentos }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Indicaciones</p>
+                                <p class="text-sm text-gray-700 whitespace-pre-line bg-white p-3 rounded border border-gray-100">{{ r.indicaciones|default:"—" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <p class="text-center text-gray-500 py-8">No hay récipes emitidos a este paciente.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="solicitudes" class="tab-pane hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                {% if solicitudes %}
+                <div class="space-y-4">
+                    {% for s in solicitudes %}
+                    <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition bg-gray-50">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 pb-2 border-b border-gray-200 gap-2">
+                            <h3 class="text-base font-bold text-gray-800 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                Orden #{{ s.id }}
+                                {% if s.estado == 'Realizado' %}
+                                    <span class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">{{ s.estado }}</span>
+                                {% elif s.estado == 'Externa' %}
+                                    <span class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">{{ s.estado }}</span>
+                                {% elif s.estado == 'Cancelada' %}
+                                    <span class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-100">{{ s.estado }}</span>
+                                {% else %}
+                                    <span class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">{{ s.estado }}</span>
+                                {% endif %}
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{{ s.fecha_solicitud|date:"d/m/Y h:i A" }}</span>
+                                <a href="{% url 'generar_pdf_orden' s.id %}" target="_blank" class="text-xs font-bold text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-full transition">Ver / Imprimir</a>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Exámenes solicitados</p>
+                            <p class="text-sm text-gray-800 bg-white p-3 rounded border border-gray-100">{{ s.examenes_solicitados }}{% if s.otros %}{% if s.examenes_solicitados %}, {% endif %}{{ s.otros }}{% endif %}</p>
+                            {% if s.observacion %}
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 mt-3">Observación</p>
+                            <p class="text-sm text-gray-700 italic whitespace-pre-line bg-white p-3 rounded border border-gray-100">{{ s.observacion }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <p class="text-center text-gray-500 py-8">No hay solicitudes de exámenes para este paciente.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div id="constancias" class="tab-pane hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                {% if constancias %}
+                <div class="space-y-4">
+                    {% for k in constancias %}
+                    <div class="border border-gray-200 rounded-lg p-5 hover:shadow-md transition bg-gray-50">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 pb-2 border-b border-gray-200 gap-2">
+                            <h3 class="text-base font-bold text-gray-800 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                Constancia
+                                <span class="ml-2 text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">Cód: {{ k.codigo_verificacion }}</span>
+                            </h3>
+                            <span class="text-sm font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{{ k.fecha_emision|date:"d/m/Y h:i A" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-800 whitespace-pre-line bg-white p-3 rounded border border-gray-100">{{ k.motivo_texto }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <p class="text-center text-gray-500 py-8">No hay constancias emitidas a este paciente.</p>
+                {% endif %}
             </div>
         </div>
 

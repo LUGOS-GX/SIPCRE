@@ -502,23 +502,31 @@ def crear_recipe(request):
                     return redirect(f"{reverse('crear_recipe')}?popup=1")
                 return redirect('crear_recipe')
 
+        # Si la acción es enviar por correo, validamos el destino ANTES de crear
+        # el récipe para no dejar registros huérfanos cuando falta el correo.
+        # (Antes esta validación corría después del create y existía una rama
+        # 'enviar_correo' duplicada: aquí se unifica en un solo punto.)
+        correo_destino = None
+        if accion == 'enviar_correo':
+            correo_destino = request.POST.get('correo_paciente', '').strip()
+            if not correo_destino and paciente_seleccionado:
+                correo_destino = paciente_seleccionado.email
+            if not correo_destino:
+                messages.warning(request, "Para enviar el récipe por correo debe indicar un correo (o seleccionar un paciente registrado que tenga correo).")
+                if is_popup == '1':
+                    return redirect(f"{reverse('crear_recipe')}?popup=1")
+                return redirect('crear_recipe')
+
+        # paciente_seleccionado es None para pacientes manuales / de paso: en ese
+        # caso el récipe no queda ligado a ningún expediente (no se muestra en él).
         recipe_nuevo = Recipe.objects.create(
             medico=medico_perfil,
+            paciente=paciente_seleccionado,
             nombre_paciente=nombre_final,
             cedula_paciente=cedula_final,
             medicamentos=medicamentos,
             indicaciones=indicaciones
         )
-
-        if accion == 'enviar_correo':
-           correo_destino = request.POST.get('correo_paciente', '').strip()
-           if not correo_destino and paciente_seleccionado:
-               correo_destino = paciente_seleccionado.email
-           if not correo_destino:
-               messages.warning(request, "Para enviar el récipe por correo debe indicar un correo (o seleccionar un paciente registrado que tenga correo).")
-               if is_popup == '1':
-                   return redirect(f"{reverse('crear_recipe')}?popup=1")
-               return redirect('crear_recipe')
 
         if accion == 'exportar_pdf':
             messages.success(request, "Récipe guardado exitosamente. Generando PDF...")
@@ -967,10 +975,23 @@ def ver_expediente_unificado(request, paciente_uuid):
         # Extraer Peso
         peso_data.append(float(c.peso) if c.peso else None)
 
+    # --- HISTORIAL DE DOCUMENTOS LIGADOS AL EXPEDIENTE ---
+    # Solo se listan los documentos emitidos a ESTE paciente registrado.
+    # Los récipes/solicitudes de pacientes manuales (de paso) tienen su FK en
+    # None y por lo tanto nunca aparecen en ningún expediente.
+    recipes = Recipe.objects.filter(paciente=paciente).order_by('-fecha')
+    solicitudes = SolicitudExamen.objects.filter(paciente=paciente).order_by('-fecha_solicitud')
+    constancias = ConstanciaMedica.objects.filter(paciente=paciente).order_by('-fecha_emision')
+
     context = {
         'paciente': paciente,
         'expediente': expediente,
         'consultas': consultas,
+
+        # Documentos del expediente (cada uno en su pestaña)
+        'recipes': recipes,
+        'solicitudes': solicitudes,
+        'constancias': constancias,
         
         # Convertimos las listas a JSON para que JavaScript (Chart.js) pueda leerlas
         'fechas_json': json.dumps(fechas_grafico),

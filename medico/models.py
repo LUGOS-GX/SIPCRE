@@ -92,6 +92,11 @@ class ConsultaEvolucion(models.Model):
 #RECIPE
 class Recipe(models.Model):
     medico = models.ForeignKey('administracion.Medico', on_delete=models.CASCADE)
+    # px registrado opcional: si el récipe se emite a un paciente que ya existe
+    # en la BD, queda ligado a su expediente. Si es un paciente "de paso"
+    # (manual/externo), este campo queda en None y no se muestra en ningún
+    # expediente. Mismo criterio que SolicitudExamen.paciente.
+    paciente = models.ForeignKey('administracion.Paciente', on_delete=models.CASCADE, null=True, blank=True, related_name='recipes')
     fecha = models.DateTimeField(auto_now_add=True) 
     medicamentos = models.TextField()
     indicaciones = models.TextField()
