@@ -87,6 +87,10 @@
                             <label class="block text-xs font-bold text-gray-500 mb-1">Nombre y Apellido</label>
                             <input type="text" id="cli_nombre" maxlength="60" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Nombre y Apellido">
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Correo (opcional, para enviar el comprobante)</label>
+                            <input type="email" id="cli_correo" autocomplete="off" class="w-full border border-gray-300 rounded py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="correo@ejemplo.com">
+                        </div>
                     </div>
                 </div>
 
@@ -379,6 +383,7 @@
             body: JSON.stringify({
                 paciente_nombre: nombre,
                 paciente_cedula: cedula,
+                correo: document.getElementById('cli_correo').value,
                 validacion_psicotropicos: checkPsico,
                 metodo_pago: monedaPago,
                 carrito: carrito
@@ -388,10 +393,18 @@
         .then(data => {
             if (data.success) {
                 // CORRECCIÓN: Alerta de éxito con redirección
+                let txt = `Venta Procesada con Éxito. Orden Generada: #${data.orden_id}`;
+                let icono = 'success';
+                if (data.correo_enviado) {
+                    txt += `\n\n Comprobante enviado a ${data.correo_enviado}.`;
+                } else if (data.correo_aviso) {
+                    txt += `\n\n⚠️ ${data.correo_aviso}`;
+                    icono = 'warning';
+                }
                 Swal.fire({
                     title: '¡Éxito!',
-                    text: `Venta Procesada con Éxito. Orden Generada: #${data.orden_id}`,
-                    icon: 'success',
+                    text: txt,
+                    icon: icono,
                     confirmButtonColor: '#10B981'
                 }).then(() => {
                     window.location.href = "{% url 'dashboard_farmacia' %}";

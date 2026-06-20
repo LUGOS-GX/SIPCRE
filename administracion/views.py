@@ -22,6 +22,7 @@ from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from .utils import obtener_tasa_bcv
+from core.correo_utils import enviar_comprobante_pago, correo_es_valido, _METODOS_USD
 from core.validators import (
     normalizar_cedula, cedula_es_valida, validar_imagen,
     normalizar_nombre, nombre_es_valido,
@@ -403,6 +404,7 @@ def caja_central(request):
         try:
             cedula = normalizar_cedula(data.get('cedula'))
             nombre = normalizar_nombre(data.get('nombre'))
+            correo = (data.get('correo') or '').strip()
             carrito = data.get('carrito') or []
             pagos = data.get('pagos') or []
             facturas_pendientes_ids = data.get('facturas_pendientes') or []
@@ -539,7 +541,66 @@ def caja_central(request):
                     factura_destino.metodo_pago = ', '.join(dict.fromkeys(metodos_usados))[:50]
                     factura_destino.save(update_fields=['metodo_pago'])
 
-            return JsonResponse({'status': 'success', 'factura_id': factura_destino.id})
+            # --- COMPROBANTE POR CORREO (fuera de la transacción: el pago ya
+            #     quedó firme; si el correo falla, NO se revierte nada) ---
+            correo_aviso = None
+            correo_enviado = None
+            if correo:
+                if correo_es_valido(correo):
+                    try:
+                        # Resumen de TODO lo pagado en esta transacción: deudas
+                        # viejas saldadas + servicios nuevos del catálogo.
+                        todas_facturas = list(facturas_viejas)
+                        if factura_maestra:
+                            todas_facturas.append(factura_maestra)
+
+                        lineas_comp = []
+                        total_comp = Decimal('0.00')
+                        for f in todas_facturas:
+                            total_comp += f.total
+                            for d in f.detalles.all():
+                                lineas_comp.append({
+                                    'descripcion': d.descripcion,
+                                    'cantidad': d.cantidad,
+                                    'precio_unitario': d.precio_unitario,
+                                    'subtotal': d.subtotal,
+                                })
+
+                        pagos_comp = []
+                        for p in pagos:
+                            metodo = p.get('metodo')
+                            pagos_comp.append({
+                                'metodo': metodo,
+                                'moneda': 'USD' if metodo in _METODOS_USD else 'Bs',
+                                'monto_original': Decimal(str(p.get('monto_ingresado'))),
+                                'monto_usd': Decimal(str(p.get('equivalente_usd'))),
+                            })
+
+                        enviar_comprobante_pago(
+                            destinatario=correo,
+                            origen='Caja Central',
+                            cliente_nombre=nombre,
+                            cliente_cedula=cedula,
+                            numero=factura_destino.numero_factura or f"FAC-{factura_destino.id}",
+                            fecha=factura_destino.fecha_pago or timezone.now(),
+                            lineas=lineas_comp,
+                            total_usd=total_comp,
+                            pagos=pagos_comp,
+                        )
+                        correo_enviado = correo
+                    except Exception:
+                        # Nunca tumbar la respuesta del pago por un fallo del correo.
+                        logger.exception("Pago OK pero falló el armado/envío del comprobante (caja central)")
+                        correo_aviso = "El pago se registró, pero no se pudo enviar el comprobante por correo."
+                else:
+                    correo_aviso = "No se envió el comprobante: el correo ingresado no es válido."
+
+            return JsonResponse({
+                'status': 'success',
+                'factura_id': factura_destino.id,
+                'correo_aviso': correo_aviso,
+                'correo_enviado': correo_enviado,
+            })
 
         except ValueError as e:
             # Errores de negocio esperables: el mensaje es seguro de mostrar.

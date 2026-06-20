@@ -113,6 +113,11 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <p class="text-[11px] font-bold text-gray-500 uppercase mb-2">Correo para el comprobante (opcional, si cobra aquí)</p>
+                        <input type="email" name="correo_paciente" value="{{ orden.paciente.email|default:'' }}" autocomplete="off" placeholder="correo@ejemplo.com" class="w-full border border-gray-300 rounded-lg py-2.5 px-3 text-sm focus:border-emerald-500 focus:ring-0">
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button type="submit" name="accion" value="caja_central" class="bg-white border-2 border-blue-500 text-blue-700 hover:bg-blue-50 font-bold py-4 px-4 rounded-lg transition flex items-center justify-center shadow-sm">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>

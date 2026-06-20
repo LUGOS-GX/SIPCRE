@@ -13,6 +13,7 @@ from decimal import Decimal
 from .models import OrdenFarmacia, Medicamento, DetalleDespacho, LoteMedicamento, MovimientoInventario, AuditoriaControlado
 from administracion.models import Factura, DetalleFactura, SesionCaja
 from administracion.utils import obtener_tasa_bcv
+from core.correo_utils import enviar_comprobante_pago, correo_es_valido
 from .forms import MedicamentoForm, LoteMedicamentoForm
 from usuarios.decorators import rol_requerido
 from core.validators import (
@@ -135,6 +136,11 @@ def despachar_orden(request, orden_id):
         accion = request.POST.get('accion')
         meds_ids = request.POST.getlist('medicamento_id[]')
         cantidades = request.POST.getlist('cantidad[]')
+        # Correo del comprobante: precargado en el form con el del px (si la orden
+        # está ligada a uno registrado) y editable por farmacia. Solo se usa si el
+        # cobro es inmediato ('pagar_farmacia'); en "Enviar a Caja" el pago ocurre
+        # después en Caja Central y allí se enviará el comprobante.
+        correo_paciente = (request.POST.get('correo_paciente') or '').strip()
 
         if not meds_ids:
             messages.error(request, "Debe agregar medicamentos al carrito.")
@@ -261,6 +267,50 @@ def despachar_orden(request, orden_id):
         if omitidos:
             msg += " No se incluyeron (stock insuficiente): " + ", ".join(omitidos) + "."
         messages.success(request, msg)
+
+        # --- COMPROBANTE POR CORREO (solo si se cobró aquí y hay correo) ---
+        if estado_factura == 'Pagada' and correo_paciente:
+            if correo_es_valido(correo_paciente):
+                try:
+                    lineas_comp = [{
+                        'descripcion': d.descripcion,
+                        'cantidad': d.cantidad,
+                        'precio_unitario': d.precio_unitario,
+                        'subtotal': d.subtotal,
+                    } for d in factura.detalles.all()]
+
+                    if metodo_pago == 'Bs':
+                        tasa = obtener_tasa_bcv()
+                        if not tasa:
+                            ultima = SesionCaja.objects.order_by('-fecha_apertura').first()
+                            tasa = ultima.tasa_bcv_dia if ultima else Decimal('0.00')
+                        pagos_comp = [{
+                            'metodo': 'Bolívares (Bs)', 'moneda': 'Bs',
+                            'monto_original': (factura.total * tasa), 'monto_usd': factura.total,
+                        }]
+                    else:
+                        pagos_comp = [{
+                            'metodo': 'Divisas ($)', 'moneda': 'USD',
+                            'monto_original': factura.total, 'monto_usd': factura.total,
+                        }]
+
+                    enviar_comprobante_pago(
+                        destinatario=correo_paciente,
+                        origen='Despacho de Farmacia',
+                        cliente_nombre=nombre_cli,
+                        cliente_cedula=cedula_cli,
+                        numero=factura.numero_factura or f"FAC-{factura.id}",
+                        fecha=factura.fecha_pago or timezone.now(),
+                        lineas=lineas_comp,
+                        total_usd=factura.total,
+                        pagos=pagos_comp,
+                    )
+                    messages.info(request, f"Comprobante enviado a {correo_paciente}.")
+                except Exception:
+                    logger.error("Despacho OK pero falló el comprobante (despachar_orden)", exc_info=True)
+            else:
+                messages.warning(request, "No se envió el comprobante: el correo ingresado no es válido.")
+
         return redirect('dashboard_farmacia')
 
     # Tasa BCV para el cobro dual ($/Bs) simulado, igual que en la Caja de
@@ -901,6 +951,7 @@ def caja_farmacia(request):
             datos = json.loads(request.body)
             paciente_nombre = normalizar_nombre(datos.get('paciente_nombre'))
             paciente_cedula = normalizar_cedula(datos.get('paciente_cedula'))
+            correo = (datos.get('correo') or '').strip()
             validacion_psicotropicos = datos.get('validacion_psicotropicos', False)
             carrito = datos.get('carrito', [])
             # Método de cobro simulado: solo dual ($ o Bs). Se normaliza a una
@@ -925,6 +976,11 @@ def caja_farmacia(request):
                     cedula_paciente=paciente_cedula,
                     estado='COMPLETADA',
                 )
+
+                # Acumuladores para el comprobante de pago (se arman aquí, con los
+                # datos ya en mano, para no re-consultar el ORM luego del commit).
+                lineas_comp = []
+                total_venta = Decimal('0.00')
 
                 for item in carrito:
                     med = Medicamento.objects.select_for_update().get(id=item['id'])
@@ -969,6 +1025,16 @@ def caja_farmacia(request):
                     precio_unit = med.precio if med.precio else Decimal('0.00')
                     subtotal_item = precio_unit * cant
 
+                    # Línea para el comprobante (resumen de compra)
+                    descripcion_item = med.nombre + ((' ' + med.concentracion) if med.concentracion else '')
+                    lineas_comp.append({
+                        'descripcion': descripcion_item,
+                        'cantidad': cant,
+                        'precio_unitario': precio_unit,
+                        'subtotal': subtotal_item,
+                    })
+                    total_venta += subtotal_item
+
                     MovimientoInventario.objects.create(
                         medicamento=med,
                         tipo_movimiento='SALIDA',
@@ -979,7 +1045,55 @@ def caja_farmacia(request):
                         orden_relacionada=orden
                     )
 
-            return JsonResponse({'success': True, 'orden_id': orden.id})
+            # --- COMPROBANTE POR CORREO (fuera de la transacción) ---
+            correo_aviso = None
+            correo_enviado = None
+            if correo:
+                if correo_es_valido(correo):
+                    try:
+                        if metodo_pago == 'Bs':
+                            tasa = obtener_tasa_bcv()
+                            if not tasa:
+                                ultima = SesionCaja.objects.order_by('-fecha_apertura').first()
+                                tasa = ultima.tasa_bcv_dia if ultima else Decimal('0.00')
+                            pagos_comp = [{
+                                'metodo': 'Bolívares (Bs)',
+                                'moneda': 'Bs',
+                                'monto_original': (total_venta * tasa),
+                                'monto_usd': total_venta,
+                            }]
+                        else:
+                            pagos_comp = [{
+                                'metodo': 'Divisas ($)',
+                                'moneda': 'USD',
+                                'monto_original': total_venta,
+                                'monto_usd': total_venta,
+                            }]
+
+                        enviar_comprobante_pago(
+                            destinatario=correo,
+                            origen='Caja de Farmacia',
+                            cliente_nombre=paciente_nombre,
+                            cliente_cedula=paciente_cedula,
+                            numero=f"Orden #{orden.id}",
+                            fecha=timezone.now(),
+                            lineas=lineas_comp,
+                            total_usd=total_venta,
+                            pagos=pagos_comp,
+                        )
+                        correo_enviado = correo
+                    except Exception:
+                        logger.error("Venta OK pero falló el comprobante (caja farmacia)", exc_info=True)
+                        correo_aviso = "La venta se registró, pero no se pudo enviar el comprobante por correo."
+                else:
+                    correo_aviso = "No se envió el comprobante: el correo ingresado no es válido."
+
+            return JsonResponse({
+                'success': True,
+                'orden_id': orden.id,
+                'correo_aviso': correo_aviso,
+                'correo_enviado': correo_enviado,
+            })
 
         except ReglaNegocioError as e:
             # Mensaje de regla de negocio: es seguro y útil mostrarlo al usuario.

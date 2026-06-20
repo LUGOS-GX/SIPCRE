@@ -40,6 +40,7 @@
                     </div>
                     <input type="text" id="pos_cedula_px" class="w-1/3 px-3 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 font-mono text-center" placeholder="Cédula">
                 </div>
+                <input type="email" id="pos_correo_px" class="mt-2 w-full px-3 py-2.5 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-0 text-sm" placeholder="Correo para enviar el comprobante (opcional)" autocomplete="off">
                 <button type="button" onclick="abrirCuentasAbiertas()" class="mt-2 w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 font-bold py-2 rounded-lg text-sm transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                     Cuentas por Cobrar (Pacientes con Deudas)
@@ -259,6 +260,8 @@
                         li.onclick = () => {
                             inputNombre.value = p.nombres;
                             inputCedula.value = p.cedula;
+                            // Precargar el correo del px registrado (editable por el cajero)
+                            document.getElementById('pos_correo_px').value = p.email || '';
                             listResultados.classList.add('hidden');
                             
                             // Cargar deudas automáticamente al seleccionar
@@ -461,6 +464,7 @@
         const payload = {
             nombre: document.getElementById('pos_buscador_px').value,
             cedula: document.getElementById('pos_cedula_px').value,
+            correo: document.getElementById('pos_correo_px').value,
             carrito: carrito,
             pagos: pagos,
             facturas_pendientes: facturasPendientesIds,
@@ -480,10 +484,18 @@
         .then(data => {
             if(data.status === 'success') {
                 // CORRECCIÓN: Alerta de éxito elegante
+                let txt = `Factura #${data.factura_id} generada exitosamente.`;
+                let icono = 'success';
+                if (data.correo_enviado) {
+                    txt += `\n\n Comprobante enviado a ${data.correo_enviado}.`;
+                } else if (data.correo_aviso) {
+                    txt += `\n\n⚠️ ${data.correo_aviso}`;
+                    icono = 'warning';
+                }
                 Swal.fire({
                     title: '¡Éxito!',
-                    text: `Factura #${data.factura_id} generada exitosamente.`,
-                    icon: 'success',
+                    text: txt,
+                    icon: icono,
                     confirmButtonColor: '#10B981' // Verde
                 }).then(() => {
                     window.location.reload(); 
